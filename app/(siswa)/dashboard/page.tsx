@@ -22,7 +22,7 @@ export default async function SiswaDashboardPage() {
     totalStudents: 120,
     isCheckedIn: false,
     checkInTime: null as string | null,
-    fotoSelfie: null as string | null,
+    checkInStatus: null as string | null,
   };
 
   let completedQuizCount = 0;
@@ -136,21 +136,6 @@ export default async function SiswaDashboardPage() {
     const { data: rawPeers } = await peersQuery.limit(20);
 
     if (rawPeers && rawPeers.length > 0) {
-      // Get recent attendance selfies if available
-      const peerIds = rawPeers.map((p) => p.id);
-      const { data: peerPresensi } = await adminSupabase
-        .from("presensi")
-        .select("siswa_id, foto_url")
-        .in("siswa_id", peerIds)
-        .order("waktu_masuk", { ascending: false });
-
-      const fotoMap = new Map<string, string>();
-      peerPresensi?.forEach((pr) => {
-        if (pr.foto_url && !fotoMap.has(pr.siswa_id)) {
-          fotoMap.set(pr.siswa_id, pr.foto_url);
-        }
-      });
-
       peerStudents = rawPeers.map((p) => {
         const parts = (p.nama_lengkap || "Siswa").trim().split(" ");
         const initials =
@@ -161,7 +146,7 @@ export default async function SiswaDashboardPage() {
         return {
           id: p.id,
           name: p.nama_lengkap || "Siswa",
-          avatarUrl: fotoMap.get(p.id) || null,
+          avatarUrl: null,
           initials,
         };
       });
@@ -199,14 +184,14 @@ export default async function SiswaDashboardPage() {
 
     const { data: presensiToday } = await supabase
       .from("presensi")
-      .select("waktu_masuk, foto_url, status")
+      .select("waktu_masuk, status")
       .eq("siswa_id", user.id)
       .eq("tanggal", todayWIB)
       .maybeSingle();
 
     let isCheckedIn = false;
     let checkInTime = null;
-    let fotoSelfie = null;
+    let checkInStatus = null;
 
     if (presensiToday) {
       isCheckedIn = true;
@@ -215,7 +200,7 @@ export default async function SiswaDashboardPage() {
         hour: "2-digit",
         minute: "2-digit",
       });
-      fotoSelfie = presensiToday.foto_url || null;
+      checkInStatus = presensiToday.status || "Hadir (Tepat Waktu)";
     }
 
     userProfile = {
@@ -228,7 +213,7 @@ export default async function SiswaDashboardPage() {
       totalStudents: totalSiswaCount,
       isCheckedIn,
       checkInTime,
-      fotoSelfie,
+      checkInStatus,
     };
   }
 

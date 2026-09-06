@@ -96,7 +96,7 @@ export async function GET() {
     const todayStr = new Date().toISOString().split("T")[0];
     const { data: presensiRows } = await adminDb
       .from("presensi")
-      .select("id, siswa_id, waktu_masuk, foto_url, status, profil (nama_lengkap, email)")
+      .select("id, siswa_id, waktu_masuk, status, profil (nama_lengkap, email)")
       .eq("tanggal", todayStr);
 
     const totalHadirToday = presensiRows?.length || 0;
@@ -181,7 +181,6 @@ export async function GET() {
               minute: "2-digit",
             })
           : "07:30 WIB",
-        selfieUrl: p.foto_url,
         status: p.status || "Hadir",
       })),
       schedules: scheduleRows || [],

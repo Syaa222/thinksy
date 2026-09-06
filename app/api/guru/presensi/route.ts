@@ -32,7 +32,6 @@ export async function GET(request: Request) {
         siswa_id,
         tanggal,
         waktu_masuk,
-        foto_url,
         status,
         profil:siswa_id!inner (
           id,

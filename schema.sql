@@ -191,14 +191,14 @@ CREATE TABLE log_ai (
   dibuat_pada       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2.13 Tabel Presensi (Absen Kamera Selfie)
+-- 2.13 Tabel Presensi (Kehadiran & Liveness Check - Tanpa Penyimpanan Foto)
+-- Catatan migrasi database: ALTER TABLE presensi DROP COLUMN IF EXISTS foto_url;
 CREATE TABLE presensi (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   siswa_id UUID NOT NULL REFERENCES profil(id) ON DELETE CASCADE,
   tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
   waktu_masuk TIMESTAMPTZ NOT NULL DEFAULT now(),
-  foto_url TEXT,
-  status TEXT NOT NULL DEFAULT 'Hadir',
+  status TEXT NOT NULL DEFAULT 'Hadir (Tepat Waktu)', -- 'Hadir (Tepat Waktu)', 'Terlambat', 'Alpha', 'Terverifikasi'
   UNIQUE(siswa_id, tanggal)
 );
 

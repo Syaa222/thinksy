@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autoClaimMisi } from "@/app/api/siswa/misi/route";
 import { checkAndUpdateDailyStreak, getWIBDateString } from "@/lib/streak";
 
-// ─── POST: Simpan presensi selfie + auto-klaim misi presensi ─────────────────
+interface PresensiRequestBody {
+  mock_time?: string; // Format: "HH:mm", misal "06:30", "07:15", "07:45", "08:15"
+}
+
+// ─── POST: Simpan presensi & kalkulasi reward berdasarkan batas waktu ─────────
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -21,37 +24,78 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: { foto_base64?: string };
+    let body: PresensiRequestBody = {};
     try {
       body = await request.json();
     } catch {
       body = {};
     }
 
-    const { foto_base64 } = body;
-    const now = new Date();
     const todayWIB = getWIBDateString();
+    const now = new Date();
 
-    const formattedTime = now.toLocaleTimeString("id-ID", {
-      timeZone: "Asia/Jakarta",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    // Tentukan waktu presensi (Mendukung Mock Time saat UAT/Development)
+    let hour: number;
+    let minute: number;
+    let formattedTime: string;
 
-    // 1. Simpan presensi (upsert: tidak duplikat jika sudah hadir)
+    if (body.mock_time && /^\d{2}:\d{2}$/.test(body.mock_time)) {
+      const [h, m] = body.mock_time.split(":").map(Number);
+      hour = h;
+      minute = m;
+      formattedTime = body.mock_time;
+    } else {
+      const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+        timeZone: "Asia/Jakarta",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const parts = timeFormatter.formatToParts(now);
+      hour = Number(parts.find((p) => p.type === "hour")?.value || now.getHours());
+      minute = Number(parts.find((p) => p.type === "minute")?.value || now.getMinutes());
+      formattedTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+
+    const minutesTotal = hour * 60 + minute;
+
+    // ─── ATURAN WAKTU PRESENSI ───────────────────────────────────────────────
+    // 1. > 08.00 WIB (> 480 menit): Presensi Ditutup, Status Alpha
+    if (minutesTotal > 480) {
+      return NextResponse.json(
+        {
+          error:
+            "Presensi telah ditutup (Pukul >08.00 WIB). Status kehadiran Anda tercatat Alpha. Silakan hubungi wali kelas Anda untuk konfirmasi/perubahan status.",
+          status: "Alpha",
+          isClosed: true,
+          time: formattedTime,
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2. 07.16 - 08.00 WIB (436 - 480 menit): Terlambat (+3 Poin)
+    // 3. 06.00 - 07.15 WIB (<= 435 menit): Hadir Tepat Waktu (+10 Poin)
+    const isLate = minutesTotal > 435;
+    const statusKehadiran = isLate ? "Terlambat" : "Hadir (Tepat Waktu)";
+    const poinReward = isLate ? 3 : 10;
+
+    // ─── 1. Simpan Presensi ke Database (Tanpa Foto) ─────────────────────────
+    const waktuMasuk = new Date();
+    waktuMasuk.setHours(hour, minute, 0, 0);
+
     const { data: presensiData, error: presensiError } = await supabase
       .from("presensi")
       .upsert(
         {
           siswa_id: user.id,
           tanggal: todayWIB,
-          waktu_masuk: now.toISOString(),
-          foto_url: foto_base64 || null,
-          status: "Hadir",
+          waktu_masuk: waktuMasuk.toISOString(),
+          status: statusKehadiran,
         },
         { onConflict: "siswa_id,tanggal" }
       )
-      .select()
+      .select("id, siswa_id, tanggal, waktu_masuk, status")
       .single();
 
     if (presensiError) {
@@ -62,29 +106,61 @@ export async function POST(request: Request) {
       );
     }
 
-    // Ambil profil siswa
-    const { data: currentProfil } = await supabase
-      .from("profil")
-      .select("nama_lengkap, poin, streak")
-      .eq("id", user.id)
-      .single();
+    // ─── 2. Update Poin Siswa di Tabel Profil ────────────────────────────────
+    let poinTotal = 0;
+    try {
+      const { data: rpcPoin } = await adminDb.rpc("tambah_poin_siswa", {
+        p_siswa_id: user.id,
+        p_poin_ditambahkan: poinReward,
+      });
+      if (typeof rpcPoin === "number" && rpcPoin > 0) {
+        poinTotal = rpcPoin;
+      }
+    } catch {
+      // fallback jika RPC belum tersedia
+    }
 
-    // Evaluasi dan update streak belajar harian siswa
+    if (poinTotal === 0) {
+      const { data: currentProfil } = await adminDb
+        .from("profil")
+        .select("poin, nama_lengkap, streak")
+        .eq("id", user.id)
+        .single();
+
+      const poinAwal = currentProfil?.poin ?? 0;
+      poinTotal = poinAwal + poinReward;
+
+      await adminDb
+        .from("profil")
+        .update({ poin: poinTotal })
+        .eq("id", user.id);
+    }
+
+    // ─── 3. Update Daily Streak Siswa ────────────────────────────────────────
     const streakResult = await checkAndUpdateDailyStreak(user.id, "presensi");
     const newStreak = streakResult.currentStreak;
 
-    // 2. AUTO-KLAIM misi presensi (server-side, jika belum diklaim)
-    const misiClaimResult = await autoClaimMisi(supabase, user.id, "presensi");
-
-    // 3. Catat notifikasi presensi
+    // ─── 4. Auto-update Misi Harian jika ada ─────────────────────────────────
     try {
-      const notifPesan = misiClaimResult.claimed
-        ? `Presensi dicatat pukul ${formattedTime} WIB. Misi Presensi selesai! +${misiClaimResult.poinDitambahkan} Poin dikreditkan.`
-        : `Foto presensi kehadiran Anda telah dicatat pada pukul ${formattedTime} WIB.`;
+      await adminDb
+        .from("misi_harian")
+        .update({ progres_saat_ini: 1, diklaim: true })
+        .eq("siswa_id", user.id)
+        .eq("tanggal", todayWIB)
+        .ilike("judul", "%presensi%");
+    } catch {
+      // silent fail
+    }
 
+    // ─── 5. Catat Notifikasi Presensi ────────────────────────────────────────
+    const notifPesan = isLate
+      ? `Presensi dicatat pukul ${formattedTime} WIB (Terlambat). +${poinReward} Poin ditambahkan ke akun Anda.`
+      : `Presensi dicatat pukul ${formattedTime} WIB (Tepat Waktu). Selamat! +${poinReward} Poin telah ditambahkan.`;
+
+    try {
       await adminDb.from("notifikasi").insert({
         user_id: user.id,
-        judul: "Presensi Selfie Berhasil",
+        judul: `Presensi Berhasil (${statusKehadiran})`,
         pesan: notifPesan,
         tipe: "presensi",
         dibaca: false,
@@ -95,25 +171,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Presensi selfie berhasil dicatat!",
+      message: `Presensi berhasil dicatat sebagai ${statusKehadiran}!`,
       presensi: {
         waktu: formattedTime,
         tanggal: todayWIB,
-        status: "Hadir",
-        foto_url: presensiData.foto_url,
+        status: statusKehadiran,
       },
       user: {
-        nama_lengkap: currentProfil?.nama_lengkap || user.email,
-        poin: misiClaimResult.claimed
-          ? misiClaimResult.poinTotal
-          : currentProfil?.poin ?? 0,
+        poin: poinTotal,
         streak: newStreak,
       },
-      // Info auto-klaim misi untuk UI
-      misiAutoClaimed: misiClaimResult.claimed,
-      misiPoinDitambahkan: misiClaimResult.poinDitambahkan,
+      poinReward,
     });
   } catch (err: any) {
+    console.error("[PRESENSI POST FATAL]", err);
     return NextResponse.json(
       { error: "Terjadi kesalahan server: " + err.message },
       { status: 500 }
@@ -138,7 +209,7 @@ export async function GET() {
 
     const { data: presensi } = await supabase
       .from("presensi")
-      .select("*")
+      .select("id, waktu_masuk, status, tanggal")
       .eq("siswa_id", user.id)
       .eq("tanggal", todayWIB)
       .maybeSingle();
@@ -147,16 +218,19 @@ export async function GET() {
       return NextResponse.json({ isCheckedIn: false });
     }
 
-    const formattedTime = new Date(presensi.waktu_masuk).toLocaleTimeString("id-ID", {
-      timeZone: "Asia/Jakarta",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const formattedTime = new Date(presensi.waktu_masuk).toLocaleTimeString(
+      "id-ID",
+      {
+        timeZone: "Asia/Jakarta",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
 
     return NextResponse.json({
       isCheckedIn: true,
       checkInTime: formattedTime,
-      foto_url: presensi.foto_url,
+      status: presensi.status,
     });
   } catch {
     return NextResponse.json({ isCheckedIn: false });
