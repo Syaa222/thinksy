@@ -549,6 +549,55 @@ export default function TabBelajar({
         </section>
       </div>
 
+      {/* DIGITAL LEARNING PLATFORM SHORTCUT BANNER: JURNAL & UJIAN */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Card 1: Jurnal Pembelajaran Digital */}
+        <div className="saas-card p-6 rounded-3xl border border-indigo-100 bg-linear-to-br from-indigo-50/70 via-white to-white shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-[11px] font-extrabold">
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Jurnal Pembelajaran Digital</span>
+            </div>
+            <h3 className="text-lg font-black text-[#0F172A]">
+              Buku & Catatan Belajar Interaktif
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Buka buku digital dengan 4 warna stabilo highlight, catatan margin, penanda halaman, dan bantuan Tutor AI Sokratik kontekstual.
+            </p>
+          </div>
+          <button
+            onClick={onNavigateToCourses}
+            className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+          >
+            <BookOpen className="w-4 h-4 text-amber-300" />
+            <span>Buka Ruang Belajar & Jurnal</span>
+          </button>
+        </div>
+
+        {/* Card 2: Ruang Ujian & Asesmen Standar */}
+        <div className="saas-card p-6 rounded-3xl border border-blue-100 bg-linear-to-br from-blue-50/70 via-white to-white shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-[11px] font-extrabold">
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
+              <span>Server-Timed Exam Engine</span>
+            </div>
+            <h3 className="text-lg font-black text-[#0F172A]">
+              Ruang Ujian & Asesmen Terjadwal
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Ikuti ulangan harian, penilaian tengah semester, dan kuis terjadwal dengan pengawasan waktu server dan auto-scoring instan.
+            </p>
+          </div>
+          <Link
+            href="/ujian"
+            className="w-full py-2.5 px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+          >
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span>Masuk ke Ruang Ujian →</span>
+          </Link>
+        </div>
+      </section>
+
       {/* ACTIVE CLASSES GRID */}
       <div className="relative">
         {!sekolahData && (

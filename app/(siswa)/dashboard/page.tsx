@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import StudentDashboardClient from "./StudentDashboardClient";
+import { normalizeMapel } from "@/lib/mapel";
 
 export default async function SiswaDashboardPage() {
   const supabase = await createClient();
@@ -23,6 +24,8 @@ export default async function SiswaDashboardPage() {
     isCheckedIn: false,
     checkInTime: null as string | null,
     checkInStatus: null as string | null,
+    tingkat_kelas: 8,
+    nama_kelas: "Kelas 8",
   };
 
   let completedQuizCount = 0;
@@ -203,6 +206,30 @@ export default async function SiswaDashboardPage() {
       checkInStatus = presensiToday.status || "Hadir (Tepat Waktu)";
     }
 
+    // Check student's enrolled class level
+    let userTingkatKelas = 8; // Default SMP Kelas 8
+    let userNamaKelas = "Kelas 8";
+
+    const { data: memberKelas } = await adminSupabase
+      .from("anggota_kelas")
+      .select("kelas ( id, nama_kelas )")
+      .eq("siswa_id", user.id)
+      .maybeSingle();
+
+    if (memberKelas?.kelas) {
+      const namaK = (memberKelas.kelas as any).nama_kelas || "";
+      if (namaK) {
+        userNamaKelas = namaK;
+        if (/\b7\b|VII|Kelas\s*7/i.test(namaK)) {
+          userTingkatKelas = 7;
+        } else if (/\b8\b|VIII|Kelas\s*8/i.test(namaK)) {
+          userTingkatKelas = 8;
+        } else if (/\b9\b|IX|Kelas\s*9/i.test(namaK)) {
+          userTingkatKelas = 9;
+        }
+      }
+    }
+
     userProfile = {
       nama_lengkap: profil?.nama_lengkap || user.email?.split("@")[0] || "Budi Kartika",
       email: user.email || "budi.kartika@sekolah.sch.id",
@@ -214,6 +241,8 @@ export default async function SiswaDashboardPage() {
       isCheckedIn,
       checkInTime,
       checkInStatus,
+      tingkat_kelas: userTingkatKelas,
+      nama_kelas: userNamaKelas,
     };
   }
 
@@ -249,6 +278,8 @@ export default async function SiswaDashboardPage() {
       judul,
       deskripsi,
       urutan,
+      mapel,
+      kelas,
       materi (
         id,
         judul,
@@ -264,6 +295,8 @@ export default async function SiswaDashboardPage() {
     judul: string;
     deskripsi: string | null;
     urutan: number;
+    mapel?: string | null;
+    kelas?: number | null;
     progress: number;
     materi?: Array<{ id: string; judul: string; urutan: number }>;
   }> = [];
@@ -292,7 +325,7 @@ export default async function SiswaDashboardPage() {
       studentAnsweredIds = new Set(userAnswers?.map((a: any) => a.soal_id));
     }
 
-    chaptersWithProgress = listBab.map((ch) => {
+    chaptersWithProgress = listBab.map((ch: any) => {
       const babQuestionIds = questionsByBab.get(ch.id) || [];
       const totalQ = babQuestionIds.length;
       const answeredQ = babQuestionIds.filter((qId) => studentAnsweredIds.has(qId)).length;
@@ -303,6 +336,8 @@ export default async function SiswaDashboardPage() {
         judul: ch.judul,
         deskripsi: ch.deskripsi,
         urutan: ch.urutan || 1,
+        mapel: normalizeMapel(ch.mapel),
+        kelas: ch.kelas || 7,
         progress,
         materi: ch.materi,
       };

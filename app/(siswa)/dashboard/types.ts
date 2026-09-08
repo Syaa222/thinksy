@@ -54,6 +54,8 @@ export interface ChapterItem {
   judul: string;
   deskripsi: string | null;
   urutan: number;
+  mapel?: string | null;
+  kelas?: number | null;
   progress?: number;
   materi?: ChapterMaterial[];
 }
@@ -144,6 +146,8 @@ export interface StudentDashboardProps {
     isCheckedIn: boolean;
     checkInTime: string | null;
     checkInStatus?: string | null;
+    tingkat_kelas?: number;
+    nama_kelas?: string;
   };
   sekolahData?: SekolahData | null;
   schedulesData?: ScheduleItem[];

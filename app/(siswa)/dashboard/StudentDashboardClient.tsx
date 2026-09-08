@@ -46,7 +46,7 @@ export default function StudentDashboardClient({
 }: StudentDashboardProps) {
   // Navigation Tabs State
   const [activeTab, setActiveTab] = useState<
-    "Belajar" | "Kursus Saya" | "Peringkat" | "Pencapaian"
+    "Belajar" | "Ruang Belajar" | "Peringkat" | "Pencapaian"
   >("Belajar");
 
   // UI Preferences & Themes
@@ -1064,7 +1064,7 @@ export default function StudentDashboardClient({
           onClaimMission={handleClaimMission}
           top3Chapters={top3Chapters}
           peerStudents={peerStudents}
-          onNavigateToCourses={() => setActiveTab("Kursus Saya")}
+          onNavigateToCourses={() => setActiveTab("Ruang Belajar")}
         />
       )}
 
@@ -1076,8 +1076,13 @@ export default function StudentDashboardClient({
         />
       )}
 
-      {activeTab === "Kursus Saya" && (
-        <TabKursusSaya chapters={chapters} peerStudents={peerStudents} />
+      {activeTab === "Ruang Belajar" && (
+        <TabKursusSaya
+          chapters={chapters}
+          peerStudents={peerStudents}
+          userGrade={userProfile.tingkat_kelas || 8}
+          userClassName={userProfile.nama_kelas || "Kelas 8"}
+        />
       )}
 
       {activeTab === "Pencapaian" && (

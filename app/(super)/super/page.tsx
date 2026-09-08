@@ -47,6 +47,7 @@ export default function SuperAdminDashboard() {
     totalKelas: 0,
     totalBiayaUSD: 0,
     tenantBreakdown: [] as TenantBreakdown[],
+    auditLogs: [] as any[],
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -383,6 +384,60 @@ export default function SuperAdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </section>
+
+          {/* SYSTEM AUDIT LOG & ACTIVITY FEED */}
+          <section className="bg-slate-800/20 rounded-2xl border border-slate-700/40 overflow-hidden backdrop-blur-sm space-y-4 p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                Aktivitas & Log Audit Sistem Real-Time
+              </h3>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live Feed
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-slate-500" /> Memuat log aktivitas...
+              </div>
+            ) : !metrics.auditLogs || metrics.auditLogs.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500">
+                Belum ada aktivitas baru tercatat di audit log.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-800/60 font-medium">
+                {metrics.auditLogs.map((log: any) => (
+                  <div key={log.id} className="py-3 flex items-start justify-between gap-4 text-xs">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold shrink-0 mt-0.5">
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-white">
+                            {log.actor?.nama_lengkap || "Pengguna"}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            {log.role}
+                          </span>
+                        </div>
+                        <p className="text-slate-400 mt-0.5">
+                          Melakukan aksi <code className="text-emerald-400 font-mono">{log.aksi}</code> pada resource{" "}
+                          <span className="text-slate-300 font-semibold">{log.target_resource}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-500 shrink-0 font-mono">
+                      {new Date(log.dibuat_pada).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>

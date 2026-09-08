@@ -82,10 +82,14 @@ export default function StudentNotesModal({
               className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-700 focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer"
             >
               <option value="Matematika">Matematika</option>
-              <option value="IPA Biologi">IPA Biologi</option>
               <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-              <option value="Informatika">Informatika</option>
-              <option value="Umum">Umum</option>
+              <option value="Bahasa Inggris">Bahasa Inggris</option>
+              <option value="IPA">IPA</option>
+              <option value="IPS">IPS</option>
+              <option value="PPKN">PPKN</option>
+              <option value="PJOK">PJOK</option>
+              <option value="SENI">SENI</option>
+              <option value="AGAMA">AGAMA</option>
             </select>
           </div>
           <textarea

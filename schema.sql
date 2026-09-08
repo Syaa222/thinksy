@@ -100,6 +100,8 @@ CREATE TABLE anggota_kelas (
 CREATE TABLE bab (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sekolah_id  UUID REFERENCES sekolah(id) ON DELETE CASCADE,
+  mapel       TEXT,
+  kelas       INT,
   judul       TEXT NOT NULL,
   deskripsi   TEXT,
   urutan      INT NOT NULL DEFAULT 1,

@@ -26,6 +26,7 @@ import {
   Sliders,
   Menu,
   GraduationCap,
+  Clock,
 } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
@@ -197,6 +198,12 @@ export default function GuruLayout({ children, userProfile }: GuruLayoutProps) {
       href: "/guru/siswa",
       icon: Users,
       active: pathname.startsWith("/guru/siswa"),
+    },
+    {
+      label: "Ujian & Asesmen",
+      href: "/guru/ujian",
+      icon: Clock,
+      active: pathname.startsWith("/guru/ujian"),
     },
     {
       label: "Bank Soal Manual",

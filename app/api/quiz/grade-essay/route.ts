@@ -127,23 +127,28 @@ export async function POST(req: Request) {
           isBenar = false;
           umpanBalik = "Jawaban esai kosong.";
         } else if (geminiApiKey) {
-          const evalPrompt = `Kamu adalah Penilai/Evaluator Otomatis Esai Matematika SMP Kelas 8.
-Tugasmu adalah memberikan evaluasi yang objektif, akurat, dan konstruktif.
+          const evalPrompt = `Kamu adalah Penilai/Evaluator Otomatis Esai Pembelajaran SMP Kelas 8 berprinsip Sokratik dan Pedagogis.
+Tugasmu adalah memberikan evaluasi yang objektif, akurat, mendalam, dan konstruktif untuk memacu daya nalar siswa.
 
 SOAL ESAI:
 ${soalData.pertanyaan}
 
 KUNCI JAWABAN / RUBRIK:
-${soalData.kunci_jawaban || "Jelaskan konsep dengan rinci."}
+${soalData.kunci_jawaban || "Jelaskan konsep dengan rinci dan logis."}
 
 JAWABAN SISWA:
 ${trimmedJawaban}
+
+PEDOMAN UMPAN BALIK SOKRATIK (umpanBalik):
+1. Apresiasi logika dan konsep yang sudah berhasil dijelaskan siswa dengan baik.
+2. Jika ada bagian yang kurang lengkap atau keliru, jangan hanya memvonis salah, melainkan berikan petunjuk/pertanyaan reflektif yang merangsang siswa untuk memikirkan bagian yang belum lengkap tersebut.
+3. Gunakan bahasa yang memotivasi dan ramah khas guru pembimbing.
 
 WAJIB MENGEMBALIKAN FORMAT JSON SAJA (TANPA TEKS LAIN):
 {
   "nilai": <angka bulat 0 hingga 100>,
   "kemiripanKonsep": "<misal: 85%>",
-  "umpanBalik": "<umpan balik konstruktif ringkas dalam Bahasa Indonesia>",
+  "umpanBalik": "<umpan balik sokratik dan konstruktif dalam Bahasa Indonesia>",
   "isBenar": <true jika nilai >= 70 else false>
 }`;
 

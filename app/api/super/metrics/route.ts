@@ -110,6 +110,22 @@ export async function GET(request: Request) {
       };
     });
 
+    // 5. Ambil 15 log audit terbaru
+    const { data: auditLogs } = await supabase
+      .from("audit_log")
+      .select(`
+        id,
+        actor_id,
+        role,
+        aksi,
+        target_resource,
+        detail,
+        dibuat_pada,
+        actor:actor_id ( nama_lengkap, email )
+      `)
+      .order("dibuat_pada", { ascending: false })
+      .limit(15);
+
     return NextResponse.json({
       success: true,
       metrics: {
@@ -120,6 +136,7 @@ export async function GET(request: Request) {
         totalKelas: totalKelas || 0,
         totalBiayaUSD: totalBiaya,
         tenantBreakdown,
+        auditLogs: auditLogs || [],
       },
     });
   } catch (err: any) {

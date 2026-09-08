@@ -48,13 +48,13 @@ interface ChatSession {
 const DEFAULT_WELCOME_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
-  content: `Halo! Saya **thinksy AI Study Assistant** 🚀🤖.
+  content: `Halo! Saya **thinksy Socratic AI Tutor** 🚀🦉.
 
-Saya siap membantumu mencari informasi, menjelaskan konsep materi pelajaran, merangkum modul, serta menjawab pertanyaan akademis dan tugas sekolahmu secara lengkap!
+Saya di sini untuk mendampingimu **berpikir lebih mendalam**, membimbing penyelesaian soal secara **bertahap (*step-by-step*)**, serta membantumu memahami logika dan konsep pelajaran secara mandiri!
 
-📁 **Dukungan Dokumen & Gambar:** Kamu bisa mengunggah **Foto Soal Tugas (PNG/JPG)** atau **Dokumen PDF (Modul/Materi)** dengan mengeklik ikon klip di sebelah kolom pesan!
+📁 **Dukungan Foto Soal & PDF:** Kamu bisa mengunggah **Foto Soal Tugas** atau **Dokumen PDF Materi** dengan mengeklik ikon klip/foto di bawah. Saya akan menelaah dan memberikan petunjuk langkah awal untuk kita bedah bersama!
 
-**Ada yang ingin kamu tanyakan atau bahas hari ini?**`,
+**Ada soal atau konsep materi yang ingin kita pelajari bersama hari ini?**`,
 };
 
 interface GeneralAiChatProps {
@@ -499,7 +499,7 @@ export default function GeneralAiChat({ studentName }: GeneralAiChatProps) {
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 text-xs sm:text-sm text-slate-600 flex items-center gap-2.5 shadow-xs">
                 <Loader2 className="w-4.5 h-4.5 animate-spin text-blue-600" />
-                <span>Thinksy AI sedang membaca file & menyusun penjelasan tuntas...</span>
+                <span>Thinksy Socratic AI sedang menganalisis & menyiapkan bimbingan bertahap...</span>
               </div>
             </div>
           )}

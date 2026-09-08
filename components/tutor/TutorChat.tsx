@@ -28,7 +28,7 @@ export default function TutorChat({
       id: "welcome",
       role: "assistant",
       content:
-        "Halo! Saya **thinksy AI** 🤖. Silakan tanyakan hal yang belum kamu pahami tentang materi ini. Saya akan membantumu memahami langkah demi langkah!",
+        "Halo! Saya **thinksy Socratic AI Tutor** 🤖🦉. Ada konsep atau soal yang ingin kita bedah bersama? Saya akan membantumu menalar dan memahaminya langkah demi langkah secara mendalam!",
     },
   ]);
   const [input, setInput] = useState("");
