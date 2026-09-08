@@ -177,32 +177,6 @@ export default function TabBelajar({
             </p>
           </div>
 
-          {/* Quick Resume Card */}
-          {top3Chapters && top3Chapters.length > 0 && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/40 border border-blue-100/80 shadow-2xs">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs font-bold text-xs">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">
-                    Lanjutkan Pembelajaran Terakhir
-                  </div>
-                  <div className="text-sm font-black text-[#0F172A] line-clamp-1">
-                    {top3Chapters[0].judul}
-                  </div>
-                </div>
-              </div>
-              <Link
-                href={`/bab/${top3Chapters[0].id}`}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer hover:scale-105 shrink-0"
-              >
-                <span>Lanjut Belajar</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          )}
-
           {/* Linear Metrics Row: Progress Ring, Poin, Streak */}
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
             {/* 1. Ring Progress */}
@@ -280,6 +254,32 @@ export default function TabBelajar({
               </div>
             </div>
           </div>
+
+          {/* Quick Resume Card */}
+          {top3Chapters && top3Chapters.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/40 border border-blue-100/80 shadow-2xs">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs font-bold text-xs">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">
+                    Lanjutkan Pembelajaran Terakhir
+                  </div>
+                  <div className="text-sm font-black text-[#0F172A] line-clamp-1">
+                    {top3Chapters[0].judul}
+                  </div>
+                </div>
+              </div>
+              <Link
+                href={`/bab/${top3Chapters[0].id}`}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer hover:scale-105 shrink-0"
+              >
+                <span>Lanjut Belajar</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* CARD KANAN: Custom Calendar View (Clean, Light Theme) */}
