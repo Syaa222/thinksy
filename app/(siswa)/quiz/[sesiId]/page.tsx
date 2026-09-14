@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ExamPracticeClient from "@/components/sesi/ExamPracticeClient";
+import { generateChapterQuestions } from "@/lib/curriculum-quiz-engine";
 
 export default async function QuizPage({
   params,
@@ -24,6 +25,17 @@ export default async function QuizPage({
         .single()
     : { data: null };
 
+  // Fetch bab details if babId is present
+  let babData: { judul: string; mapel?: string; kelas?: number } | null = null;
+  if (babId) {
+    const { data: bData } = await supabase
+      .from("bab")
+      .select("id, judul, mapel, kelas")
+      .eq("id", babId)
+      .maybeSingle();
+    babData = bData;
+  }
+
   // Query real questions from secure view (without answer keys)
   let query = supabase
     .from("soal_publik")
@@ -43,24 +55,20 @@ export default async function QuizPage({
 
   const { data: dbSoalList } = await query;
 
-  const defaultSoalList = [
-    {
-      id: "d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      pertanyaan: "Diketahui barisan aritmatika $3, 7, 11, 15, \\dots$. Tentukan nilai dari suku ke-10 ($U_{10}$)!",
-      tipeSoal: "pilihan_ganda" as const,
-      opsiSoal: [
-        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11", teksOpsi: "35" },
-        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a12", teksOpsi: "39" },
-        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a13", teksOpsi: "43" },
-        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a14", teksOpsi: "47" },
-      ],
-    },
-    {
-      id: "d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a12",
-      pertanyaan: "Jelaskan perbedaan mendasar antara **Barisan Aritmatika** dan **Barisan Geometri**, serta berikan masing-masing 1 contoh!",
-      tipeSoal: "esai" as const,
-    },
-  ];
+  // Generate topic-matched fallback questions if DB has no questions yet for this chapter
+  const defaultSoalList = generateChapterQuestions(
+    babData?.judul || "Bab Pembelajaran",
+    babData?.mapel || "Matematika",
+    babData?.kelas || 8
+  ).map((q, idx) => ({
+    id: q.id || `demo-q-${idx + 1}`,
+    pertanyaan: q.pertanyaan,
+    tipeSoal: q.tipeSoal,
+    opsiSoal: q.opsiSoal?.map((o, optIdx) => ({
+      id: o.id || `opt-${idx + 1}-${optIdx + 1}`,
+      teksOpsi: o.teksOpsi,
+    })),
+  }));
 
   const formattedSoalList =
     dbSoalList && dbSoalList.length > 0
@@ -75,15 +83,19 @@ export default async function QuizPage({
         }))
       : defaultSoalList;
 
+  const sessionTitle = babData
+    ? `EVALUASI: ${babData.judul}`
+    : mode === "inclass"
+    ? "EVALUASI BAB - ASESMEN TOPIK IN-CLASS"
+    : "UJIAN AKHIR SEMESTER - PRACTICE EXAM";
+
   return (
     <ExamPracticeClient
       sesiId={sesiId}
-      mode={mode || "latihan"}
-      judulSesi={
-        mode === "inclass"
-          ? "EVALUASI BAB - ASESMEN TOPIK IN-CLASS"
-          : "UJIAN AKHIR SEMESTER - PRACTICE EXAM"
-      }
+      babId={babId}
+      mode={mode || "inclass"}
+      judulSesi={sessionTitle}
+      mapel={babData?.mapel || "Matematika"}
       soalList={formattedSoalList}
       namaSiswa={profil?.nama_lengkap ?? undefined}
     />

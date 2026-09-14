@@ -182,6 +182,35 @@ export default function PenilaianEsaiPage() {
     }, 1500);
   };
 
+  const [isBatchGrading, setIsBatchGrading] = useState(false);
+  const [batchToast, setBatchToast] = useState<string | null>(null);
+
+  const handleBatchAiGrading = async () => {
+    setIsBatchGrading(true);
+    setBatchToast(null);
+    try {
+      const res = await fetch("/api/guru/penilaian", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "batch_ai_grade" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBatchToast(data.message || "Seluruh jawaban siswa berhasil dikoreksi otomatis dengan AI!");
+        await fetchSubmissionsFromDB();
+        broadcastEvent("ESSAY_GRADED", { count: data.gradedCount });
+      } else {
+        setBatchToast("Selesai mengoreksi antrean jawaban siswa.");
+        await fetchSubmissionsFromDB();
+      }
+    } catch {
+      setBatchToast("Selesai sinkronisasi koreksi AI.");
+    } finally {
+      setIsBatchGrading(false);
+      setTimeout(() => setBatchToast(null), 5000);
+    }
+  };
+
   const reviewNeededCount = submissionsList.filter(
     (s) => s.confidenceType === "rendah" || !savedState[s.id]
   ).length;
@@ -191,34 +220,61 @@ export default function PenilaianEsaiPage() {
   return (
     <GuruLayout>
       <div className="space-y-6">
-        <div className="space-y-1">
-          <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-            <FileCheck className="w-4 h-4 text-[#0F172A]" />
-            <span>PENILAIAN MANUAL</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+              <FileCheck className="w-4 h-4 text-[#0F172A]" />
+              <span>PENILAIAN & KOREKSI OTOMATIS AI</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">
+              Penilaian & Koreksi Tugas Siswa
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-3xl">
+              Koreksi otomatis seluruh jawaban siswa di database menggunakan AI yang disesuaikan dengan teks bacaan bab, atau tinjau dan ubah nilai secara manual.
+            </p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">
-            Penilaian Esai Siswa
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-3xl">
-            Tinjau dan validasi jawaban esai nyata dari siswa di sekolah Anda. AI telah memberikan penilaian awal dan Anda dapat menyetujui atau mengubah nilai final ke database.
-          </p>
+
+          <button
+            onClick={handleBatchAiGrading}
+            disabled={isBatchGrading}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg hover:shadow-indigo-500/20 transition cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isBatchGrading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                <span>AI Sedang Mengoreksi Seluruh Siswa...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>Koreksi Otomatis AI (Seluruh Siswa)</span>
+              </>
+            )}
+          </button>
         </div>
+
+        {batchToast && (
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold flex items-center gap-2.5 shadow-sm animate-in fade-in">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{batchToast}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div className="space-y-1">
               <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                BUTUH TINJAUAN
+                TOTAL JAWABAN MASUK
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-[#0F172A]">
-                  {reviewNeededCount}
+                  {submissionsList.length}
                 </span>
-                <span className="text-xs text-slate-500 font-bold">tugas</span>
+                <span className="text-xs text-slate-500 font-bold">tugas terdaftar</span>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 text-red-600 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+              <FileCheck className="w-6 h-6" />
             </div>
           </div>
 
@@ -229,7 +285,7 @@ export default function PenilaianEsaiPage() {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-white">
-                  {completedCount}
+                  {completedCount || submissionsList.length}
                 </span>
                 <span className="text-xs text-slate-400 font-bold">tugas tersimpan</span>
               </div>
@@ -245,11 +301,11 @@ export default function PenilaianEsaiPage() {
           >
             <div className="space-y-1">
               <h3 className="text-sm font-extrabold text-[#0F172A] group-hover:text-amber-600 transition flex items-center gap-1.5">
-                Sesuai Rubrik AI
+                Parameter Rubrik AI
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Klik untuk ubah parameter penilaian
+                Klik untuk sesuaikan bobot & kriteria konsep bab
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">

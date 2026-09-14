@@ -32,6 +32,7 @@ export interface ExamResultClientProps {
   judulBab?: string;
   jenisSesi?: string;
   score?: number;
+  poinEarned?: number;
   totalQuestions?: number;
   correctCount?: number;
   incorrectCount?: number;
@@ -43,6 +44,7 @@ export default function ExamResultClient({
   judulBab = "Bab Pembelajaran",
   jenisSesi = "Latihan",
   score = 0,
+  poinEarned = 100,
   totalQuestions = 0,
   correctCount = 0,
   incorrectCount = 0,
@@ -63,10 +65,10 @@ export default function ExamResultClient({
             </div>
             <div>
               <span className="font-extrabold text-[#0F172A] block text-base tracking-tight">
-                Hasil Asesmen - Skor Akhir
+                Hasil Asesmen - Skor & Pembahasan
               </span>
               <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">
-                THINKSY Evaluation System
+                THINKSY Real-Time Evaluation
               </span>
             </div>
           </div>
@@ -83,26 +85,26 @@ export default function ExamResultClient({
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-8 space-y-8">
         {/* ========================================================= */}
-        {/* SCORE GAUGE & SUMMARY BANNER (`image_71b4df.png` Style) */}
+        {/* SCORE GAUGE & SUMMARY BANNER */}
         {/* ========================================================= */}
         <div className="glass-card rounded-3xl p-6 sm:p-8 border border-white/90 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
           <div className="space-y-3 max-w-md">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Hasil Asesmen Tuntas!</span>
+              <span>Hasil Asesmen Berhasil Disimpan!</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
               Selamat! Kamu Mencapai Skor {score}! 🎉
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Kamu berhasil menyelesaikan {totalQuestions} soal ({judulBab}) dengan baik. Tinjau kembali rincian jawaban & pembahasan di bawah untuk memperdalam pemahamanmu.
+              Kamu berhasil menyelesaikan {totalQuestions} soal topik <strong>{judulBab}</strong>. Skor & jawaban otomatis tersinkronisasi ke Dashboard Guru dan poin belajarmu telah bertambah.
             </p>
 
-            {/* Reward Points Earned */}
+            {/* Reward Points Earned Badge */}
             <div className="pt-2 flex items-center justify-center md:justify-start gap-3">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold shadow-xs">
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-extrabold shadow-sm animate-pulse">
                 <Trophy className="w-4 h-4 text-amber-600" />
-                <span>+150 Poin Diberikan</span>
+                <span>+{poinEarned} Poin Belajar Diberikan</span>
               </div>
             </div>
           </div>
@@ -205,15 +207,15 @@ export default function ExamResultClient({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={`text-[10px] font-extrabold px-3 py-1 rounded-full ${
+                        className={`text-[11px] font-extrabold px-3 py-1 rounded-full flex items-center gap-1.5 ${
                           rev.isCorrect
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            : "bg-red-100 text-red-800 border border-red-300"
                         }`}
                       >
-                        {rev.isCorrect ? "Jawaban Benar" : "Jawaban Salah"}
+                        {rev.isCorrect ? "Benar (+10 Poin)" : "Salah (0 Poin)"}
                       </span>
                       {isOpen ? (
                         <ChevronUp className="w-4 h-4 text-slate-400" />
