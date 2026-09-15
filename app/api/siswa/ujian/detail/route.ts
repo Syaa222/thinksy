@@ -98,9 +98,9 @@ export async function GET(req: Request) {
         };
       });
     } else {
-      // Fallback: Jika ujian belum memiliki relasi ujian_soal, ambil dari soal_publik yang relevan
+      // Fallback: Jika ujian belum memiliki relasi ujian_soal, ambil dari soal yang relevan
       let query = adminSupabase
-        .from("soal_publik")
+        .from("soal")
         .select(`
           id,
           pertanyaan,

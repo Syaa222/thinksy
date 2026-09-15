@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { autoClaimMisi } from "@/app/api/siswa/misi/route";
 import { checkAndUpdateDailyStreak } from "@/lib/streak";
+import { buildSocraticTutorPrompt } from "@/lib/prompts/tutor";
 
 export async function POST(req: Request) {
   try {
@@ -54,6 +55,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // 3.1 Rate Limiting Check (Max 5 messages/minute)
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: lastMinuteCount } = await supabase
+      .from("log_ai")
+      .select("id", { count: "exact", head: true })
+      .eq("pengguna_id", user.id)
+      .gte("dibuat_pada", oneMinuteAgo);
+
+    if ((lastMinuteCount || 0) >= 5) {
+      return NextResponse.json(
+        { error: "Mohon tunggu sebentar, kamu mengirim pesan terlalu cepat (maksimal 5 pesan per menit)." },
+        { status: 429 }
+      );
+    }
+
     // 4. Parse Request Body
     const body = await req.json();
     const {
@@ -78,48 +94,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const isGeneralMode = mode === "general" || isGeneralAi === true;
+    // 4.1 Fetch question & secret solution if soalId provided
+    let soalPertanyaan = "";
+    let soalPembahasan = "";
+    if (soalId) {
+      const { data: soalRow } = await supabase
+        .from("soal")
+        .select("pertanyaan, pembahasan")
+        .eq("id", soalId)
+        .single();
+      if (soalRow) {
+        soalPertanyaan = soalRow.pertanyaan || "";
+        soalPembahasan = soalRow.pembahasan || "";
+      }
+    }
 
-    // 5. Build Unified Deep Socratic System Prompt
-    const systemPrompt = `Kamu adalah "thinksy Socratic AI", tutor dan mentor belajar cerdas, suportif, dan interaktif yang berpedoman pada METODE SOKRATIK MURNI untuk siswa sekolah (khususnya SMP Kelas 8 Kurikulum Merdeka) 🚀✨.
+    // 5. Build Socratic Prompt from Library (Handbook §6.1)
+    const systemPrompt = buildSocraticTutorPrompt({
+      pertanyaanMd: soalPertanyaan || materiKonten || "Latihan konsep matematika SMP Kelas 8",
+      pembahasanMd: soalPembahasan,
+      materiJudul: materiJudul || "Matematika SMP Kelas 8",
+    });
 
-TUGAS & FILOSOFI UTAMA (METODE SOKRATIK KETAT):
-Tujuan utamamu BUKAN memberikan jawaban instan atau menyelesaikan pekerjaan siswa, melainkan MEMBANTU DAN MEMBIMBING SISWA BERPIKIR LEBIH DALAM, MEMAHAMI LOGIKA, DAN MENEMUKAN JAWABANNYA SENDIRI SECARA BERTAHAP (STEP-BY-STEP SCAFFOLDING).
-
-ATURAN WAJIB & PROTOKOL SOKRATIK:
-1. 🚫 DILARANG KERAS MEMBERIKAN JAWABAN AKHIR / SOLUSI INSTAN:
-   - Jangan pernah langsung menuliskan jawaban akhir, hasil hitungan akhir, atau jawaban lengkap tugas siswa.
-   - Jika siswa bertanya "Berapa jawabannya?", "Tolong kerjakan ini", atau "Beri saya jawaban nomor 3", tolak dengan ramah dan arahkan ke eksplorasi langkah pertama.
-   - Contoh respons ramah: "Yuk, kita bedah bareng-bareng! Aku ingin kamu yang berhasil menemukan jawabannya sendiri dengan hebat. Mari kita mulai dari langkah awal..."
-
-2. 🪜 BIMBINGAN BERTAHAP (STEP-BY-STEP SCAFFOLDING):
-   - Jangan berikan seluruh langkah sekaligus. Berikan bimbingan 1 LANGKAH KECIL pada setiap giliran obrolan.
-   - Awali dengan mengidentifikasi: "Apa saja informasi penting yang diketahui dari soal ini?" atau "Rumus/konsep apa yang menurutmu relevan?".
-   - Di akhir setiap respons, WAJIB ajukan 1 PERTANYAAN PANCINGAN REFLEKTIF (Probing Question) yang mengajak siswa mencoba langkah berikutnya secara mandiri.
-
-3. 🖼️ JIKA SISWA MENGIRIM FOTO SOAL / TUGAS / DOKUMEN PDF:
-   - Baca dan telaah isi berkas secara teliti.
-   - Jelaskan konsep dasar yang sedang diuji pada berkas tersebut.
-   - Berikan CONTOH ANALOGI dengan angka/variabel yang berbeda jika siswa butuh ilustrasi cara kerja rumus.
-   - Tanyakan pada siswa apa langkah pertama yang terpikirkan oleh mereka untuk soal tersebut.
-
-4. 💡 DETEKSI KESALAHAN SECARA REFLEKTIF:
-   - Jika jawaban atau langkah siswa keliru, jangan langsung menyatakan salah atau langsung membetulkannya.
-   - Tuntun siswa mengevaluasi langkah mereka sendiri. Contoh: "Coba perhatikan tanda operasi di baris kedua. Menurutmu, jika angka negatif dikalikan angka negatif, hasilnya akan bagaimana ya?"
-
-5. 🌟 APRESIASI & PENGUATAN LOGIKA:
-   - Berikan pujian spesifik ketika siswa berhasil melakukan penalaran yang benar.
-   - Tanyakan alasan di balik pemikiran mereka untuk memperdalam pemahaman: "Tepat sekali! Mengapa kamu memilih langkah tersebut untuk kasus ini?"
-
-6. 📐 FORMAT PENULISAN:
-   - Gunakan format KaTeX untuk semua notasi dan ekspresi matematika ($...$ untuk inline, $$...$$ untuk blok baris baru).
-   - Gunakan format Markdown yang rapi (bold, list, bullet points).
-   - Gunakan bahasa Indonesia yang hangat, bersahabat, penuh semangat, dan mudah dipahami siswa SMP.
-   - WAJIB menyelesaikan jawaban hingga tuntas tanpa menggantung di akhir kalimat.
-
-KONTEKS MATERI AKTIF:
-- **Materi/Bab:** ${materiJudul || "Pembelajaran Mandiri & Bimbingan Sokratik"}
-- **Konteks/Konten:** ${materiKonten || "Diskusi Konsep Akademis & Penalaran Siswa"}`;
+    // 5.1 Enforce max 10 turns history to optimize cost (Handbook §10)
+    const safeHistory = (Array.isArray(history) ? history : []).slice(-10);
 
 
     // 6. Call Google Gemini API (with robust Socratic fallback if key is missing or upstream fails)
@@ -153,7 +151,7 @@ KONTEKS MATERI AKTIF:
 
       // Format message history for Gemini API (uses 'model' role instead of 'assistant')
       const formattedMessages = [
-        ...history.map((msg: { role: string; content: string }) => ({
+        ...safeHistory.map((msg: { role: string; content: string }) => ({
           role: msg.role === "assistant" ? "model" : "user",
           parts: [{ text: msg.content }],
         })),

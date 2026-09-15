@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import StudentDashboardClient from "./StudentDashboardClient";
 import { normalizeMapel } from "@/lib/mapel";
+import { StudentDashboardProps, SekolahData, PeerStudent } from "./types";
 
 export default async function SiswaDashboardPage() {
   const supabase = await createClient();
@@ -13,7 +14,7 @@ export default async function SiswaDashboardPage() {
   } = await supabase.auth.getUser();
 
   // Default User Profile
-  let userProfile = {
+  let userProfile: StudentDashboardProps["userProfile"] = {
     nama_lengkap: "Budi Kartika",
     email: "budi.kartika@sekolah.sch.id",
     peran: "siswa",
@@ -22,10 +23,15 @@ export default async function SiswaDashboardPage() {
     rank: 3,
     totalStudents: 120,
     isCheckedIn: false,
-    checkInTime: null as string | null,
-    checkInStatus: null as string | null,
+    checkInTime: null,
+    checkInStatus: null,
     tingkat_kelas: 8,
     nama_kelas: "Kelas 8",
+    nisn: "0089247182",
+    nis: "260481",
+    jurusan: "Teknik Komputer & Jaringan",
+    tahun_ajaran: "2026/2027",
+    foto_url: null,
   };
 
   let completedQuizCount = 0;
@@ -33,16 +39,7 @@ export default async function SiswaDashboardPage() {
   let totalSoalCount = 0;
   let learningProgressPercent = 0;
 
-  let sekolahData: {
-    id: string;
-    nama: string;
-    motto?: string | null;
-    deskripsi?: string | null;
-    bg_image_url?: string | null;
-    links?: { label: string; url: string; icon?: string }[] | null;
-    alamat?: string | null;
-    npsn?: string | null;
-  } | null = null;
+  let sekolahData: SekolahData | null = null;
 
   let peerStudents: Array<{
     id: string;
@@ -55,14 +52,14 @@ export default async function SiswaDashboardPage() {
     // Get user profile data
     const { data: profil } = await supabase
       .from("profil")
-      .select("nama_lengkap, peran, poin, streak, sekolah_id")
+      .select("id, nama_lengkap, peran, poin, streak, sekolah_id, nisn, nis, jurusan, tahun_ajaran, foto_url")
       .eq("id", user.id)
       .single();
 
     if (profil?.sekolah_id) {
       const { data: sek } = await supabase
         .from("sekolah")
-        .select("id, nama, motto, deskripsi, bg_image_url, links, alamat, npsn")
+        .select("id, nama, motto, deskripsi, bg_image_url, links, alamat, npsn, jam_masuk, jam_terlambat, jam_tutup")
         .eq("id", profil.sekolah_id)
         .single();
 
@@ -85,6 +82,9 @@ export default async function SiswaDashboardPage() {
           links: parsedLinks,
           alamat: sek.alamat,
           npsn: sek.npsn,
+          jam_masuk: sek.jam_masuk || "07:00:00",
+          jam_terlambat: sek.jam_terlambat || "07:15:00",
+          jam_tutup: sek.jam_tutup || "08:00:00",
         };
       }
     }
@@ -92,14 +92,20 @@ export default async function SiswaDashboardPage() {
     const currentPoin = profil?.poin ?? 0;
     const currentStreak = profil?.streak ?? 0;
 
-    // Calculate completed quiz count (status_sesi = 'selesai')
-    const { count: quizDoneCount } = await supabase
+    // Calculate completed quiz count (sesi kuis/latihan + sesi_ujian resmi)
+    const { count: quizDoneCount } = await adminSupabase
       .from("sesi")
       .select("id", { count: "exact", head: true })
       .eq("siswa_id", user.id)
       .eq("status_sesi", "selesai");
 
-    completedQuizCount = quizDoneCount || 0;
+    const { count: ujianDoneCount } = await adminSupabase
+      .from("sesi_ujian")
+      .select("id", { count: "exact", head: true })
+      .eq("siswa_id", user.id)
+      .eq("status", "selesai");
+
+    completedQuizCount = (quizDoneCount || 0) + (ujianDoneCount || 0);
 
     // Calculate dynamic student rank among ALL users with peran = 'siswa' sorted by learning points
     let { data: allStudents } = await adminSupabase
@@ -167,7 +173,18 @@ export default async function SiswaDashboardPage() {
       .select("soal_id, sesi!inner(siswa_id)")
       .eq("sesi.siswa_id", user.id);
 
-    const answeredSet = new Set(answeredRows?.map((r: any) => r.soal_id));
+    const { data: answeredUjianRows } = await adminSupabase
+      .from("jawaban_ujian")
+      .select("soal_id, sesi_ujian!inner(siswa_id)")
+      .eq("sesi_ujian.siswa_id", user.id);
+
+    const answeredSet = new Set<string>();
+    answeredRows?.forEach((r: any) => {
+      if (r.soal_id) answeredSet.add(r.soal_id);
+    });
+    answeredUjianRows?.forEach((r: any) => {
+      if (r.soal_id) answeredSet.add(r.soal_id);
+    });
     answeredSoalCount = answeredSet.size;
 
     if (totalSoalCount > 0) {
@@ -243,14 +260,19 @@ export default async function SiswaDashboardPage() {
       checkInStatus,
       tingkat_kelas: userTingkatKelas,
       nama_kelas: userNamaKelas,
+      nisn: profil?.nisn || "0089247182",
+      nis: profil?.nis || "260481",
+      jurusan: profil?.jurusan || "Teknik Komputer & Jaringan",
+      tahun_ajaran: profil?.tahun_ajaran || "2026/2027",
+      foto_url: profil?.foto_url || null,
     };
   }
 
   // 2. Fetch Jadwal Kelas Pelajaran Mingguan
   let schedules = [
-    { id: "s1", subject: "Matematika", teacher: "Ibu Siti Rahmawati, S.Pd.", day: "Senin", time: "08:00 - 09:30 WIB", room: "Ruang 8A" },
-    { id: "s2", subject: "Matematika", teacher: "Budi Santoso, S.Pd.", day: "Rabu", time: "10:00 - 11:30 WIB", room: "Ruang 8A" },
-    { id: "s3", subject: "Matematika (AI Sokratik)", teacher: "thinksy AI Tutor", day: "Jumat", time: "08:00 - 09:30 WIB", room: "Lab Komputer" },
+    { id: "s1", subject: "Matematika", teacher: "Ibu Siti Rahmawati, M.Pd.", day: "Senin", time: "08:00 - 09:30 WIB", room: "Ruang 8A" },
+    { id: "s2", subject: "Bahasa Inggris", teacher: "Budi Santoso, S.Pd.", day: "Rabu", time: "10:00 - 11:30 WIB", room: "Ruang 8A" },
+    { id: "s3", subject: "Bahasa Indonesia", teacher: "Dra. Nurul Hidayah", day: "Jumat", time: "08:00 - 09:30 WIB", room: "Lab Bahasa" },
   ];
 
   const { data: dbSchedules } = await supabase
@@ -269,7 +291,7 @@ export default async function SiswaDashboardPage() {
     }));
   }
 
-  // 3. Fetch List of Chapters (Bab) and Compute Real Per-Chapter Progress
+  // 3. Fetch List of Chapters (Bab) with Semester and Compute Real Progress
   const { data: listBab } = await supabase
     .from("bab")
     .select(
@@ -280,6 +302,7 @@ export default async function SiswaDashboardPage() {
       urutan,
       mapel,
       kelas,
+      semester,
       materi (
         id,
         judul,
@@ -297,6 +320,7 @@ export default async function SiswaDashboardPage() {
     urutan: number;
     mapel?: string | null;
     kelas?: number | null;
+    semester?: number | null;
     progress: number;
     materi?: Array<{ id: string; judul: string; urutan: number }>;
   }> = [];
@@ -337,9 +361,75 @@ export default async function SiswaDashboardPage() {
         deskripsi: ch.deskripsi,
         urutan: ch.urutan || 1,
         mapel: normalizeMapel(ch.mapel),
-        kelas: ch.kelas || 7,
+        kelas: ch.kelas || 8,
+        semester: ch.semester || (ch.urutan <= 3 ? 1 : 2),
         progress,
         materi: ch.materi,
+      };
+    });
+  }
+
+  // 4. Fetch Agenda Akademik Kalender dari Supabase
+  let agendasData: any[] = [];
+  const { data: dbAgendas } = await supabase
+    .from("agenda_akademik")
+    .select("*")
+    .order("tanggal", { ascending: true });
+
+  if (dbAgendas) {
+    agendasData = dbAgendas.map((a: any) => ({
+      id: a.id,
+      judul: a.judul,
+      deskripsi: a.deskripsi,
+      kategori: a.kategori || "agenda",
+      tanggal: a.tanggal,
+      jam_mulai: a.jam_mulai,
+      jam_selesai: a.jam_selesai,
+      lokasi: a.lokasi,
+    }));
+  }
+
+  // 5. Fetch Ujian & Ulangan untuk Section "AKU LULUS"
+  let examsData: any[] = [];
+  const { data: dbExams } = await adminSupabase
+    .from("ujian")
+    .select(`
+      id,
+      judul,
+      deskripsi,
+      mapel,
+      durasi_menit,
+      passing_grade,
+      waktu_mulai,
+      waktu_berakhir,
+      status,
+      tipe
+    `)
+    .order("waktu_mulai", { ascending: false });
+
+  let userExamSessions: Record<string, any> = {};
+  if (user) {
+    const { data: sesiList } = await adminSupabase
+      .from("sesi_ujian")
+      .select("id, ujian_id, status, nilai_akhir")
+      .eq("siswa_id", user.id);
+
+    if (sesiList) {
+      sesiList.forEach((s: any) => {
+        userExamSessions[s.ujian_id] = s;
+      });
+    }
+  }
+
+  if (dbExams) {
+    examsData = dbExams.map((e: any) => {
+      const s = userExamSessions[e.id];
+      return {
+        ...e,
+        tipe: e.tipe || "ujian",
+        sessionStatus: s?.status || "belum_mulai",
+        score: s?.nilai_akhir ?? null,
+        sesiId: s?.id,
       };
     });
   }
@@ -356,20 +446,23 @@ export default async function SiswaDashboardPage() {
     ];
   }
 
-  if (!user && !sekolahData) {
+  if (!sekolahData) {
     sekolahData = {
       id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      nama: "SMK Muhammadiyah 1 Playen",
+      nama: "SMK Muhammadiyah Pakem",
       npsn: "20402099",
-      alamat: "Jl. Logandeng No. 1, Playen, Gunungkidul, D.I. Yogyakarta",
-      motto: "Pusat Keunggulan • Unggul, Terampil, Berkarakter & Berdaya Saing Global",
-      deskripsi: "SMK Muhammadiyah 1 Playen (Muspla) adalah Sekolah Pusat Keunggulan yang berkomitmen mencetak generasi muda yang cerdas, beriman, dan menguasai teknologi serta keahlian industri masa depan.",
-      bg_image_url: "/images/smk-muh1-playen.jpg",
+      alamat: "Jl. Pakem - Turi No.23, Area Sawah, Pakembinangun, Kec. Pakem, Kab. Sleman, D.I. Yogyakarta",
+      motto: "Pusat Keunggulan & Pesantren Vokasi • Bahagia Bersama",
+      deskripsi: "SMK Muhammadiyah Pakem (MUPA) merupakan Sekolah Pusat Keunggulan dan Sekolah yang mengusung konsep Pesantren Vokasi dengan jurusan unggulan berstandar industri dan teknologi modern.",
+      bg_image_url: "/images/smk-muh-pakem.png",
       links: [
-        { label: "Website Resmi", url: "https://smkmuh1playen.sch.id", icon: "Globe" },
-        { label: "Portal PPDB", url: "https://ppdb.smkmuh1playen.sch.id", icon: "ExternalLink" },
-        { label: "Instagram", url: "https://instagram.com/smkmuh1playen", icon: "Instagram" }
-      ]
+        { label: "Website Resmi", url: "https://smkmuhpakem.sch.id/#", icon: "Globe" },
+        { label: "Portal SPMB", url: "https://smkmuhpakem.sch.id/ppdb/", icon: "ExternalLink" },
+        { label: "Instagram", url: "https://www.instagram.com/smkmuhpakem/?hl=id", icon: "Instagram" },
+      ],
+      jam_masuk: "07:00:00",
+      jam_terlambat: "07:15:00",
+      jam_tutup: "08:00:00",
     };
   }
 
@@ -380,6 +473,8 @@ export default async function SiswaDashboardPage() {
       schedulesData={schedules}
       chapters={chaptersWithProgress}
       peerStudents={peerStudents}
+      agendasData={agendasData}
+      examsData={examsData}
       completedQuizCount={completedQuizCount}
       answeredSoalCount={answeredSoalCount}
       totalSoalCount={totalSoalCount}
@@ -387,3 +482,4 @@ export default async function SiswaDashboardPage() {
     />
   );
 }
+

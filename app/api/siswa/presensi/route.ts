@@ -59,13 +59,34 @@ export async function POST(request: Request) {
 
     const minutesTotal = hour * 60 + minute;
 
-    // ─── ATURAN WAKTU PRESENSI ───────────────────────────────────────────────
-    // 1. > 08.00 WIB (> 480 menit): Presensi Ditutup, Status Alpha
-    if (minutesTotal > 480) {
+    // ─── AMBIL PENGATURAN BATAS WAKTU SEKOLAH SECARA DINAMIS DARI SUPABASE ───
+    let jamMasukStr = "07:15";
+    let jamTutupStr = "08:00";
+
+    const { data: profilSekolah } = await supabase
+      .from("profil")
+      .select("sekolah_id, sekolah (jam_masuk, jam_terlambat, jam_tutup)")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const sekolahInfo = profilSekolah?.sekolah as any;
+    if (sekolahInfo?.jam_masuk) jamMasukStr = sekolahInfo.jam_masuk.substring(0, 5);
+    if (sekolahInfo?.jam_tutup) jamTutupStr = sekolahInfo.jam_tutup.substring(0, 5);
+
+    const parseMinutes = (timeStr: string) => {
+      const [h, m] = timeStr.split(":").map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const maxCutoffMinutes = parseMinutes(jamTutupStr);
+    const lateThresholdMinutes = parseMinutes(jamMasukStr);
+
+    // ─── ATURAN WAKTU PRESENSI DINAMIS ───────────────────────────────────────
+    // 1. > Batas Jam Tutup (default > 08.00 WIB): Presensi Ditutup, Status Alpha
+    if (minutesTotal > maxCutoffMinutes) {
       return NextResponse.json(
         {
-          error:
-            "Presensi telah ditutup (Pukul >08.00 WIB). Status kehadiran Anda tercatat Alpha. Silakan hubungi wali kelas Anda untuk konfirmasi/perubahan status.",
+          error: `Presensi telah ditutup (Pukul >${jamTutupStr} WIB). Status kehadiran Anda tercatat Alpha. Silakan hubungi wali kelas Anda untuk konfirmasi/perubahan status.`,
           status: "Alpha",
           isClosed: true,
           time: formattedTime,
@@ -74,9 +95,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. 07.16 - 08.00 WIB (436 - 480 menit): Terlambat (+3 Poin)
-    // 3. 06.00 - 07.15 WIB (<= 435 menit): Hadir Tepat Waktu (+10 Poin)
-    const isLate = minutesTotal > 435;
+    // 2. > Batas Jam Masuk (default > 07.15 WIB): Terlambat (+3 Poin)
+    // 3. <= Batas Jam Masuk: Hadir Tepat Waktu (+10 Poin)
+    const isLate = minutesTotal > lateThresholdMinutes;
     const statusKehadiran = isLate ? "Terlambat" : "Hadir (Tepat Waktu)";
     const poinReward = isLate ? 3 : 10;
 

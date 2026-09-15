@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkAndUpdateDailyStreak } from "@/lib/streak";
+import { buildEssayEvaluationPrompt } from "@/lib/prompts/nilai-esai";
 
 export async function POST(req: Request) {
   try {
@@ -147,24 +148,17 @@ export async function POST(req: Request) {
           isBenar = false;
           umpanBalik = "❌ **Analisis Evaluasi AI:** Jawaban esai kosong (0 Poin).";
         } else if (geminiApiKey) {
-          const evalPrompt = `Kamu adalah Penilai/Evaluator Otomatis Esai Pembelajaran SMP berprinsip Sokratik dan Pedagogis.
-Beri skor dari 0 sampai 10 (angka bulat) berdasarkan ketepatan konsep.
-
-SOAL ESAI:
-${soalData.pertanyaan}
-
-KUNCI JAWABAN / RUBRIK:
-${soalData.kunci_jawaban || "Jelaskan konsep dengan rinci dan logis."}
-
-JAWABAN SISWA:
-${trimmedJawaban}
-
-WAJIB MENGEMBALIKAN FORMAT JSON:
-{
-  "nilai": <angka bulat 0 hingga 10>,
-  "isBenar": <true jika nilai >= 7 else false>,
-  "umpanBalik": "<analisis singkat dan umpan balik sokratik dalam Bahasa Indonesia>"
-}`;
+          const evalPrompt = buildEssayEvaluationPrompt({
+            pertanyaan: soalData.pertanyaan,
+            rubrikJson: [
+              { kriteria: "Pemahaman Konsep", bobot: 40 },
+              { kriteria: "Ketepatan Langkah & Perhitungan", bobot: 35 },
+              { kriteria: "Kejelasan Jawaban", bobot: 25 },
+            ],
+            kunciJawaban: soalData.kunci_jawaban,
+            pembahasan: soalData.pembahasan,
+            jawabanSiswa: trimmedJawaban,
+          });
 
           try {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiApiKey}`;
@@ -185,9 +179,12 @@ WAJIB MENGEMBALIKAN FORMAT JSON:
               const responseData = await apiResponse.json();
               const rawText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
               const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
-              nilai = Math.min(10, Math.max(0, typeof parsed.nilai === "number" ? parsed.nilai : 0));
+              const rawScore = typeof parsed.skor_total === "number" ? parsed.skor_total : parsed.nilai;
+              nilai = Math.min(10, Math.max(0, typeof rawScore === "number" ? (rawScore > 10 ? Math.round(rawScore / 10) : rawScore) : 0));
               isBenar = typeof parsed.isBenar === "boolean" ? parsed.isBenar : nilai >= 7;
-              umpanBalik = parsed.umpanBalik || "Evaluasi esai selesai.";
+              const confidence = parsed.keyakinan || "sedang";
+              const tag = confidence === "rendah" ? " ⚠️ (Perlu Review Guru)" : "";
+              umpanBalik = (parsed.umpan_balik || parsed.umpanBalik || "Evaluasi esai selesai.") + tag;
             }
           } catch (e) {
             console.error("Error calling Gemini for essay grading:", e);

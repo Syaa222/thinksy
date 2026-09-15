@@ -250,6 +250,48 @@ export async function GET() {
     // Ambil atau buat misi harian
     let missions = await ensureDailyMissions(adminDb, user.id, todayWIB);
 
+    // ── AUTO-CLAIM DALAM 24 JAM: Jika siswa tidak klaim manual, sistem otomatis mengklaim ──
+    const { data: unclaimedPastMissions } = await adminDb
+      .from("misi_harian")
+      .select("id, judul, poin_hadiah, progres_saat_ini, target_max, tanggal")
+      .eq("siswa_id", user.id)
+      .lt("tanggal", todayWIB)
+      .eq("diklaim", false);
+
+    if (unclaimedPastMissions && unclaimedPastMissions.length > 0) {
+      for (const pastM of unclaimedPastMissions) {
+        if (Number(pastM.progres_saat_ini) >= Number(pastM.target_max)) {
+          // Tandai diklaim
+          await adminDb
+            .from("misi_harian")
+            .update({ diklaim: true })
+            .eq("id", pastM.id);
+
+          const pts = Number(pastM.poin_hadiah) || 20;
+          try {
+            await adminDb.rpc("tambah_poin_siswa", {
+              p_siswa_id: user.id,
+              p_poin_ditambahkan: pts,
+            });
+          } catch {
+            const { data: p } = await adminDb.from("profil").select("poin").eq("id", user.id).single();
+            await adminDb.from("profil").update({ poin: (p?.poin || 0) + pts }).eq("id", user.id);
+          }
+
+          // Catat notifikasi bahwa misi terklaim otomatis 24 jam
+          try {
+            await adminDb.from("notifikasi").insert({
+              user_id: user.id,
+              judul: "Misi Harian Terklaim Otomatis (24 Jam) 🎉",
+              pesan: `Misi "${pastM.judul}" otomatis diklaim setelah 24 jam. +${pts} Poin telah ditambahkan ke akun Anda.`,
+              tipe: "info",
+              dibaca: false,
+            });
+          } catch {}
+        }
+      }
+    }
+
     // Sync progres untuk misi yang belum diklaim
     // (dalam kasus sudah ada misi tapi progres belum terupdate)
     for (const m of missions) {

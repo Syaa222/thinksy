@@ -38,7 +38,65 @@ export default async function DetailUjianPage({
     notFound();
   }
 
-  // 2. Ambil soal-soal ujian
+  // Security Check: Verify user role and exam status
+  const { data: userProfil } = await adminSupabase
+    .from("profil")
+    .select("peran")
+    .eq("id", user?.id || "")
+    .maybeSingle();
+
+  const isStaff = ["guru", "admin_sekolah", "superadmin"].includes(userProfil?.peran || "");
+  const now = new Date();
+  const startTime = new Date(ujian.waktu_mulai);
+  const endTime = new Date(ujian.waktu_berakhir);
+  const isTimeAvailable = now >= startTime && now <= endTime;
+  const isAvailable = ujian.status === "dipublikasi" && isTimeAvailable;
+
+  // Block unauthorized direct URL access if exam is not active
+  if (!isAvailable && !isStaff) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
+            🔒
+          </div>
+          <div className="space-y-2">
+            <span className="inline-block px-3 py-1 rounded-full bg-red-50 text-red-600 border border-red-200 text-xs font-black uppercase tracking-wider">
+              Akses Dibatasi
+            </span>
+            <h2 className="text-xl font-black text-[#0F172A]">
+              Ujian Belum Tersedia
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Ujian/Ulangan <strong>&quot;{ujian.judul}&quot;</strong> belum dibuka oleh Guru pengampu atau waktu pengerjaan telah berakhir. Akses langsung melalui URL dinonaktifkan demi integritas ujian.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Status Server:</span>
+              <span className="font-bold text-slate-800 uppercase">{ujian.status === 'dipublikasi' ? 'Menunggu Jadwal' : 'Ditutup'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Mulai:</span>
+              <span className="font-bold text-slate-800">{startTime.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} WIB</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Selesai:</span>
+              <span className="font-bold text-slate-800">{endTime.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} WIB</span>
+            </div>
+          </div>
+
+          <a
+            href="/"
+            className="block w-full py-3 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+          >
+            ← Kembali ke Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
   const { data: ujianSoalList } = await adminSupabase
     .from("ujian_soal")
     .select(`
@@ -89,9 +147,9 @@ export default async function DetailUjianPage({
       };
     });
   } else {
-    // Fallback dari soal_publik
+    // Fallback dari tabel soal
     let query = adminSupabase
-      .from("soal_publik")
+      .from("soal")
       .select(`
         id,
         pertanyaan,

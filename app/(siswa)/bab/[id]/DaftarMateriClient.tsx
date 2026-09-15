@@ -119,6 +119,44 @@ export default function DaftarMateriClient({
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Supabase Reading Progress State
+  const [readMateriIds, setReadMateriIds] = useState<Set<string>>(new Set());
+  const [markingMateriId, setMarkingMateriId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProgress() {
+      try {
+        const res = await fetch(`/api/siswa/materi/progress?babId=${babId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const set = new Set<string>((data.progress || []).map((p: any) => p.materi_id));
+          setReadMateriIds(set);
+        }
+      } catch {}
+    }
+    loadProgress();
+  }, [babId]);
+
+  const handleMarkComplete = async (materiId: string) => {
+    setMarkingMateriId(materiId);
+    try {
+      const res = await fetch("/api/siswa/materi/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ babId, materiId, status: "selesai" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReadMateriIds((prev) => new Set([...prev, materiId]));
+        showToast(data.message || "Materi berhasil ditandai selesai! (+5 Poin)");
+      }
+    } catch {
+      showToast("Gagal menyimpan progres");
+    } finally {
+      setMarkingMateriId(null);
+    }
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -640,8 +678,30 @@ export default function DaftarMateriClient({
                     </div>
 
                     {/* Section Footer */}
-                    <div className="mt-8 pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-xs text-slate-400">
-                      <span>Bagian {idx + 1} Selesai</span>
+                    <div className="mt-8 pt-4 border-t border-black/5 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold">Bagian {idx + 1} dari {listMateri.length}</span>
+                        {readMateriIds.has(mod.id) ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold text-xs">
+                            <Check className="w-3.5 h-3.5" />
+                            Selesai Dibaca
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleMarkComplete(mod.id)}
+                            disabled={markingMateriId === mod.id}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition shadow-xs cursor-pointer disabled:opacity-50"
+                          >
+                            {markingMateriId === mod.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                            <span>Tandai Selesai Dibaca (+5 Poin)</span>
+                          </button>
+                        )}
+                      </div>
+
                       <a
                         href="#subbab-1"
                         className="hover:text-blue-600 transition flex items-center gap-1 font-bold"

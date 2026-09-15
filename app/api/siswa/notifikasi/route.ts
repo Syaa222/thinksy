@@ -16,7 +16,7 @@ export async function GET() {
 
     const { data: dbNotif, error } = await supabase
       .from("notifikasi")
-      .select("id, judul, pesan, tipe, dibaca, dibuat_pada")
+      .select("id, judul, pesan, tipe, dibaca, dibuat_pada, link_url")
       .eq("user_id", user.id)
       .order("dibuat_pada", { ascending: false })
       .limit(20);
@@ -39,6 +39,7 @@ export async function GET() {
         time: `${timeStr} WIB`,
         type: n.tipe || "info",
         dibaca: n.dibaca,
+        link_url: n.link_url || null,
       };
     });
 
@@ -96,14 +97,16 @@ async function handleUpdateNotification(request: Request) {
 
     // Action: Create new notification log
     if (judul && pesan) {
-      const { data: newNotif, error } = await supabase
+      const recipientId = body.target_user_id || user.id;
+      const { data: newNotif, error } = await adminDb
         .from("notifikasi")
         .insert({
-          user_id: user.id,
+          user_id: recipientId,
           judul,
           pesan,
           tipe: tipe || "info",
           dibaca: false,
+          link_url: body.link_url || null,
         })
         .select()
         .single();

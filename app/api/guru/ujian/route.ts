@@ -21,7 +21,7 @@ export async function GET() {
       .eq("id", user.id)
       .single();
 
-    if (!profil || !["guru", "admin_sekolah", "super_admin"].includes(profil.peran)) {
+    if (!profil || !["guru", "admin_sekolah", "super_admin", "superadmin"].includes(profil.peran)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -191,6 +191,59 @@ export async function POST(req: Request) {
       success: true,
       ujian: newUjian,
       message: "Ujian berhasil dibuat dan dipublikasikan!",
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profil } = await adminSupabase
+      .from("profil")
+      .select("id, peran")
+      .eq("id", user.id)
+      .single();
+
+    if (!profil || !["guru", "admin_sekolah", "super_admin", "superadmin"].includes(profil.peran)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { ujianId, status, waktuMulai, waktuBerakhir } = body;
+
+    if (!ujianId) {
+      return NextResponse.json({ error: "ujianId wajib diisi" }, { status: 400 });
+    }
+
+    const updatePayload: any = {};
+    if (status) updatePayload.status = status;
+    if (waktuMulai) updatePayload.waktu_mulai = new Date(waktuMulai).toISOString();
+    if (waktuBerakhir) updatePayload.waktu_berakhir = new Date(waktuBerakhir).toISOString();
+
+    const { data, error } = await adminSupabase
+      .from("ujian")
+      .update(updatePayload)
+      .eq("id", ujianId)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      ujian: data,
+      message: `Status ujian berhasil diubah menjadi ${status === "dipublikasi" ? "Dibuka (Aktif)" : "Ditutup"}!`,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -32,6 +32,8 @@ import StudentProfileModal from "./components/modals/StudentProfileModal";
 import SettingsModal from "./components/modals/SettingsModal";
 import HelpCenterModal from "./components/modals/HelpCenterModal";
 import ToastNotification from "./components/modals/ToastNotification";
+import GamesHubModal from "@/components/game/GamesHubModal";
+import UnifiedGlobalChatModal from "@/components/chat/UnifiedGlobalChatModal";
 
 export default function StudentDashboardClient({
   userProfile,
@@ -39,15 +41,17 @@ export default function StudentDashboardClient({
   schedulesData,
   chapters = [],
   peerStudents = [],
-  completedQuizCount = 0,
-  answeredSoalCount = 0,
+  agendasData = [],
+  examsData = [],
+  completedQuizCount: initialCompletedQuizCount = 0,
+  answeredSoalCount: initialAnsweredSoalCount = 0,
   totalSoalCount = 10,
   learningProgressPercent = 0,
 }: StudentDashboardProps) {
   // Navigation Tabs State
   const [activeTab, setActiveTab] = useState<
-    "Belajar" | "Ruang Belajar" | "Peringkat" | "Pencapaian"
-  >("Belajar");
+    "Home" | "Belajar" | "Ruang Ujian" | "Peringkat" | "Pencapaian"
+  >("Home");
 
   // UI Preferences & Themes
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -56,6 +60,14 @@ export default function StudentDashboardClient({
   // User Gamification State
   const [learningPoints, setLearningPoints] = useState(userProfile?.poin ?? 0);
   const [dailyStreak, setDailyStreak] = useState(userProfile?.streak ?? 0);
+  const [completedQuizCount, setCompletedQuizCount] = useState(
+    initialCompletedQuizCount || 0
+  );
+  const [answeredSoalCount, setAnsweredSoalCount] = useState(
+    initialAnsweredSoalCount || 0
+  );
+  const [pencapaianBadges, setPencapaianBadges] = useState<any[]>([]);
+  const [isLoadingPencapaian, setIsLoadingPencapaian] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(userProfile?.isCheckedIn || false);
   const [checkInTime, setCheckInTime] = useState<string | null>(
     userProfile?.checkInTime || null
@@ -67,7 +79,7 @@ export default function StudentDashboardClient({
   // Modals Visibility State
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
-  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
+  const [isGamesModalOpen, setIsGamesModalOpen] = useState(false);
   const [isGlobalChatOpen, setIsGlobalChatOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -80,6 +92,46 @@ export default function StudentDashboardClient({
   // Toast Notification State
   const [toastNotification, setToastNotification] =
     useState<ToastNotificationData | null>(null);
+
+  // Realtime Sync Listener for Student
+  useRealtimeDashboard((event) => {
+    if (event.type === "ATTENDANCE_VERIFIED" || event.type === "ATTENDANCE_CHECKIN") {
+      setIsCheckedIn(true);
+      setCheckInStatus(event.payload?.status || "Hadir (Terverifikasi)");
+      if (event.payload?.waktu_masuk) {
+        setCheckInTime(
+          new Date(event.payload.waktu_masuk).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }) + " WIB"
+        );
+      }
+      setToastNotification({
+        show: true,
+        title: "Presensi Terverifikasi 🎉",
+        message: "Kehadiran Anda telah disetujui resmi oleh Guru di dashboard!",
+        time: "Baru saja",
+        type: "success",
+      });
+    } else if (event.type === "ESSAY_GRADED") {
+      setLearningPoints((prev) => prev + 20);
+      setToastNotification({
+        show: true,
+        title: "Nilai Tugas Diverifikasi Guru 📝",
+        message: "Guru telah memeriksa jawaban tugas Anda! Poin bertambah +20.",
+        time: "Baru saja",
+        type: "success",
+      });
+    } else if (event.type === "SOAL_PUBLISHED") {
+      setToastNotification({
+        show: true,
+        title: "Soal Latihan Baru Diterbitkan! ✨",
+        message: "Guru baru saja menambahkan soal latihan baru di Bank Soal.",
+        time: "Baru saja",
+        type: "info",
+      });
+    }
+  });
 
   // Notes State
   const [notes, setNotes] = useState<NoteItem[]>([
@@ -214,10 +266,20 @@ export default function StudentDashboardClient({
     fetchPresensiStatus();
     fetchNotifications();
     fetchLeaderboard();
+    fetchPencapaian();
     fetchMissions();
     fetchNotes();
     fetchGlobalChat();
   }, []);
+
+  // Auto-refresh leaderboard & pencapaian when student navigates to those tabs
+  useEffect(() => {
+    if (activeTab === "Peringkat") {
+      fetchLeaderboard();
+    } else if (activeTab === "Pencapaian") {
+      fetchPencapaian();
+    }
+  }, [activeTab]);
 
   // Data Fetchers
   const fetchPresensiStatus = async () => {
@@ -259,6 +321,35 @@ export default function StudentDashboardClient({
       }
     } catch {} finally {
       setIsLoadingLeaderboard(false);
+    }
+  };
+
+  const fetchPencapaian = async () => {
+    setIsLoadingPencapaian(true);
+    try {
+      const res = await fetch("/api/siswa/pencapaian");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.stats) {
+          if (typeof data.stats.learningPoints === "number") {
+            setLearningPoints(data.stats.learningPoints);
+          }
+          if (typeof data.stats.dailyStreak === "number") {
+            setDailyStreak(data.stats.dailyStreak);
+          }
+          if (typeof data.stats.completedQuizCount === "number") {
+            setCompletedQuizCount(data.stats.completedQuizCount);
+          }
+          if (typeof data.stats.answeredSoalCount === "number") {
+            setAnsweredSoalCount(data.stats.answeredSoalCount);
+          }
+        }
+        if (Array.isArray(data.badges)) {
+          setPencapaianBadges(data.badges);
+        }
+      }
+    } catch {} finally {
+      setIsLoadingPencapaian(false);
     }
   };
 
@@ -328,8 +419,20 @@ export default function StudentDashboardClient({
 
   // Real-Time Events Hook
   const { broadcastEvent } = useRealtimeDashboard((event) => {
-    if (event.type === "SOAL_PUBLISHED" || event.type === "ESSAY_GRADED") {
+    if (event.type === "SOAL_PUBLISHED") {
       fetchNotifications();
+    } else if (event.type === "ESSAY_GRADED") {
+      fetchNotifications();
+      fetchPencapaian();
+    } else if (
+      event.type === "POINTS_UPDATED" ||
+      event.type === "ATTENDANCE_CHECKIN" ||
+      event.type === "ATTENDANCE_VERIFIED"
+    ) {
+      fetchLeaderboard();
+      fetchPencapaian();
+    } else if (event.type === "EXAM_STATUS_CHANGED") {
+      fetchPencapaian();
     } else if (event.type === "CHAT_POSTED" && event.payload?.chat) {
       setGlobalChats((prev) => [
         event.payload.chat,
@@ -1049,22 +1152,24 @@ export default function StudentDashboardClient({
       />
 
       {/* 2. TAB VIEWS */}
-      {activeTab === "Belajar" && (
+      {(activeTab === "Home" || activeTab === "Belajar") && (
         <TabBelajar
           studentName={studentName}
           currentUserRank={currentUserRank}
+          namaKelas={userProfile.nama_kelas || "Kelas 8A"}
           learningProgressPercent={learningProgressPercent}
           learningPoints={learningPoints}
-          dailyStreak={dailyStreak}
           sekolahData={sekolahData}
           calendarWeeks={calendarWeeks}
           dailyMissions={dailyMissions}
           isMissionsLoading={isMissionsLoading}
           isClaimingMissionId={isClaimingMissionId}
           onClaimMission={handleClaimMission}
-          top3Chapters={top3Chapters}
+          allChapters={chapters}
           peerStudents={peerStudents}
-          onNavigateToCourses={() => setActiveTab("Ruang Belajar")}
+          agendasData={agendasData}
+          examsData={examsData}
+          onNavigateToCourses={() => setActiveTab("Home")}
         />
       )}
 
@@ -1076,21 +1181,16 @@ export default function StudentDashboardClient({
         />
       )}
 
-      {activeTab === "Ruang Belajar" && (
-        <TabKursusSaya
-          chapters={chapters}
-          peerStudents={peerStudents}
-          userGrade={userProfile.tingkat_kelas || 8}
-          userClassName={userProfile.nama_kelas || "Kelas 8"}
-        />
-      )}
-
       {activeTab === "Pencapaian" && (
         <TabPencapaian
           completedQuizCount={completedQuizCount}
           dailyStreak={dailyStreak}
           learningPoints={learningPoints}
           answeredSoalCount={answeredSoalCount}
+          badgesList={pencapaianBadges}
+          isLoading={isLoadingPencapaian}
+          onRefresh={fetchPencapaian}
+          onNavigateTab={setActiveTab}
         />
       )}
 
@@ -1123,27 +1223,25 @@ export default function StudentDashboardClient({
         onDeleteNote={handleDeleteNote}
       />
 
-      <StudentAiAssistantModal
-        isOpen={isAiAssistantOpen}
-        onClose={() => setIsAiAssistantOpen(false)}
-        studentName={studentName}
+      <GamesHubModal
+        isOpen={isGamesModalOpen}
+        onClose={() => setIsGamesModalOpen(false)}
+        onRewardClaimed={(newPoints) => {
+          setLearningPoints(newPoints);
+          setToastNotification({
+            show: true,
+            title: "Hadiah Game Berhasil Diklaim! 🎉",
+            message: `Poin belajar kamu kini bertambah menjadi ${newPoints} Poin!`,
+            time: "Baru saja",
+            type: "success",
+          });
+        }}
       />
 
-      <GlobalDiscussionModal
+      <UnifiedGlobalChatModal
         isOpen={isGlobalChatOpen}
         onClose={() => setIsGlobalChatOpen(false)}
-        globalChats={globalChats}
-        chatComments={chatComments}
-        expandedCommentsChatId={expandedCommentsChatId}
-        setExpandedCommentsChatId={setExpandedCommentsChatId}
-        loadingCommentsId={loadingCommentsId}
-        reportingChatId={reportingChatId}
-        setReportingChatId={setReportingChatId}
-        onSendChat={handleSendChat}
-        onLikeChat={handleLikeChat}
-        onSendReply={handleSendReply}
-        onToggleComments={handleToggleComments}
-        onReportContent={handleReportContent}
+        currentUserId={userProfile?.email}
       />
 
       <StudentProfileModal
@@ -1153,6 +1251,13 @@ export default function StudentDashboardClient({
         studentEmail={studentEmail}
         learningPoints={learningPoints}
         dailyStreak={dailyStreak}
+        nisn={userProfile.nisn}
+        nis={userProfile.nis}
+        namaKelas={userProfile.nama_kelas}
+        jurusan={userProfile.jurusan}
+        tahunAjaran={userProfile.tahun_ajaran}
+        fotoUrl={userProfile.foto_url}
+        sekolahData={sekolahData}
       />
 
       <SettingsModal
@@ -1179,7 +1284,7 @@ export default function StudentDashboardClient({
       {/* 5. FLOATING ACTION HUB (FAB +) */}
       <FloatingActionHub
         onOpenNotes={() => setIsNotesModalOpen(true)}
-        onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
+        onOpenGames={() => setIsGamesModalOpen(true)}
         onOpenGlobalChat={() => setIsGlobalChatOpen(true)}
       />
 

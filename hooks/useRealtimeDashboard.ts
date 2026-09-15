@@ -16,7 +16,9 @@ export interface RealtimeEvent {
     | "CLASS_CREATED"
     | "CHAT_POSTED"
     | "CHAT_LIKED"
-    | "CHAT_COMMENTED";
+    | "CHAT_COMMENTED"
+    | "EXAM_STATUS_CHANGED"
+    | "POINTS_UPDATED";
   payload?: any;
   timestamp: string;
 }
@@ -57,6 +59,10 @@ function initGlobalChannel() {
           eventType = payload.eventType === "INSERT" ? "ATTENDANCE_CHECKIN" : "ATTENDANCE_VERIFIED";
         } else if (payload.table === "notifikasi") {
           eventType = "NOTIFICATION_RECEIVED";
+        } else if (payload.table === "ujian") {
+          eventType = "EXAM_STATUS_CHANGED";
+        } else if (payload.table === "profil") {
+          eventType = "POINTS_UPDATED";
         }
 
         const eventData: RealtimeEvent = {

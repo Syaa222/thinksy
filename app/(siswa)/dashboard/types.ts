@@ -13,6 +13,9 @@ export interface SekolahData {
   links?: SekolahLink[] | null;
   alamat?: string | null;
   npsn?: string | null;
+  jam_masuk?: string | null;
+  jam_terlambat?: string | null;
+  jam_tutup?: string | null;
 }
 
 export interface PeerStudent {
@@ -22,12 +25,25 @@ export interface PeerStudent {
   initials: string;
 }
 
+export interface AgendaAkademikItem {
+  id: string;
+  judul: string;
+  deskripsi?: string | null;
+  kategori: "ulangan" | "ujian" | "tugas" | "agenda";
+  tanggal: string; // YYYY-MM-DD
+  jam_mulai?: string | null;
+  jam_selesai?: string | null;
+  lokasi?: string | null;
+}
+
 export interface CalendarDayItem {
   day: number;
   isCurrentMonth: boolean;
   isToday: boolean;
   status: "today" | "streak" | "past" | "scheduled" | "normal" | "muted";
   fullDateStr: string;
+  isoDateStr?: string; // YYYY-MM-DD
+  agendas?: AgendaAkademikItem[];
   schedule: {
     bab: string;
     jam: string;
@@ -56,6 +72,7 @@ export interface ChapterItem {
   urutan: number;
   mapel?: string | null;
   kelas?: number | null;
+  semester?: number | null;
   progress?: number;
   materi?: ChapterMaterial[];
 }
@@ -78,6 +95,7 @@ export interface DailyMission {
   isCompleted: boolean;
   isClaimed: boolean;
   iconType: string;
+  deskripsi?: string;
 }
 
 export interface NoteItem {
@@ -124,6 +142,7 @@ export interface NotificationItem {
   time: string;
   type: string;
   dibaca?: boolean;
+  link_url?: string | null;
 }
 
 export interface ToastNotificationData {
@@ -132,6 +151,22 @@ export interface ToastNotificationData {
   message: string;
   time: string;
   type?: "success" | "alpha" | "info";
+}
+
+export interface UjianItem {
+  id: string;
+  judul: string;
+  deskripsi?: string | null;
+  mapel: string;
+  durasi_menit: number;
+  passing_grade: number;
+  waktu_mulai: string;
+  waktu_berakhir: string;
+  status: string; // 'draft' | 'dipublikasi' | 'ditutup'
+  tipe: "ulangan" | "ujian";
+  score?: number | null;
+  sessionStatus?: "belum_mulai" | "sedang_mengerjakan" | "selesai" | "habis_waktu";
+  sesiId?: string;
 }
 
 export interface StudentDashboardProps {
@@ -148,13 +183,21 @@ export interface StudentDashboardProps {
     checkInStatus?: string | null;
     tingkat_kelas?: number;
     nama_kelas?: string;
+    nisn?: string | null;
+    nis?: string | null;
+    jurusan?: string | null;
+    tahun_ajaran?: string | null;
+    foto_url?: string | null;
   };
   sekolahData?: SekolahData | null;
   schedulesData?: ScheduleItem[];
   chapters?: ChapterItem[];
   peerStudents?: PeerStudent[];
+  agendasData?: AgendaAkademikItem[];
+  examsData?: UjianItem[];
   completedQuizCount?: number;
   answeredSoalCount?: number;
   totalSoalCount?: number;
   learningProgressPercent?: number;
 }
+

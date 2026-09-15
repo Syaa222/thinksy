@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import GuruLayout from "@/components/guru/GuruLayout";
+import ExamStatusToggle from "@/components/guru/ExamStatusToggle";
 import {
   Plus,
   Clock,
@@ -145,16 +146,15 @@ export default async function GuruDaftarUjianPage() {
                       {u.nama_kelas}
                     </span>
 
-                    {u.peserta_sedang > 0 ? (
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 animate-pulse">
-                        <Radio className="w-3 h-3 text-emerald-600" />
-                        <span>{u.peserta_sedang} Siswa Live</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-                        {u.status === "dipublikasi" ? "Aktif" : "Ditutup"}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {u.peserta_sedang > 0 && (
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 animate-pulse">
+                          <Radio className="w-3 h-3 text-emerald-600" />
+                          <span>{u.peserta_sedang} Live</span>
+                        </span>
+                      )}
+                      <ExamStatusToggle ujianId={u.id} initialStatus={u.status} />
+                    </div>
                   </div>
 
                   <h3 className="text-base font-black text-[#0F172A] line-clamp-2 leading-snug">

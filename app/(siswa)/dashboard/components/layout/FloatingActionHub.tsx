@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, BrainCircuit, Globe } from "lucide-react";
+import { FileText, Gamepad2, Globe } from "lucide-react";
 
 interface FloatingActionHubProps {
   onOpenNotes: () => void;
-  onOpenAiAssistant: () => void;
+  onOpenGames: () => void;
   onOpenGlobalChat: () => void;
 }
 
 export default function FloatingActionHub({
   onOpenNotes,
-  onOpenAiAssistant,
+  onOpenGames,
   onOpenGlobalChat,
 }: FloatingActionHubProps) {
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -35,14 +35,14 @@ export default function FloatingActionHub({
 
           <button
             onClick={() => {
-              onOpenAiAssistant();
+              onOpenGames();
               setIsFabOpen(false);
             }}
             className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-[#0F172A] text-xs font-extrabold shadow-xl border border-slate-200 group transition transform hover:scale-105 cursor-pointer"
           >
-            <span className="text-xs font-bold text-slate-700">AI Assistant 🤖</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-              <BrainCircuit className="w-4.5 h-4.5" />
+            <span className="text-xs font-bold text-slate-700">GAME 🎮</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md">
+              <Gamepad2 className="w-4.5 h-4.5" />
             </div>
           </button>
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, Sparkles, Save, HelpCircle, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Sparkles, Save, HelpCircle, CheckCircle2, Loader2 } from "lucide-react";
 import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
+import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
 
 interface EditorSoalModalProps {
   isOpen: boolean;
@@ -11,7 +12,8 @@ interface EditorSoalModalProps {
 }
 
 export default function EditorSoalModal({ isOpen, onClose, onSave }: EditorSoalModalProps) {
-  const [bab, setBab] = useState("Bab 4: Persamaan Linear Dua Variabel");
+  const [babList, setBabList] = useState<{ id: string; judul: string }[]>([]);
+  const [bab, setBab] = useState("b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
   const [kesulitan, setKesulitan] = useState("mudah");
   const [tipeSoal, setTipeSoal] = useState<"pilihan_ganda" | "isian" | "esai">("pilihan_ganda");
   const [pertanyaan, setPertanyaan] = useState("Tuliskan pertanyaan di sini... Gunakan $ untuk inline math atau $$ untuk block math.");
@@ -22,23 +24,101 @@ export default function EditorSoalModal({ isOpen, onClose, onSave }: EditorSoalM
   const [jawabanBenar, setJawabanBenar] = useState<"A" | "B" | "C" | "D">("A");
   const [pembahasan, setPembahasan] = useState("Tuliskan pembahasan langkah-demi-langkah di sini...");
   const [isPreview, setIsPreview] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { broadcastEvent } = useRealtimeDashboard();
+
+  useEffect(() => {
+    async function loadBabs() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data } = await supabase.from("bab").select("id, judul").order("urutan", { ascending: true });
+        if (data && data.length > 0) {
+          setBabList(data);
+          setBab(data[0].id);
+        } else {
+          setBabList([
+            { id: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11", judul: "Bab 1: Pola Bilangan & Barisan Bilangan" },
+            { id: "b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22", judul: "Bab 2: Bentuk Aljabar & PLSV/PTLSV" },
+            { id: "b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33", judul: "Bab 3: Relasi & Fungsi" },
+            { id: "b4eebc99-9c0b-4ef8-bb6d-6bb9bd380a44", judul: "Bab 4: Persamaan Garis Lurus (PGL)" },
+            { id: "b5eebc99-9c0b-4ef8-bb6d-6bb9bd380a55", judul: "Bab 5: Sistem Persamaan Linear Dua Variabel (SPLDV)" },
+            { id: "b6eebc99-9c0b-4ef8-bb6d-6bb9bd380a66", judul: "Bab 6: Teorema Pythagoras" },
+          ]);
+        }
+      } catch {
+        setBabList([
+          { id: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11", judul: "Bab 1: Pola Bilangan & Barisan Bilangan" },
+          { id: "b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22", judul: "Bab 2: Bentuk Aljabar & PLSV/PTLSV" },
+        ]);
+      }
+    }
+    loadBabs();
+  }, []);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newQuestion = {
-      id: `#Q-${Math.floor(1000 + Math.random() * 9000)}`,
-      bab,
-      kesulitan,
-      tipeSoal,
-      pertanyaan,
-      opsi: [opsiA, opsiB, opsiC, opsiD],
-      jawabanBenar,
-      pembahasan,
-    };
-    if (onSave) onSave(newQuestion);
-    onClose();
+    setIsSaving(true);
+    try {
+      const selectedBab = babList.find((b) => b.id === bab) || babList[0];
+      const targetBabId = selectedBab?.id || "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+
+      const res = await fetch("/api/guru/simpan-soal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          babId: targetBabId,
+          pertanyaan,
+          tipeSoal: tipeSoal === "isian" ? "esai" : tipeSoal,
+          tingkatSoal: kesulitan,
+          statusSoal: "dipublikasi",
+          sumberKonten: "manual",
+          kunciJawaban: tipeSoal === "pilihan_ganda" ? jawabanBenar : "",
+          pembahasan,
+          opsiSoal:
+            tipeSoal === "pilihan_ganda"
+              ? [
+                  { teksOpsi: opsiA, benar: jawabanBenar === "A" },
+                  { teksOpsi: opsiB, benar: jawabanBenar === "B" },
+                  { teksOpsi: opsiC, benar: jawabanBenar === "C" },
+                  { teksOpsi: opsiD, benar: jawabanBenar === "D" },
+                ]
+              : [],
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        broadcastEvent("SOAL_PUBLISHED", {
+          soalId: data.soalId,
+          babId: targetBabId,
+          babJudul: selectedBab?.judul || "Materi Matematika",
+        });
+
+        if (onSave) {
+          onSave({
+            id: data.soalId ? `#Q-${data.soalId.substring(0, 6)}` : `#Q-${Math.floor(1000 + Math.random() * 9000)}`,
+            bab: selectedBab?.judul || "Matematika",
+            kesulitan,
+            tipeSoal,
+            pertanyaan,
+            opsi: [opsiA, opsiB, opsiC, opsiD],
+            jawabanBenar,
+            pembahasan,
+          });
+        }
+        onClose();
+      } else {
+        alert(data.error || "Gagal menyimpan soal ke database.");
+      }
+    } catch (err: any) {
+      alert("Terjadi kesalahan: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -49,7 +129,7 @@ export default function EditorSoalModal({ isOpen, onClose, onSave }: EditorSoalM
           <div>
             <h2 className="text-base font-extrabold text-[#0F172A]">Editor Soal Baru</h2>
             <p className="text-xs text-slate-500 font-medium">
-              Tambahkan pertanyaan manual ke Bank Soal Latihan.
+              Buat soal langsung ke Bank Soal & Dashboard Siswa.
             </p>
           </div>
           <button
@@ -73,14 +153,11 @@ export default function EditorSoalModal({ isOpen, onClose, onSave }: EditorSoalM
                 onChange={(e) => setBab(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F172A] bg-slate-50"
               >
-                <option value="Bab 1: Pola Bilangan & Barisan Bilangan">Bab 1: Pola Bilangan & Barisan Bilangan</option>
-                <option value="Bab 2: Bentuk Aljabar & PLSV/PTLSV">Bab 2: Bentuk Aljabar & PLSV/PTLSV</option>
-                <option value="Bab 3: Relasi & Fungsi">Bab 3: Relasi & Fungsi</option>
-                <option value="Bab 4: Persamaan Garis Lurus (PGL)">Bab 4: Persamaan Garis Lurus (PGL)</option>
-                <option value="Bab 5: Sistem Persamaan Linear Dua Variabel (SPLDV)">Bab 5: Sistem Persamaan Linear Dua Variabel (SPLDV)</option>
-                <option value="Bab 6: Teorema Pythagoras">Bab 6: Teorema Pythagoras</option>
-                <option value="Bab 7: Bangun Ruang Sisi Datar (BRSD)">Bab 7: Bangun Ruang Sisi Datar (BRSD)</option>
-                <option value="Bab 8: Statistika & Peluang">Bab 8: Statistika & Peluang</option>
+                {babList.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.judul}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -219,17 +296,23 @@ export default function EditorSoalModal({ isOpen, onClose, onSave }: EditorSoalM
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-extrabold text-xs hover:bg-slate-100 transition cursor-pointer"
           >
             Batal
           </button>
           <button
             type="button"
+            disabled={isSaving}
             onClick={handleSubmit}
-            className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-extrabold text-xs shadow-xs transition flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-extrabold text-xs shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4 text-amber-400" />
-            <span>Simpan Soal</span>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+            ) : (
+              <Save className="w-4 h-4 text-amber-400" />
+            )}
+            <span>{isSaving ? "Menyimpan ke Database..." : "Simpan & Publikasikan ke Siswa"}</span>
           </button>
         </div>
       </div>

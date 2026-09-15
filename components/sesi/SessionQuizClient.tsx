@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import TutorChat from "../tutor/TutorChat";
+import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
 
 interface Question {
   id: string;
@@ -42,6 +43,7 @@ export default function SessionQuizClient({
   namaSiswa,
 }: SessionQuizClientProps) {
   const hasAI = jenisSesi.toLowerCase() === "latihan" || jenisSesi.toLowerCase() === "eksplorasi";
+  const { broadcastEvent } = useRealtimeDashboard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [jawabanState, setJawabanState] = useState<{
     [soalId: string]: { opsiDipilihId?: string; jawabanTeks?: string };
@@ -281,6 +283,16 @@ export default function SessionQuizClient({
         skorAkhir: data.skorAkhir,
         detailEvaluasi: data.detailEvaluasi || [],
       });
+
+      // Broadcast event ke antrean Dashboard Guru secara real-time
+      try {
+        await broadcastEvent("NEW_ESSAY_SUBMISSION", {
+          sesiId,
+          skorAkhir: data.skorAkhir,
+        });
+      } catch (broadcastErr) {
+        console.warn("[BROADCAST ERROR]", broadcastErr);
+      }
     } catch (err: any) {
       alert(err.message || "Terjadi kesalahan saat mengumpulkan kuis.");
     } finally {

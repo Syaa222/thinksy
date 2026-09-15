@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Platform pembelajaran mandiri berbasis AI Multi-Tenant",
 };
 
+import DemoRoleSwitcher from "@/components/demo/DemoRoleSwitcher";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,7 +25,10 @@ export default function RootLayout({
       lang="id"
       className={`${plusJakartaSans.variable} font-sans h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <DemoRoleSwitcher />
+      </body>
     </html>
   );
 }

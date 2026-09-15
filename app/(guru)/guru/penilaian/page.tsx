@@ -56,7 +56,11 @@ export default function PenilaianEsaiPage() {
   const [rubrikStruktur, setRubrikStruktur] = useState(15);
   const [rubrikSavedToast, setRubrikSavedToast] = useState(false);
 
-  const { broadcastEvent } = useRealtimeDashboard();
+  const { broadcastEvent } = useRealtimeDashboard((event) => {
+    if (event.type === "NEW_ESSAY_SUBMISSION") {
+      fetchSubmissionsFromDB();
+    }
+  });
 
   const fetchSubmissionsFromDB = async () => {
     setIsLoadingSubmissions(true);

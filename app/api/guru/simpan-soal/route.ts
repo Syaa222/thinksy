@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
+    const adminDb = createAdminClient();
 
     // 1. Authenticate user
     const {
@@ -21,10 +23,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       babId,
+      materiId,
       pertanyaan,
       tipeSoal,
       tingkatSoal,
-      sumberKonten = "ai_generated",
+      sumberKonten = "manual",
+      statusSoal = "dipublikasi",
       kunciJawaban,
       pembahasan,
       opsiSoal = [],
@@ -37,28 +41,26 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch teacher profile for sekolah_id
-    const { data: teacherProfil } = await supabase
-      .from("profil")
-      .select("sekolah_id")
-      .eq("id", user.id)
-      .single();
+    // Insert to `soal` table via adminDb
+    const soalPayload: Record<string, any> = {
+      bab_id: babId,
+      pertanyaan,
+      tipe_soal: tipeSoal || "pilihan_ganda",
+      tingkat_soal: tingkatSoal || "sedang",
+      sumber_konten: sumberKonten,
+      status_soal: statusSoal || (sumberKonten === "ai_generated" ? "draft" : "dipublikasi"),
+      kunci_jawaban: kunciJawaban || "",
+      pembahasan: pembahasan || "",
+      pembuat_id: user.id,
+    };
 
-    // Insert to `soal` table (AI generated questions saved as "draft" for curation)
-    const { data: insertedSoal, error: insertError } = await supabase
+    if (materiId) {
+      soalPayload.materi_id = materiId;
+    }
+
+    const { data: insertedSoal, error: insertError } = await adminDb
       .from("soal")
-      .insert({
-        bab_id: babId,
-        pertanyaan,
-        tipe_soal: tipeSoal || "pilihan_ganda",
-        tingkat_soal: tingkatSoal || "sedang",
-        sumber_konten: sumberKonten,
-        status_soal: sumberKonten === "ai_generated" ? "draft" : "dipublikasi",
-        kunci_jawaban: kunciJawaban || "",
-        pembahasan: pembahasan || "",
-        pembuat_id: user.id,
-        sekolah_id: teacherProfil?.sekolah_id || null,
-      })
+      .insert(soalPayload)
       .select("id")
       .single();
 
@@ -70,15 +72,15 @@ export async function POST(req: Request) {
     }
 
     // Insert options if Pilihan Ganda
-    if (tipeSoal === "pilihan_ganda" && opsiSoal.length > 0) {
+    if ((tipeSoal === "pilihan_ganda" || !tipeSoal) && opsiSoal.length > 0) {
       const opsiPayload = opsiSoal.map((o: any, idx: number) => ({
         soal_id: insertedSoal.id,
-        teks_opsi: o.teksOpsi,
+        teks_opsi: o.teksOpsi || o.teks || "",
         benar: Boolean(o.benar),
         urutan: idx + 1,
       }));
 
-      const { error: opsiError } = await supabase
+      const { error: opsiError } = await adminDb
         .from("opsi_soal")
         .insert(opsiPayload);
 
@@ -87,10 +89,47 @@ export async function POST(req: Request) {
       }
     }
 
+    // Ambil info bab untuk notifikasi
+    const { data: babData } = await adminDb
+      .from("bab")
+      .select("judul, sekolah_id")
+      .eq("id", babId)
+      .single();
+
+    // Jika soal langsung dipublikasikan, kirim notifikasi ke siswa sekolah tersebut
+    if (statusSoal === "dipublikasi") {
+      try {
+        let studentsQuery = adminDb
+          .from("profil")
+          .select("id")
+          .eq("peran", "siswa");
+
+        if (babData?.sekolah_id) {
+          studentsQuery = studentsQuery.eq("sekolah_id", babData.sekolah_id);
+        }
+
+        const { data: students } = await studentsQuery;
+
+        if (students && students.length > 0) {
+          const notifs = students.map((s: any) => ({
+            user_id: s.id,
+            judul: "Soal Latihan Baru Tersedia! 📝",
+            pesan: `Guru telah menerbitkan soal latihan baru pada "${babData?.judul || "Materi Matematika"}". Coba kerjakan sekarang!`,
+            tipe: "info",
+            dibaca: false,
+          }));
+          await adminDb.from("notifikasi").insert(notifs);
+        }
+      } catch (notifErr) {
+        console.warn("[SOAL NOTIF ERROR]", notifErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       soalId: insertedSoal.id,
-      message: "Soal berhasil disimpan ke Bank Soal!",
+      statusSoal: soalPayload.status_soal,
+      message: "Soal berhasil disimpan dan dipublikasikan ke siswa!",
     });
   } catch (error: any) {
     console.error("Error saving question:", error);

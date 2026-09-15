@@ -18,13 +18,13 @@ import {
 } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { NotificationItem, SekolahData } from "../../types";
-import MathMiniGameModal from "@/components/game/MathMiniGameModal";
+import { usePathname, useRouter } from "next/navigation";
 
 interface StudentNavbarProps {
   isDarkMode: boolean;
   sekolahData?: SekolahData | null;
-  activeTab: "Belajar" | "Ruang Belajar" | "Peringkat" | "Pencapaian";
-  setActiveTab: (tab: "Belajar" | "Ruang Belajar" | "Peringkat" | "Pencapaian") => void;
+  activeTab?: "Home" | "Belajar" | "Ruang Ujian" | "Peringkat" | "Pencapaian";
+  setActiveTab?: (tab: "Home" | "Belajar" | "Ruang Ujian" | "Peringkat" | "Pencapaian") => void;
   isCheckedIn: boolean;
   checkInStatus: string | null;
   checkInTime: string | null;
@@ -42,7 +42,7 @@ interface StudentNavbarProps {
 export default function StudentNavbar({
   isDarkMode,
   sekolahData,
-  activeTab,
+  activeTab = "Home",
   setActiveTab,
   isCheckedIn,
   checkInStatus,
@@ -57,9 +57,10 @@ export default function StudentNavbar({
   onOpenHelp,
   onOpenProfile,
 }: StudentNavbarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isMathGameOpen, setIsMathGameOpen] = useState(false);
 
   const initials = studentName
     .split(" ")
@@ -69,6 +70,13 @@ export default function StudentNavbar({
     .toUpperCase();
 
   const closed = isPresensiClosed();
+
+  // Determine active state
+  const isHomeActive = pathname === "/" || pathname === "/dashboard" ? (activeTab === "Home") : false;
+  const isBelajarActive = pathname.startsWith("/belajar");
+  const isUjianActive = pathname.startsWith("/ujian");
+  const isPeringkatActive = activeTab === "Peringkat";
+  const isPencapaianActive = activeTab === "Pencapaian";
 
   return (
     <>
@@ -95,52 +103,90 @@ export default function StudentNavbar({
               </span>
             </Link>
 
-            {/* Navigation Tabs */}
+            {/* Navigation Tabs (Navbar Siswa: Home, Belajar, Ruang Ujian, Peringkat, Pencapaian) */}
             <nav className="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
-              {(
-                ["Belajar", "Ruang Belajar", "Peringkat", "Pencapaian"] as const
-              ).map((tab) => {
-                const isDisabled = !sekolahData && tab !== "Belajar";
-                return (
-                  <button
-                    key={tab}
-                    disabled={isDisabled}
-                    onClick={() => {
-                      if (!isDisabled) {
-                        setActiveTab(tab);
-                      }
-                    }}
-                    title={
-                      isDisabled
-                        ? "Fitur dibatasi - Akun belum terhubung ke sekolah"
-                        : undefined
-                    }
-                    className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-1 ${
-                      isDisabled
-                        ? "opacity-40 cursor-not-allowed text-slate-400 bg-slate-100/50"
-                        : activeTab === tab
-                        ? "bg-[#0F172A] text-white shadow-xs font-extrabold cursor-pointer scale-100"
-                        : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80 cursor-pointer"
-                    }`}
-                  >
-                    <span>{tab}</span>
-                  </button>
-                );
-              })}
+              {/* 1. Home */}
+              <button
+                onClick={() => {
+                  if (pathname !== "/" && pathname !== "/dashboard") {
+                    router.push("/");
+                  } else if (setActiveTab) {
+                    setActiveTab("Home");
+                  }
+                }}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isHomeActive
+                    ? "bg-[#0F172A] text-white shadow-xs font-extrabold scale-100"
+                    : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80"
+                }`}
+              >
+                Home
+              </button>
+
+              {/* 2. Belajar */}
+              <Link
+                href="/belajar"
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isBelajarActive
+                    ? "bg-[#0F172A] text-white shadow-xs font-extrabold scale-100"
+                    : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80"
+                }`}
+              >
+                Belajar
+              </Link>
+
+              {/* 3. Ruang Ujian */}
+              <Link
+                href="/ujian"
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isUjianActive
+                    ? "bg-[#0F172A] text-white shadow-xs font-extrabold scale-100"
+                    : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80"
+                }`}
+              >
+                Ruang Ujian
+              </Link>
+
+              {/* 4. Peringkat */}
+              <button
+                onClick={() => {
+                  if (pathname !== "/" && pathname !== "/dashboard") {
+                    router.push("/?tab=peringkat");
+                  } else if (setActiveTab) {
+                    setActiveTab("Peringkat");
+                  }
+                }}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isPeringkatActive
+                    ? "bg-[#0F172A] text-white shadow-xs font-extrabold scale-100"
+                    : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80"
+                }`}
+              >
+                Peringkat
+              </button>
+
+              {/* 5. Pencapaian */}
+              <button
+                onClick={() => {
+                  if (pathname !== "/" && pathname !== "/dashboard") {
+                    router.push("/?tab=pencapaian");
+                  } else if (setActiveTab) {
+                    setActiveTab("Pencapaian");
+                  }
+                }}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isPencapaianActive
+                    ? "bg-[#0F172A] text-white shadow-xs font-extrabold scale-100"
+                    : "text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80"
+                }`}
+              >
+                Pencapaian
+              </button>
             </nav>
           </div>
 
-          {/* Right Header Controls */}
+          {/* Right Header Controls (Presensi, Notification, Profile) */}
           <div className="flex items-center space-x-2 sm:space-x-2.5">
-            {/* Math Quick Game Trigger Button */}
-            <button
-              onClick={() => setIsMathGameOpen(true)}
-              title="Mini Game Matematika: Math Blitz (Asah Otak Cepat)"
-              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full border border-amber-300/80 bg-linear-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 text-xs font-bold shadow-2xs transition-all duration-200 cursor-pointer group active:scale-95"
-            >
-              <Gamepad2 className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-12 transition-transform shrink-0" />
-              <span className="hidden sm:inline font-extrabold">Math Game</span>
-            </button>
 
             {/* Presensi Button in Navbar */}
             <div className="relative">
@@ -256,7 +302,15 @@ export default function StudentNavbar({
                       notifications.map((notif) => (
                         <div
                           key={notif.id}
+                          onClick={() => {
+                            if (notif.link_url) {
+                              setIsNotificationOpen(false);
+                              router.push(notif.link_url);
+                            }
+                          }}
                           className={`p-3 rounded-xl border space-y-1 transition ${
+                            notif.link_url ? "cursor-pointer hover:shadow-sm" : ""
+                          } ${
                             notif.dibaca
                               ? "bg-slate-50/70 border-slate-200/60 opacity-80"
                               : "bg-blue-50/50 border-blue-200"
@@ -276,6 +330,11 @@ export default function StudentNavbar({
                           <p className="text-xs text-slate-700 leading-snug">
                             {notif.desc}
                           </p>
+                          {notif.link_url && (
+                            <span className="text-[10px] text-blue-600 font-bold hover:underline inline-block pt-0.5">
+                              Buka tautan →
+                            </span>
+                          )}
                         </div>
                       ))
                     )}
@@ -366,12 +425,7 @@ export default function StudentNavbar({
           </div>
         </div>
       </header>
-
-      {/* Lightweight Math Mini Game Modal */}
-      <MathMiniGameModal
-        isOpen={isMathGameOpen}
-        onClose={() => setIsMathGameOpen(false)}
-      />
     </>
   );
 }
+

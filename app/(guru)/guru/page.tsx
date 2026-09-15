@@ -5,6 +5,9 @@ import GuruLayout from "@/components/guru/GuruLayout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
+import AttendanceLimitConfigModal from "@/components/guru/AttendanceLimitConfigModal";
+import AkuLulusControlWidget from "@/components/guru/AkuLulusControlWidget";
+import StudentLeaderboardWidget from "@/components/guru/StudentLeaderboardWidget";
 import {
   TrendingUp,
   Users,
@@ -138,6 +141,7 @@ export default function GuruDashboardPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [isPresenceModalOpen, setIsPresenceModalOpen] = useState(false);
+  const [isAttendanceConfigOpen, setIsAttendanceConfigOpen] = useState(false);
 
   // New Stat Modals States
   const [isScoreAvgModalOpen, setIsScoreAvgModalOpen] = useState(false);
@@ -151,6 +155,10 @@ export default function GuruDashboardPage() {
   const [presenceFilter, setPresenceFilter] = useState<"all" | "hadir" | "online" | "offline">("all");
   const [studentSearch, setStudentSearch] = useState("");
   const [selectedSelfieZoom, setSelectedSelfieZoom] = useState<StudentAttendance | null>(null);
+  const [editingPresenceStudent, setEditingPresenceStudent] = useState<StudentAttendance | null>(null);
+  const [editStatusValue, setEditStatusValue] = useState<string>("Hadir (Tepat Waktu)");
+  const [editTimeValue, setEditTimeValue] = useState<string>("07:30");
+  const [isSavingPresence, setIsSavingPresence] = useState(false);
 
   // Selected Class for Detail & Edit Modal
   const [selectedClass, setSelectedClass] = useState<ClassCardData | null>(null);
@@ -357,11 +365,64 @@ export default function GuruDashboardPage() {
   }, [fetchRealStats]);
 
   // Real-time updates for teacher main dashboard
-  useRealtimeDashboard((event) => {
-    if (event.type === "ATTENDANCE_CHECKIN" || event.type === "ATTENDANCE_VERIFIED") {
+  const { broadcastEvent } = useRealtimeDashboard((event) => {
+    if (
+      event.type === "ATTENDANCE_CHECKIN" ||
+      event.type === "ATTENDANCE_VERIFIED" ||
+      event.type === "NEW_ESSAY_SUBMISSION"
+    ) {
       fetchRealStats();
     }
   });
+
+  const handleSaveStudentPresence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPresenceStudent) return;
+    setIsSavingPresence(true);
+    try {
+      const res = await fetch("/api/guru/presensi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_student_presence",
+          siswaId: editingPresenceStudent.id,
+          status: editStatusValue,
+          waktuMasuk: editTimeValue,
+        }),
+      });
+
+      if (res.ok) {
+        setStudentPresenceList((prev) =>
+          prev.map((s) =>
+            s.id === editingPresenceStudent.id
+              ? {
+                  ...s,
+                  status: editStatusValue as any,
+                  timeIn: `${editTimeValue} WIB`,
+                  hasAttended: editStatusValue !== "Alpha" && editStatusValue !== "Belum Absen",
+                }
+              : s
+          )
+        );
+
+        broadcastEvent("ATTENDANCE_VERIFIED", {
+          siswaId: editingPresenceStudent.id,
+          status: editStatusValue,
+          waktu_masuk: editTimeValue,
+        });
+
+        setNotification(`Kehadiran ${editingPresenceStudent.name} (${editTimeValue} WIB) berhasil diatur!`);
+        setTimeout(() => setNotification(null), 4000);
+        setEditingPresenceStudent(null);
+      } else {
+        alert("Gagal memperbarui status presensi.");
+      }
+    } catch (err: any) {
+      alert("Terjadi kesalahan: " + err.message);
+    } finally {
+      setIsSavingPresence(false);
+    }
+  };
 
   // Load existing classes from API on mount
   useEffect(() => {
@@ -813,6 +874,12 @@ export default function GuruDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* 2.5. KONTROL ASESMEN SISWA (AKU LULUS) */}
+        <AkuLulusControlWidget />
+
+        {/* 2.6. PAPAN PERINGKAT & KEAKTIFAN SISWA */}
+        <StudentLeaderboardWidget />
 
         {/* 3. MAIN CONTENT: CLASSES + ACTIVITY */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1304,12 +1371,21 @@ export default function GuruDashboardPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsPresenceModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsAttendanceConfigOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Atur Batas Waktu</span>
+                </button>
+                <button
+                  onClick={() => setIsPresenceModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Top Stat Bar (BISA DIKLIK KEDUA-DUANYA UNTUK FILTER LIST) */}
@@ -1483,7 +1559,20 @@ export default function GuruDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPresenceStudent(st);
+                        setEditStatusValue(st.status === "Belum Absen" ? "Hadir (Tepat Waktu)" : st.status);
+                        setEditTimeValue(st.timeIn ? st.timeIn.split(" ")[0] : "07:30");
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold transition flex items-center gap-1 shadow-xs cursor-pointer"
+                      title="Atur jam & status kehadiran siswa ini"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Atur Jam</span>
+                    </button>
                     <Link
                       href={`/guru/siswa`}
                       onClick={() => setIsPresenceModalOpen(false)}
@@ -1506,6 +1595,89 @@ export default function GuruDashboardPage() {
                 Tutup Pilihan
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 8.1 MODAL ATUR JAM & STATUS KEHADIRAN SISWA               */}
+      {/* ======================================================== */}
+      {editingPresenceStudent && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-[#0F172A]">Atur Jam & Status Kehadiran</h3>
+                  <p className="text-xs text-slate-500 font-medium">{editingPresenceStudent.name} · {editingPresenceStudent.class}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPresenceStudent(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStudentPresence} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Status Kehadiran
+                </label>
+                <select
+                  value={editStatusValue}
+                  onChange={(e) => setEditStatusValue(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="Hadir (Tepat Waktu)">Hadir (Tepat Waktu)</option>
+                  <option value="Terlambat">Terlambat</option>
+                  <option value="Izin">Izin (Surat Keterangan)</option>
+                  <option value="Sakit">Sakit</option>
+                  <option value="Alpha">Alpha (Tanpa Keterangan)</option>
+                  <option value="Terverifikasi">Terverifikasi Resmi</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Jam Kehadiran Masuk (WIB)
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={editTimeValue}
+                  onChange={(e) => setEditTimeValue(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPresenceStudent(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPresence}
+                  className="flex-1 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-extrabold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingPresence ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                  ) : (
+                    <Save className="w-4 h-4 text-amber-400" />
+                  )}
+                  <span>{isSavingPresence ? "Menyimpan..." : "Simpan Jam Kehadiran"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -2219,6 +2391,12 @@ export default function GuruDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* 9. MODAL ATUR BATAS WAKTU PRESENSI SEKOLAH */}
+      <AttendanceLimitConfigModal
+        isOpen={isAttendanceConfigOpen}
+        onClose={() => setIsAttendanceConfigOpen(false)}
+      />
     </GuruLayout>
   );
 }

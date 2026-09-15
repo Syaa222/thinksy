@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Timer } from "lucide-react";
 
 interface UatDevMenuProps {
@@ -15,6 +16,16 @@ export default function UatDevMenu({
   isOpen,
   setIsOpen,
 }: UatDevMenuProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   const currentRealTime = new Date().toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
@@ -35,9 +46,10 @@ export default function UatDevMenu({
         <select
           value={mockTime || ""}
           onChange={(e) => setMockTime(e.target.value || null)}
+          suppressHydrationWarning
           className="bg-slate-800 text-white font-semibold text-xs rounded-xl px-2.5 py-1.5 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
         >
-          <option value="">Waktu Nyata ({currentRealTime} WIB)</option>
+          <option value="" suppressHydrationWarning>Waktu Nyata ({currentRealTime} WIB)</option>
           <option value="06:30">06:30 WIB (Tepat Waktu • +10 Poin)</option>
           <option value="07:15">07:15 WIB (Batas Tepat Waktu • +10 Poin)</option>
           <option value="07:45">07:45 WIB (Terlambat • +3 Poin)</option>

@@ -23,50 +23,53 @@ export async function GET() {
       .from("profil")
       .select("sekolah_id")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     const userSekolahId = userProfil?.sekolah_id || null;
 
     // 2. Panggil RPC SECURITY DEFINER `get_peringkat_sekolah` per sekolah_id
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
+    let { data: rpcData, error: rpcError } = await supabase.rpc(
       "get_peringkat_sekolah",
       { p_sekolah_id: userSekolahId }
     );
 
+    // Jika kosong dengan filter sekolah tertentu, coba panggil dengan null (seluruh siswa aktif)
+    if ((!rpcData || rpcData.length === 0) && !rpcError) {
+      const { data: allRpcData, error: allRpcErr } = await supabase.rpc(
+        "get_peringkat_sekolah",
+        { p_sekolah_id: null }
+      );
+      if (!allRpcErr && allRpcData && allRpcData.length > 0) {
+        rpcData = allRpcData;
+      }
+    }
+
     let leaderboardRows: any[] = [];
 
-    if (!rpcError && rpcData && rpcData.length > 0) {
-      leaderboardRows = rpcData.map((row: any) => ({
-        rank: Number(row.rank),
-        id: row.student_id,
+    if (rpcData && rpcData.length > 0) {
+      leaderboardRows = rpcData.map((row: any, idx: number) => ({
+        rank: Number(row.rank) || idx + 1,
+        id: row.student_id || row.id,
         name: row.nama_lengkap || "Siswa",
-        points: row.poin || 0,
-        streak: row.streak || 0,
-        school: row.nama_sekolah || "Sekolah",
-        isCurrentUser: row.student_id === user.id,
+        points: Number(row.poin) || 0,
+        streak: Number(row.streak) || 0,
+        school: row.nama_sekolah || "SMK Muhammadiyah Pakem",
+        isCurrentUser: (row.student_id || row.id) === user.id,
       }));
     } else {
-      // 3. Fallback jika RPC belum di-deploy: Query via adminSupabase difilter ketat per sekolah_id & peran = 'siswa'
-      let query = adminSupabase
+      // 3. Fallback jika RPC tidak mengembalikan data: Query tabel profil
+      let query = supabase
         .from("profil")
         .select(`
           id,
           nama_lengkap,
           poin,
           streak,
-          sekolah_id,
-          sekolah (
-            nama
-          )
+          sekolah_id
         `)
         .eq("peran", "siswa")
         .order("poin", { ascending: false })
-        .order("dibuat_pada", { ascending: true })
         .limit(100);
-
-      if (userSekolahId) {
-        query = query.eq("sekolah_id", userSekolahId);
-      }
 
       const { data: fallbackData } = await query;
 
@@ -76,7 +79,7 @@ export async function GET() {
         name: student.nama_lengkap || "Siswa",
         points: student.poin || 0,
         streak: student.streak || 0,
-        school: student.sekolah?.nama || "Sekolah",
+        school: "SMK Muhammadiyah Pakem",
         isCurrentUser: student.id === user.id,
       }));
     }
