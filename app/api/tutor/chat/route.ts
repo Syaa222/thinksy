@@ -75,8 +75,17 @@ export async function POST(req: Request) {
     const {
       sesiId,
       soalId,
+      soalNomor,
+      totalSoal,
+      pertanyaan,
+      opsiJawaban,
+      kunciJawaban,
+      pembahasan,
+      hintSokratik,
+      babJudul,
       materiJudul,
       materiKonten,
+      mapel,
       message,
       image,
       attachment,
@@ -94,26 +103,79 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4.1 Fetch question & secret solution if soalId provided
-    let soalPertanyaan = "";
-    let soalPembahasan = "";
+    // 4.1 Extract or Fetch specific question details & secret solution
+    let activePertanyaan = pertanyaan || "";
+    let activePembahasan = pembahasan || "";
+    let activeKunci = kunciJawaban || "";
+    let activeHint = hintSokratik || "";
+    let activeOpsi: Array<{ id?: string; label?: string; teks: string }> = [];
+
+    if (Array.isArray(opsiJawaban) && opsiJawaban.length > 0) {
+      activeOpsi = opsiJawaban.map((o: any, idx: number) => ({
+        id: o.id,
+        label: o.label || String.fromCharCode(65 + idx),
+        teks: o.teksOpsi || o.teks || (typeof o === "string" ? o : ""),
+      }));
+    }
+
     if (soalId) {
-      const { data: soalRow } = await supabase
-        .from("soal")
-        .select("pertanyaan, pembahasan")
-        .eq("id", soalId)
-        .single();
-      if (soalRow) {
-        soalPertanyaan = soalRow.pertanyaan || "";
-        soalPembahasan = soalRow.pembahasan || "";
+      try {
+        const { data: soalRow } = await supabase
+          .from("soal")
+          .select(`
+            id,
+            pertanyaan,
+            pembahasan,
+            kunci_jawaban,
+            tipe_soal,
+            opsi_soal (id, teks_opsi, benar, urutan)
+          `)
+          .eq("id", soalId)
+          .maybeSingle();
+
+        if (soalRow) {
+          if (!activePertanyaan) activePertanyaan = soalRow.pertanyaan || "";
+          if (!activePembahasan) activePembahasan = soalRow.pembahasan || "";
+          if (!activeKunci) activeKunci = soalRow.kunci_jawaban || "";
+
+          if (activeOpsi.length === 0 && soalRow.opsi_soal && Array.isArray(soalRow.opsi_soal)) {
+            const sortedOpsi = [...soalRow.opsi_soal].sort(
+              (a, b) => (a.urutan || 0) - (b.urutan || 0)
+            );
+            activeOpsi = sortedOpsi.map((o: any, idx: number) => ({
+              id: o.id,
+              label: String.fromCharCode(65 + idx),
+              teks: o.teks_opsi,
+            }));
+            const correctOpt = sortedOpsi.find((o) => o.benar);
+            if (correctOpt && !activeKunci) {
+              const correctIdx = sortedOpsi.indexOf(correctOpt);
+              activeKunci = `Opsi ${String.fromCharCode(65 + correctIdx)}: "${correctOpt.teks_opsi}"`;
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.warn("[TUTOR CHAT] Soal lookup by ID failed, using provided client context:", dbErr);
       }
     }
 
-    // 5. Build Socratic Prompt from Library (Handbook §6.1)
+    if (!activePertanyaan && materiKonten) {
+      activePertanyaan = materiKonten;
+    }
+
+    // 5. Build Socratic Prompt from Library (v2.0 with question-level deep understanding)
     const systemPrompt = buildSocraticTutorPrompt({
-      pertanyaanMd: soalPertanyaan || materiKonten || "Latihan konsep matematika SMP Kelas 8",
-      pembahasanMd: soalPembahasan,
-      materiJudul: materiJudul || "Matematika SMP Kelas 8",
+      mapel: mapel || "Informatika",
+      tingkatKelas: "SMP / MTs Kelas 8",
+      babJudul: babJudul || materiJudul || "Pembelajaran Aktif",
+      materiJudul: materiJudul || babJudul || "",
+      nomorSoal: soalNomor || undefined,
+      totalSoal: totalSoal || undefined,
+      pertanyaanMd: activePertanyaan || "Soal latihan konsep pembelajaran.",
+      opsiJawaban: activeOpsi,
+      kunciJawaban: activeKunci,
+      pembahasanMd: activePembahasan,
+      hintSokratik: activeHint,
     });
 
     // 5.1 Enforce max 10 turns history to optimize cost (Handbook §10)
@@ -211,12 +273,31 @@ export async function POST(req: Request) {
     // High-quality Socratic Fallback if Gemini is not responding or key absent
     if (!assistantReply) {
       const lowerMsg = (message || "").toLowerCase();
-      if (lowerMsg.includes("rumus") || lowerMsg.includes("kunci") || lowerMsg.includes("istilah")) {
-        assistantReply = `💡 **Petunjuk Konsep & Rumus:**\n\nUntuk menyelesaikan persoalan pada materi **${materiJudul || "ini"}**, perhatikan hubungan antar besaran yang diketahui di soal.\n\n*Coba pikirkan:* Rumus atau hubungan apa yang menghubungkan informasi yang sudah kamu ketahui dengan yang ditanyakan?`;
-      } else if (lowerMsg.includes("langkah") || lowerMsg.includes("awal") || lowerMsg.includes("cara")) {
-        assistantReply = `🪜 **Bimbingan Langkah Awal:**\n\n1. Tuliskan terlebih dahulu apa saja yang **diketahui** dari soal.\n2. Identifikasi apa yang **ditanyakan** secara spesifik.\n3. Hubungkan kedua hal tersebut menggunakan konsep dasar bab ini.\n\nMenurutmu, dari informasi yang ada pada soal, data mana yang bisa kita gunakan terlebih dahulu?`;
+      const questionSnippet = activePertanyaan
+        ? activePertanyaan.replace(/^\d+\.\s*/, "").slice(0, 90)
+        : "";
+      const nomorPrefix = soalNomor ? `Soal #${soalNomor}` : "soal ini";
+
+      if (
+        lowerMsg.includes("rumus") ||
+        lowerMsg.includes("kunci") ||
+        lowerMsg.includes("istilah")
+      ) {
+        assistantReply = `🔍 **Kata Kunci Seru (${nomorPrefix}):**\n\n${
+          activeHint ? `> *Tips dari aku:* ${activeHint}\n\n` : ""
+        }Di ${nomorPrefix}, inti yang lagi diuji itu seputar: *"${questionSnippet}..."*.\n\nCoba deh amati kata kunci di masing-masing pilihan jawaban. Menurutmu, opsi mana yang paling nyambung sama konsep itu?`;
+      } else if (
+        lowerMsg.includes("langkah") ||
+        lowerMsg.includes("awal") ||
+        lowerMsg.includes("cara") ||
+        lowerMsg.includes("analisis") ||
+        lowerMsg.includes("eliminasi")
+      ) {
+        assistantReply = `🪜 **Yuk kita bedah langkahnya bareng-bareng (${nomorPrefix}):**\n\n1. Pertama, cek dulu kata kunci utama yang ditanyakan soal.\n2. Baca keempat pilihan jawaban dengan teliti.\n3. Kalau ada opsi yang kerasa aneh atau jelas bertentangan sama konsep, langsung kita coret duluan!\n\nNah, menurut kamu dari opsi yang ada, mana yang paling gampang kita eliminasi duluan?`;
       } else {
-        assistantReply = `✨ **Bimbingan Tutor AI Sokratik:**\n\nPertanyaan yang sangat bagus! Untuk materi **${materiJudul || "ini"}**, mari kita telaah bersama secara bertahap.\n\nCoba amati kembali pokok permasalahan pada soal tersebut. Informasi utama apa yang paling menonjol menurut pengamatanmu?`;
+        assistantReply = `💡 **Tips Santai (${nomorPrefix}):**\n\n${
+          activeHint ? `> *Clue buat kamu:* ${activeHint}\n\n` : ""
+        }Soal ini lagi ngajak kita mikir tentang *"${questionSnippet}..."*.\n\nCoba kamu baca pelan-pelan pilihan jawabannya. Kira-kira apa hal pertama yang terlintas di pikiranmu pas baca opsi-opsi itu?`;
       }
     }
 

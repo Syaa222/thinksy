@@ -22,11 +22,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 
-interface ExamQuestion {
+export interface ExamQuestion {
   id: string;
   pertanyaan: string;
   tipeSoal: "pilihan_ganda" | "esai";
   opsiSoal?: Array<{ id: string; teksOpsi: string }>;
+  kunciJawaban?: string;
+  pembahasan?: string;
+  hintSokratik?: string;
 }
 
 interface ExamPracticeClientProps {
@@ -99,25 +102,50 @@ export default function ExamPracticeClient({
     setFlagged((prev) => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }));
   };
 
-  // Socratic AI Assistant Chat Modal State (Always Available)
+  // Socratic AI Assistant Chat Modal State (Scoped per Question)
   const [isAiOpen, setIsAiOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState<
-    Array<{ sender: "user" | "tutor"; text: string }>
-  >([
-    {
-      sender: "tutor",
-      text: `Halo ${namaSiswa}! Saya THINKSY AI Sokratik Tutor (${mapel}). Saya siap memberikan petunjuk konsep & memandu langkah berpikirmu tanpa memberi tahu jawaban langsung. Ada yang ingin kamu tanyakan mengenai soal ini?`,
-    },
-  ]);
+  const [aiMessagesByQuestion, setAiMessagesByQuestion] = useState<
+    Record<string, Array<{ sender: "user" | "tutor"; text: string }>>
+  >({});
   const [inputMsg, setInputMsg] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  // Active Socratic messages for currently viewed question (Peer Persona)
+  const currentQuestionMessages = currentQ
+    ? aiMessagesByQuestion[currentQ.id] || [
+        {
+          sender: "tutor",
+          text: `Hai ${namaSiswa || "kamu"}! 👋 Aku teman belajarmu di sini buat nemenin kamu ngerjain **Soal #${currentIdx + 1}**.\n\nTenang aja, kita bedah bareng konsep soalnya pelan-pelan tanpa bocorin jawaban langsung ya, biar kamu makin paham! Kira-kira bagian mana nih yang bikin kamu ragu atau penasaran?`,
+        },
+      ]
+    : [];
+
+  const handleRequestQuestionHint = () => {
+    setIsAiOpen(true);
+    if (!currentQ) return;
+    const existing = aiMessagesByQuestion[currentQ.id];
+    if (!existing || existing.length === 0) {
+      handleSendAiMessage(
+        `Yuk bantu aku pahami konsep dasar dan tips awal buat ngerjain Soal #${currentIdx + 1} ini!`
+      );
+    }
+  };
 
   const handleSendAiMessage = async (presetPrompt?: string) => {
     const textToSend = (presetPrompt || inputMsg).trim();
     if (!textToSend || isAiLoading || !currentQ) return;
 
     setInputMsg("");
-    setAiMessages((prev) => [...prev, { sender: "user", text: textToSend }]);
+    const prevList = currentQuestionMessages;
+    const updatedWithUser = [
+      ...prevList,
+      { sender: "user" as const, text: textToSend },
+    ];
+
+    setAiMessagesByQuestion((prev) => ({
+      ...prev,
+      [currentQ.id]: updatedWithUser,
+    }));
     setIsAiLoading(true);
 
     try {
@@ -127,29 +155,46 @@ export default function ExamPracticeClient({
         body: JSON.stringify({
           sesiId,
           soalId: currentQ.id,
-          message: textToSend,
+          soalNomor: currentIdx + 1,
+          totalSoal: activeQuestions.length,
+          pertanyaan: currentQ.pertanyaan,
+          opsiJawaban: currentQ.opsiSoal,
+          kunciJawaban: currentQ.kunciJawaban,
+          pembahasan: currentQ.pembahasan,
+          hintSokratik: currentQ.hintSokratik,
+          babJudul: judulSesi,
           materiJudul: `${judulSesi} - Soal #${currentIdx + 1}`,
-          materiKonten: `PERTANYAAN: ${currentQ.pertanyaan}\n\nOPSI JAWABAN: ${currentQ.opsiSoal?.map((o) => o.teksOpsi).join(", ") || "Esai"}\n\nATURAN PENTING: Bimbing siswa dengan prinsip Sokratik (berikan petunjuk, pertanyaan pemantik, analogi, atau langkah awal berpikir). JANGAN PERNAH memberikan jawaban huruf pilihan ganda secara langsung!`,
+          mapel,
+          message: textToSend,
+          history: prevList.map((m) => ({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.text,
+          })),
         }),
       });
       const data = await response.json();
-      setAiMessages((prev) => [
+      const replyText =
+        data.reply ||
+        `💡 **Bimbingan Sokratik Soal #${currentIdx + 1}:**\n\nCoba telaah kembali kata kunci utama pada pertanyaan ini. Apakah kamu bisa mengidentifikasi konsep yang menghubungkan pertanyaan dengan pilihan jawaban yang ada?`;
+
+      setAiMessagesByQuestion((prev) => ({
         ...prev,
-        {
-          sender: "tutor",
-          text:
-            data.reply ||
-            "Mari kita analisis konsep dasarnya bersama-sama. Langkah awal apa yang sudah kamu pahami dari soal ini?",
-        },
-      ]);
+        [currentQ.id]: [
+          ...(prev[currentQ.id] || updatedWithUser),
+          { sender: "tutor", text: replyText },
+        ],
+      }));
     } catch {
-      setAiMessages((prev) => [
+      setAiMessagesByQuestion((prev) => ({
         ...prev,
-        {
-          sender: "tutor",
-          text: "Coba tinjau kembali data atau besaran yang diketahui pada soal ini. Apa rumus atau konsep utama yang bisa kita gunakan?",
-        },
-      ]);
+        [currentQ.id]: [
+          ...(prev[currentQ.id] || updatedWithUser),
+          {
+            sender: "tutor",
+            text: `💡 **Petunjuk Sokratik Soal #${currentIdx + 1}:**\n\nPerhatikan informasi penting yang ada pada soal. Konsep dasar apa yang menurutmu paling tepat untuk membedakan opsi yang benar dan yang salah?`,
+          },
+        ],
+      }));
     } finally {
       setIsAiLoading(false);
     }
@@ -248,13 +293,13 @@ export default function ExamPracticeClient({
 
           {/* Right Header: Socratic AI Button & Timer */}
           <div className="flex items-center space-x-2.5 sm:space-x-3">
-            {/* AI Sokratik Trigger Button (Always Visible) */}
+            {/* Teman Belajar AI Trigger Button (Always Visible) */}
             <button
               onClick={() => setIsAiOpen(true)}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold shadow-md transition cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-              <span>Tutor AI Sokratik</span>
+              <span>Teman Belajar AI</span>
             </button>
 
             {!isInClassMode ? (
@@ -286,12 +331,12 @@ export default function ExamPracticeClient({
 
                 {/* Socratic Helper Button in Question Card */}
                 <button
-                  onClick={() => setIsAiOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold transition"
+                  onClick={handleRequestQuestionHint}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold transition cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span className="hidden sm:inline">Minta Petunjuk Sokratik</span>
-                  <span className="sm:hidden">Petunjuk</span>
+                  <span className="hidden sm:inline">Tanya Teman Belajar</span>
+                  <span className="sm:hidden">Teman AI</span>
                 </button>
               </div>
 
@@ -516,30 +561,62 @@ export default function ExamPracticeClient({
 
       {/* 4. SOCRATIC AI ASSISTANT MODAL / DRAWER */}
       {isAiOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[550px] animate-in fade-in slide-in-from-bottom-4 duration-200 text-slate-900">
+        <div className="fixed bottom-6 right-6 z-50 w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[580px] animate-in fade-in slide-in-from-bottom-4 duration-200 text-slate-900">
           {/* Header */}
           <div className="bg-[#0F172A] text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-xs">
                 <Sparkles className="w-4 h-4 text-amber-300" />
               </div>
               <div>
-                <h4 className="text-xs font-black">Tutor AI Sokratik ({mapel})</h4>
-                <p className="text-[10px] text-slate-300">Membimbing konsep tanpa membocorkan jawaban</p>
+                <h4 className="text-xs font-black tracking-tight">Teman Belajar AI ({mapel})</h4>
+                <p className="text-[10px] text-slate-300">Teman diskusi asik buat bedah soal tanpa bocorin jawaban</p>
               </div>
             </div>
 
             <button
               onClick={() => setIsAiOpen(false)}
-              className="text-slate-400 hover:text-white text-xs font-bold p-1 rounded-lg hover:bg-slate-800"
+              className="text-slate-400 hover:text-white text-xs font-bold p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="p-4 flex-1 overflow-y-auto space-y-3 max-h-[350px] bg-slate-50 text-xs">
-            {aiMessages.map((msg, i) => (
+          {/* Active Question Focus Banner with Quick Switcher */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-indigo-100/90 px-3.5 py-2 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0 pr-2">
+              <span className="shrink-0 font-extrabold px-2 py-0.5 rounded-lg bg-blue-600 text-white text-[10px] tracking-wide">
+                Soal #{currentIdx + 1}
+              </span>
+              <span className="truncate text-slate-700 font-medium text-[11px]" title={currentQ?.pertanyaan}>
+                {currentQ?.pertanyaan.replace(/^\d+\.\s*/, "").slice(0, 60)}...
+              </span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                disabled={currentIdx === 0}
+                onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
+                className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 text-slate-700 text-[10px] font-bold cursor-pointer"
+                title="Pindah ke Soal Sebelumnya"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                disabled={currentIdx === activeQuestions.length - 1}
+                onClick={() => setCurrentIdx((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
+                className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 text-slate-700 text-[10px] font-bold cursor-pointer"
+                title="Pindah ke Soal Selanjutnya"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+
+          {/* Messages (Scoped to Current Active Question) */}
+          <div className="p-4 flex-1 overflow-y-auto space-y-3 max-h-[330px] bg-slate-50 text-xs">
+            {currentQuestionMessages.map((msg, i) => (
               <div
                 key={i}
                 className={`p-3 rounded-2xl leading-relaxed ${
@@ -553,32 +630,58 @@ export default function ExamPracticeClient({
             ))}
 
             {isAiLoading && (
-              <div className="flex items-center gap-2 text-slate-500 text-xs italic p-2 bg-white rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2 text-slate-500 text-xs italic p-2.5 bg-white rounded-xl border border-slate-200">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                <span>Tutor Sokratik sedang merumuskan petunjuk...</span>
+                <span>Teman AI lagi nyiapin tips asik buat Soal #{currentIdx + 1}...</span>
               </div>
             )}
           </div>
 
-          {/* Quick Socratic Prompt Buttons */}
-          <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[10px]">
+          {/* Quick Socratic Prompt Buttons (Targeted to Active Question - Peer Tone) */}
+          <div className="px-3 py-2 bg-slate-100/90 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[10px]">
             <button
-              onClick={() => handleSendAiMessage("Berikan petunjuk konsep awal untuk soal nomor ini tanpa memberikan jawaban langsung.")}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition"
+              type="button"
+              onClick={() =>
+                handleSendAiMessage(
+                  `Yuk kasih tips konsep awal buat Soal #${currentIdx + 1} ini tanpa bocorin jawabannya ya!`
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition cursor-pointer font-medium shadow-2xs"
             >
-              💡 Petunjuk Konsep
+              💡 Tips Soal #{currentIdx + 1}
             </button>
             <button
-              onClick={() => handleSendAiMessage("Apa rumus atau istilah kunci yang perlu saya ingat untuk menyelesaikan soal ini?")}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition"
+              type="button"
+              onClick={() =>
+                handleSendAiMessage(
+                  `Apa kata kunci penting yang diuji di Soal #${currentIdx + 1} ini?`
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition cursor-pointer font-medium shadow-2xs"
             >
-              🔍 Rumus / Istilah Kunci
+              🔍 Kata Kunci
             </button>
             <button
-              onClick={() => handleSendAiMessage("Bagaimana langkah pertama menganalisis soal ini?")}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition"
+              type="button"
+              onClick={() =>
+                handleSendAiMessage(
+                  `Gimana cara menganalisis dan mengeliminasi pilihan jawaban di Soal #${currentIdx + 1} ini?`
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition cursor-pointer font-medium shadow-2xs"
             >
-              ❓ Langkah Awal
+              🪜 Cara Eliminasi Opsi
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                handleSendAiMessage(
+                  `Ada jebakan atau hal yang perlu diwaspadai nggak di soal ini?`
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 text-slate-700 whitespace-nowrap transition cursor-pointer font-medium shadow-2xs"
+            >
+              ⚠️ Ada Jebakan Nggak?
             </button>
           </div>
 
@@ -594,13 +697,13 @@ export default function ExamPracticeClient({
               type="text"
               value={inputMsg}
               onChange={(e) => setInputMsg(e.target.value)}
-              placeholder="Tanyakan konsep soal ini ke AI Sokratik..."
+              placeholder={`Tanya atau diskusikan Soal #${currentIdx + 1} ke teman AI...`}
               className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-900"
             />
             <button
               type="submit"
               disabled={isAiLoading || !inputMsg.trim()}
-              className="p-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition shadow-xs"
+              className="p-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition shadow-xs cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>

@@ -68,6 +68,9 @@ export default async function QuizPage({
       id: o.id || `opt-${idx + 1}-${optIdx + 1}`,
       teksOpsi: o.teksOpsi,
     })),
+    kunciJawaban: q.kunciJawaban,
+    pembahasan: q.pembahasan,
+    hintSokratik: q.hintSokratik,
   }));
 
   const formattedSoalList =
