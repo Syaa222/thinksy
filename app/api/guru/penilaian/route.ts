@@ -285,6 +285,8 @@ export async function POST(req: Request) {
       .from("jawaban")
       .update({
         nilai: numericScore,
+        skor_final_guru: numericScore,
+        status_penilaian: "terverifikasi_guru",
         umpan_balik_ai: catatanGuru || "Nilai telah disetujui dan diverifikasi oleh Guru.",
         is_benar: isBenar,
       })
@@ -308,11 +310,14 @@ export async function POST(req: Request) {
 
       const { data: allAnswers } = await adminDb
         .from("jawaban")
-        .select("nilai")
+        .select("nilai, skor_final_guru")
         .eq("sesi_id", updatedJawaban.sesi_id);
 
       if (allAnswers && allAnswers.length > 0) {
-        const totalSum = allAnswers.reduce((acc, curr) => acc + Number(curr.nilai || 0), 0);
+        const totalSum = allAnswers.reduce(
+          (acc, curr) => acc + Number(curr.skor_final_guru ?? curr.nilai ?? 0),
+          0
+        );
         const avgScore = Math.round(totalSum / allAnswers.length);
 
         await adminDb

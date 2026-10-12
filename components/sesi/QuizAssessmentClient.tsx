@@ -21,7 +21,7 @@ import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 export interface CleanQuizQuestion {
   id: string;
   pertanyaan: string;
-  tipeSoal: "pilihan_ganda" | "esai";
+  tipeSoal: "pilihan_ganda" | "isian_singkat" | "esai";
   opsiSoal?: Array<{ id: string; teksOpsi: string }>;
 }
 
@@ -194,14 +194,15 @@ export default function QuizAssessmentClient({
   // 4. ANSWER SELECTION & PERSISTENCE
   const saveAnswerToDb = async (soalId: string, val: string) => {
     try {
-      await fetch("/api/sesi/simpan-jawaban", {
+      const q = soalList.find((item) => item.id === soalId);
+      await fetch("/api/sesi/jawab", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sesiId,
           soalId,
-          opsiDipilihId: val,
-          jawabanTeks: val,
+          opsiId: q?.tipeSoal === "pilihan_ganda" ? val : undefined,
+          jawabanTeks: q?.tipeSoal !== "pilihan_ganda" ? val : undefined,
         }),
       });
     } catch {
@@ -368,6 +369,22 @@ export default function QuizAssessmentClient({
                         </button>
                       );
                     })
+                  ) : currentQ.tipeSoal === "isian_singkat" ? (
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600 block">
+                        Ketikkan Jawaban Singkat Anda:
+                      </label>
+                      <input
+                        type="text"
+                        value={answers[currentQ.id] || ""}
+                        onChange={(e) => handleSelectAnswer(e.target.value)}
+                        placeholder="Contoh: 120 atau 3x + 5"
+                        className="w-full p-4 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 transition"
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        *Jawaban otomatis tersimpan setiap kali Anda mengetik.
+                      </p>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-600 block">

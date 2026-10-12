@@ -11,7 +11,7 @@ export default async function HasilPage({
   const { sesiId } = await params;
   const adminDb = createAdminClient();
 
-  // 1. Fetch Sesi Info via adminDb
+  // 1. Fetch Sesi Info
   const { data: sesiData } = await adminDb
     .from("sesi")
     .select(`
@@ -31,7 +31,7 @@ export default async function HasilPage({
     .eq("id", sesiId)
     .maybeSingle();
 
-  // 2. Fetch Jawaban Data via adminDb to read full question detail & AI discussions
+  // 2. Fetch Jawaban Data dengan alasan_salah & status override guru
   const { data: jawabanRows } = await adminDb
     .from("jawaban")
     .select(`
@@ -41,7 +41,10 @@ export default async function HasilPage({
       jawaban_teks,
       is_benar,
       nilai,
+      skor_final_guru,
       umpan_balik_ai,
+      keyakinan_ai,
+      status_penilaian,
       dijawab_pada,
       soal (
         id,
@@ -51,8 +54,10 @@ export default async function HasilPage({
         pembahasan,
         opsi_soal (
           id,
+          label,
           teks_opsi,
           benar,
+          alasan_salah,
           urutan
         )
       )
@@ -74,20 +79,32 @@ export default async function HasilPage({
         incorrectCount += 1;
       }
 
-      totalScoreSum += Number(item.nilai || 0);
+      const effectiveScore =
+        item.skor_final_guru !== null && item.skor_final_guru !== undefined
+          ? Number(item.skor_final_guru)
+          : Number(item.nilai || 0);
 
-      const soal = item.soal;
+      totalScoreSum += effectiveScore;
+
+      const soal = Array.isArray(item.soal) ? item.soal[0] : item.soal;
       let studentAns = "-";
       let correctAns = "-";
+      let miskonsepsiText: string | undefined = undefined;
 
       if (soal?.tipe_soal === "pilihan_ganda") {
         const selectedOpt = soal.opsi_soal?.find((o: any) => o.id === item.opsi_dipilih_id);
         const correctOpt = soal.opsi_soal?.find((o: any) => o.benar);
-        studentAns = selectedOpt ? selectedOpt.teks_opsi : (item.jawaban_teks || "Tidak Dijawab");
-        correctAns = correctOpt ? correctOpt.teks_opsi : (soal.kunci_jawaban || "-");
+        studentAns = selectedOpt ? `${selectedOpt.label ? `[${selectedOpt.label}] ` : ""}${selectedOpt.teks_opsi}` : (item.jawaban_teks || "Tidak Dijawab");
+        correctAns = correctOpt ? `${correctOpt.label ? `[${correctOpt.label}] ` : ""}${correctOpt.teks_opsi}` : (soal.kunci_jawaban || "-");
+        if (!isCorrect && selectedOpt?.alasan_salah) {
+          miskonsepsiText = selectedOpt.alasan_salah;
+        }
+      } else if (soal?.tipe_soal === "isian_singkat") {
+        studentAns = item.jawaban_teks || "Tidak Dijawab";
+        correctAns = soal?.kunci_jawaban || "-";
       } else {
         studentAns = item.jawaban_teks || "Tidak Dijawab";
-        correctAns = soal?.kunci_jawaban || "Sesuai kriteria penilaian esai";
+        correctAns = soal?.kunci_jawaban || "Sesuai kriteria rubrik esai";
       }
 
       const explanation =
@@ -97,6 +114,14 @@ export default async function HasilPage({
           ? "Jawaban Anda sudah tepat dan memenuhi kriteria pemahaman konsep materi ini."
           : "Tinjau kembali konsep dan langkah penyelesaian pada materi bab ini.");
 
+      const isEssay = soal?.tipe_soal === "esai";
+      const isOverridden = item.skor_final_guru !== null && item.skor_final_guru !== undefined;
+      const statusPenilaian = isOverridden
+        ? "final"
+        : isEssay
+        ? "sementara"
+        : "final";
+
       reviews.push({
         id: idx + 1,
         soalId: item.soal_id,
@@ -104,18 +129,18 @@ export default async function HasilPage({
         studentAnswer: studentAns,
         correctAnswer: correctAns,
         isCorrect: isCorrect,
-        explanation: explanation,
+        explanation: miskonsepsiText ? `⚠️ **Analisis Miskonsepsi Jawabanmu:** ${miskonsepsiText}\n\n**Pembahasan:**\n${explanation}` : explanation,
         tipeSoal: (soal?.tipe_soal || "pilihan_ganda") as any,
-        statusPenilaian: soal?.tipe_soal === "esai" ? "sementara" : "final",
+        statusPenilaian: statusPenilaian as any,
         topik: (soal as any)?.bab?.judul || "Materi Terkait",
       });
     });
   }
 
-  // Fallback if no jawaban rows were stored yet
   const judulBab = (sesiData as any)?.bab?.judul || "Evaluasi Pembelajaran";
-  const mapelNama = (sesiData as any)?.bab?.mapel || "Umum";
+  const mapelNama = (sesiData as any)?.bab?.mapel || "Matematika";
 
+  // Fallback if no jawaban rows
   if (reviews.length === 0) {
     const fallbackQuestions = generateChapterQuestions(judulBab, mapelNama, 8);
     fallbackQuestions.forEach((q, idx) => {

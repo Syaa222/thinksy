@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { gradeSingleEssayWithAi } from "@/app/api/nilai-esai/route";
 import { autoClaimMisi } from "@/app/api/siswa/misi/route";
 import { checkAndUpdateDailyStreak } from "@/lib/streak";
 
@@ -21,8 +22,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { sesiId, answers = {}, autoSubmitted = false } = body;
+    const body = await req.json().catch(() => ({}));
+    const { sesiId, autoSubmitted = false } = body;
 
     if (!sesiId) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Fetch Sesi record
+    // 1. Ambil data sesi
     const { data: sesiRow, error: sesiErr } = await adminDb
       .from("sesi")
       .select("id, siswa_id, bab_id, status_sesi, tipe_sesi")
@@ -40,120 +41,127 @@ export async function POST(req: Request) {
 
     if (sesiErr || !sesiRow) {
       return NextResponse.json(
-        { error: "Sesi quiz tidak ditemukan." },
+        { error: "Sesi tidak ditemukan." },
         { status: 404 }
       );
     }
 
-    // If already finalized, return redirect immediately
-    if (sesiRow.status_sesi === "selesai") {
-      return NextResponse.json({
-        success: true,
-        redirectUrl: `/hasil/${sesiId}`,
-        message: "Sesi ini sudah selesai sebelumnya.",
-      });
-    }
-
-    // 2. Fetch full question data with correct answer keys securely on server side
-    let query = adminDb
-      .from("soal")
+    // 2. Query semua jawaban pada sesi ini yang terhubung dengan detail soal
+    const { data: jawabanList } = await adminDb
+      .from("jawaban")
       .select(`
         id,
-        tipe_soal,
-        kunci_jawaban,
-        pembahasan,
-        opsi_soal (
+        soal_id,
+        opsi_dipilih_id,
+        jawaban_teks,
+        is_benar,
+        nilai,
+        soal (
           id,
-          teks_opsi,
-          benar
+          pertanyaan,
+          tipe_soal,
+          kunci_jawaban,
+          pembahasan,
+          rubrik,
+          poin,
+          opsi_soal (
+            id,
+            teks_opsi,
+            benar,
+            alasan_salah
+          )
         )
-      `);
+      `)
+      .eq("sesi_id", sesiId);
 
-    if (sesiRow.bab_id) {
-      query = query.eq("bab_id", sesiRow.bab_id);
-    }
+    let totalScoreSum = 0;
+    let totalQuestions = jawabanList?.length || 0;
+    let benarCount = 0;
 
-    const { data: dbQuestions } = await query.order("dibuat_pada", { ascending: true });
+    // 3. Evaluasi jawaban yang belum dinilai (terutama esai melalui AI rubrik)
+    if (jawabanList && jawabanList.length > 0) {
+      for (const j of jawabanList) {
+        const soal: any = Array.isArray(j.soal) ? j.soal[0] : j.soal;
+        if (!soal) continue;
 
-    let correctCount = 0;
-    let totalQuestions = dbQuestions && dbQuestions.length > 0 ? dbQuestions.length : Object.keys(answers).length || 1;
+        let currentNilai = typeof j.nilai === "number" ? j.nilai : 0;
+        let isCorrect = Boolean(j.is_benar);
 
-    // 3. Process and grade each answer
-    if (dbQuestions && dbQuestions.length > 0) {
-      for (const q of dbQuestions) {
-        const studentChoice = answers[q.id];
-        let isCorrect = false;
-        let nilai = 0;
-        let opsiDipilihId: string | null = null;
-        let jawabanTeks: string | null = null;
+        if (soal.tipe_soal === "pilihan_ganda") {
+          const matchingOpt = soal.opsi_soal?.find((o: any) => o.id === j.opsi_dipilih_id);
+          isCorrect = Boolean(matchingOpt?.benar);
+          currentNilai = isCorrect ? (soal.poin || 10) : 0;
 
-        if (q.tipe_soal === "pilihan_ganda") {
-          const matchingOption = q.opsi_soal?.find(
-            (o: any) => o.id === studentChoice || o.teks_opsi === studentChoice
-          );
-          opsiDipilihId = matchingOption?.id || (studentChoice ? studentChoice : null);
-          const correctOption = q.opsi_soal?.find((o: any) => o.benar);
+          await adminDb
+            .from("jawaban")
+            .update({
+              is_benar: isCorrect,
+              nilai: currentNilai,
+              status_penilaian: "selesai",
+            })
+            .eq("id", j.id);
 
-          if (matchingOption && matchingOption.benar) {
-            isCorrect = true;
-            nilai = 100;
-            correctCount += 1;
-          } else if (
-            studentChoice &&
-            q.kunci_jawaban &&
-            studentChoice.toLowerCase().trim() === q.kunci_jawaban.toLowerCase().trim()
-          ) {
-            isCorrect = true;
-            nilai = 100;
-            correctCount += 1;
+          if (isCorrect) benarCount += 1;
+        } else if (soal.tipe_soal === "isian_singkat") {
+          const studentInput = (j.jawaban_teks || "").trim().toLowerCase().replace(/\s+/g, " ");
+          const officialKey = (soal.kunci_jawaban || "").trim().toLowerCase().replace(/\s+/g, " ");
+          const keyOptions = officialKey.split(/[,/|]/).map((k: string) => k.trim());
+          isCorrect = keyOptions.includes(studentInput);
+          currentNilai = isCorrect ? (soal.poin || 10) : 0;
+
+          await adminDb
+            .from("jawaban")
+            .update({
+              is_benar: isCorrect,
+              nilai: currentNilai,
+              status_penilaian: "selesai",
+            })
+            .eq("id", j.id);
+
+          if (isCorrect) benarCount += 1;
+        } else if (soal.tipe_soal === "esai") {
+          // Evaluasi esai AI berbasis rubrik jika belum dinilai
+          if (j.nilai === null || j.nilai === undefined || j.nilai === 0) {
+            const { result } = await gradeSingleEssayWithAi(
+              soal.pertanyaan,
+              soal.rubrik,
+              j.jawaban_teks || "",
+              soal.kunci_jawaban,
+              soal.pembahasan
+            );
+
+            currentNilai = result.skor_total;
+            isCorrect = currentNilai >= 70;
+
+            await adminDb
+              .from("jawaban")
+              .update({
+                nilai: currentNilai,
+                umpan_balik_ai: result.umpan_balik,
+                keyakinan_ai: result.keyakinan,
+                status_penilaian: "sementara_menunggu_guru",
+                is_benar: isCorrect,
+              })
+              .eq("id", j.id);
+
+            if (isCorrect) benarCount += 1;
+          } else {
+            if (currentNilai >= 70) benarCount += 1;
           }
-        } else {
-          // Soal Esai
-          jawabanTeks = studentChoice || "";
-          isCorrect = false; // Menunggu konfirmasi guru
-          nilai = 0;
         }
 
-        // Upsert into jawaban table
-        await adminDb.from("jawaban").upsert(
-          {
-            sesi_id: sesiId,
-            soal_id: q.id,
-            opsi_dipilih_id: opsiDipilihId,
-            jawaban_teks: jawabanTeks,
-            is_benar: isCorrect,
-            nilai: nilai,
-            umpan_balik_ai:
-              q.tipe_soal === "esai"
-                ? "Skor esai sementara — menunggu konfirmasi guru"
-                : q.pembahasan || null,
-            dijawab_pada: new Date().toISOString(),
-          },
-          { onConflict: "sesi_id,soal_id" }
-        );
-      }
-    } else {
-      // Fallback if no questions in DB: record provided answers
-      for (const [soalId, val] of Object.entries(answers)) {
-        await adminDb.from("jawaban").upsert(
-          {
-            sesi_id: sesiId,
-            soal_id: soalId,
-            jawaban_teks: typeof val === "string" ? val : JSON.stringify(val),
-            is_benar: true,
-            nilai: 100,
-            dijawab_pada: new Date().toISOString(),
-          },
-          { onConflict: "sesi_id,soal_id" }
-        );
-        correctCount += 1;
+        totalScoreSum += currentNilai;
       }
     }
 
-    const finalScore = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
+    // 4. Hitung skor akhir persentase (0-100)
+    const finalScore =
+      totalQuestions > 0
+        ? Math.min(100, Math.round((totalScoreSum / (totalQuestions * 10)) * 100))
+        : 100;
 
-    // 4. Update sesi to status 'selesai'
-    const { error: updateSesiErr } = await adminDb
+    // 5. Update sesi menjadi selesai
+    await adminDb
       .from("sesi")
       .update({
         status_sesi: "selesai",
@@ -162,51 +170,29 @@ export async function POST(req: Request) {
       })
       .eq("id", sesiId);
 
-    if (updateSesiErr) {
-      console.error("[SELESAI SESI ERROR]", updateSesiErr);
-    }
-
-    // 5. Award Learning Points (XP)
-    const pointsToAdd = finalScore >= 80 ? 100 : finalScore >= 60 ? 75 : 50;
-    try {
-      const { data: curProfil } = await adminDb
-        .from("profil")
-        .select("poin_belajar")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const newPoints = (curProfil?.poin_belajar || 0) + pointsToAdd;
-      await adminDb
-        .from("profil")
-        .update({ poin_belajar: newPoints })
-        .eq("id", user.id);
-    } catch (xpErr) {
-      console.error("[AWARD XP ERROR]", xpErr);
-    }
-
-    // 6. Trigger auto-claim daily missions & streak evaluation
+    // 6. Bonus gamifikasi (XP/Misi) jika profil siswa aktif
     try {
       await autoClaimMisi(supabase, user.id, "kuis");
       await checkAndUpdateDailyStreak(user.id, "kuis");
-    } catch (questErr) {
-      console.error("[QUEST CLAIM ERROR]", questErr);
+    } catch {
+      // Non-fatal
     }
 
     return NextResponse.json({
       success: true,
       sesiId,
-      finalScore,
-      pointsAwarded: pointsToAdd,
-      autoSubmitted,
+      skorAkhir: finalScore,
+      totalSoal: totalQuestions,
+      benarCount,
       redirectUrl: `/hasil/${sesiId}`,
       message: autoSubmitted
-        ? "Waktu pengerjaan telah habis. Jawaban berhasil dikunci otomatis!"
-        : "Quiz berhasil diselesaikan!",
+        ? "Waktu pengerjaan habis. Sesi kuis telah dikunci dan dinilai otomatis!"
+        : "Sesi berhasil diselesaikan dan dihitung!",
     });
   } catch (err: any) {
     console.error("[API SESI SELESAI EXCEPTION]", err);
     return NextResponse.json(
-      { error: err.message || "Gagal memproses penyelesaian sesi quiz." },
+      { error: err.message || "Gagal memproses penyelesaian sesi." },
       { status: 500 }
     );
   }

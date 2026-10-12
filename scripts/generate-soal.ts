@@ -134,8 +134,10 @@ Balas HANYA JSON array valid tanpa markdown fence:
       if (Array.isArray(q.opsi) && q.opsi.length > 0) {
         const opsiData = q.opsi.map((op: any, idx: number) => ({
           soal_id: soalRow.id,
+          label: String.fromCharCode(65 + idx),
           teks_opsi: op.teks,
           benar: Boolean(op.benar),
+          alasan_salah: op.alasan_salah || null,
           urutan: idx + 1,
         }));
         await supabase.from("opsi_soal").insert(opsiData);

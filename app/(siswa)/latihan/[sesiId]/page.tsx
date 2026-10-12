@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import SessionQuizClient from "@/components/sesi/SessionQuizClient";
+import { createAdminClient } from "@/lib/supabase/admin";
+import LatihanSatuSoalClient, { QuestionItem } from "@/components/sesi/LatihanSatuSoalClient";
 import { redirect } from "next/navigation";
 
 function isValidUUID(str: string) {
@@ -13,35 +14,41 @@ export default async function LatihanPage({
 }) {
   const { sesiId: rawId } = await params;
   const supabase = await createClient();
+  const adminDb = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
 
   let sesiId = rawId;
 
-  // Always fetch profile to get nama and sekolah_id
-  const { data: profil } = user
-    ? await supabase.from("profil").select("sekolah_id, nama_lengkap").eq("id", user.id).single()
-    : { data: null };
+  // 1. Validasi sesi jika UUID
+  let sesiRow: any = null;
+  if (isValidUUID(rawId)) {
+    const { data: s } = await adminDb
+      .from("sesi")
+      .select("id, bab_id, tipe_sesi, status_sesi, bab:bab_id (id, judul)")
+      .eq("id", rawId)
+      .maybeSingle();
+    sesiRow = s;
+  }
 
-  // If not a valid UUID, create a real sesi row and redirect once
-  if (!isValidUUID(rawId) && user) {
-    const { data: firstBab } = await supabase
+  // 2. Buat sesi jika belum ada UUID valid
+  if (!sesiRow && user) {
+    const { data: firstBab } = await adminDb
       .from("bab")
-      .select("id")
+      .select("id, judul")
       .order("urutan", { ascending: true })
       .limit(1)
       .single();
 
-    const { data: newSesi } = await supabase
+    const { data: newSesi } = await adminDb
       .from("sesi")
       .insert({
         siswa_id: user.id,
-        sekolah_id: profil?.sekolah_id ?? null,
         bab_id: firstBab?.id ?? null,
         tipe_sesi: "latihan",
         status_sesi: "aktif",
       })
-      .select("id")
+      .select("id, bab_id, tipe_sesi, status_sesi")
       .single();
 
     if (newSesi?.id) {
@@ -49,47 +56,85 @@ export default async function LatihanPage({
     }
   }
 
-  // Query published questions from secure view
-  const { data: dbSoalList } = await supabase
-    .from("soal_publik")
-    .select(`id, pertanyaan, tipe_soal, opsi_soal_publik (id, teks_opsi)`);
+  const effectiveBabId = sesiRow?.bab_id;
+  const judulBab =
+    (sesiRow?.bab as any)?.judul || "Bab 1: Pola Bilangan & Barisan";
 
-  const defaultSoalList = [
+  // 3. Query Soal Publik terbit untuk bab ini (Termasuk PG, Isian Singkat, dan Esai)
+  let soalQuery = adminDb
+    .from("soal")
+    .select(`
+      id,
+      pertanyaan,
+      tipe_soal,
+      poin,
+      opsi_soal (
+        id,
+        label,
+        teks_opsi,
+        urutan
+      )
+    `)
+    .in("status_soal", ["dipublikasi", "terbit"]);
+
+  if (effectiveBabId) {
+    soalQuery = soalQuery.eq("bab_id", effectiveBabId);
+  }
+
+  const { data: dbSoalList } = await soalQuery.order("dibuat_pada", { ascending: true }).limit(10);
+
+  // Default soal jika bank soal bab belum memiliki data
+  const defaultSoalList: QuestionItem[] = [
     {
       id: "d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a55",
       pertanyaan: "Diketahui barisan aritmatika $3, 7, 11, 15, \\dots$. Tentukan nilai dari suku ke-10 ($U_{10}$)!",
-      tipeSoal: "pilihan_ganda" as const,
+      tipeSoal: "pilihan_ganda",
+      poin: 10,
       opsiSoal: [
-        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a77", teksOpsi: "35" },
-        { id: "e2eebc99-9c0b-4ef8-bb6d-6bb9bd380a88", teksOpsi: "39" },
-        { id: "e3eebc99-9c0b-4ef8-bb6d-6bb9bd380a99", teksOpsi: "43" },
-        { id: "e4eebc99-9c0b-4ef8-bb6d-6bb9bd380aaa", teksOpsi: "47" },
+        { id: "e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a77", label: "A", teksOpsi: "35" },
+        { id: "e2eebc99-9c0b-4ef8-bb6d-6bb9bd380a88", label: "B", teksOpsi: "39" },
+        { id: "e3eebc99-9c0b-4ef8-bb6d-6bb9bd380a99", label: "C", teksOpsi: "43" },
+        { id: "e4eebc99-9c0b-4ef8-bb6d-6bb9bd380aaa", label: "D", teksOpsi: "47" },
       ],
     },
     {
+      id: "d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a77",
+      pertanyaan: "Jika beda ($b$) pada barisan aritmatika $5, 9, 13, 17, \\dots$ adalah konstan, berapakah nilai beda ($b$) tersebut?",
+      tipeSoal: "isian_singkat",
+      poin: 10,
+    },
+    {
       id: "d2eebc99-9c0b-4ef8-bb6d-6bb9bd380a66",
-      pertanyaan: "Jelaskan perbedaan mendasar antara **Barisan Aritmatika** dan **Barisan Geometri**, serta berikan masing-masing 1 contoh!",
-      tipeSoal: "esai" as const,
+      pertanyaan: "Jelaskan perbedaan mendasar antara **Barisan Aritmatika** dan **Barisan Geometri**, serta berikan masing-masing 1 contoh sederhana!",
+      tipeSoal: "esai",
+      poin: 10,
     },
   ];
 
-  const soalList =
+  const formattedSoalList: QuestionItem[] =
     dbSoalList && dbSoalList.length > 0
       ? dbSoalList.map((item: any) => ({
           id: item.id,
           pertanyaan: item.pertanyaan,
-          tipeSoal: item.tipe_soal as "pilihan_ganda" | "esai",
-          opsiSoal: (item.opsi_soal_publik || item.opsi_soal)?.map((o: any) => ({ id: o.id, teksOpsi: o.teks_opsi })),
+          tipeSoal: item.tipe_soal as "pilihan_ganda" | "isian_singkat" | "esai",
+          poin: item.poin || 10,
+          opsiSoal: Array.isArray(item.opsi_soal)
+            ? [...item.opsi_soal]
+                .sort((a, b) => (a.urutan || 0) - (b.urutan || 0))
+                .map((o: any, idx: number) => ({
+                  id: o.id,
+                  label: o.label || String.fromCharCode(65 + idx),
+                  teksOpsi: o.teks_opsi,
+                }))
+            : undefined,
         }))
       : defaultSoalList;
 
   return (
-    <SessionQuizClient
+    <LatihanSatuSoalClient
       sesiId={sesiId}
-      jenisSesi="Latihan"
-      judulBab="Bab 1: Pola Bilangan & Barisan"
-      soalList={soalList}
-      namaSiswa={profil?.nama_lengkap ?? undefined}
+      judulBab={judulBab}
+      soalList={formattedSoalList}
     />
   );
 }

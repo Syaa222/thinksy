@@ -8,22 +8,29 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
-  Save,
   Clock,
   Sparkles,
-  Bot,
   AlertCircle,
   Eye,
   Plus,
   Trash2,
+  ShieldCheck,
   FileCheck,
 } from "lucide-react";
 
 interface OpsiItem {
   id?: string;
+  label?: string;
   teks_opsi: string;
   benar: boolean;
+  alasan_salah?: string;
   urutan: number;
+}
+
+interface RubrikItem {
+  kriteria: string;
+  bobot: number;
+  deskriptor?: string;
 }
 
 export default function EditorSoalReviewGatePage({
@@ -44,7 +51,9 @@ export default function EditorSoalReviewGatePage({
   const [kunciJawaban, setKunciJawaban] = useState("");
   const [pembahasan, setPembahasan] = useState("");
   const [babJudul, setBabJudul] = useState("");
+  const [direviewAt, setDireviewAt] = useState<string | null>(null);
   const [opsiList, setOpsiList] = useState<OpsiItem[]>([]);
+  const [rubrikList, setRubrikList] = useState<RubrikItem[]>([]);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -67,6 +76,8 @@ export default function EditorSoalReviewGatePage({
           status_soal,
           kunci_jawaban,
           pembahasan,
+          rubrik,
+          direview_at,
           sumber_konten,
           bab (
             id,
@@ -74,8 +85,10 @@ export default function EditorSoalReviewGatePage({
           ),
           opsi_soal (
             id,
+            label,
             teks_opsi,
             benar,
+            alasan_salah,
             urutan
           )
         `)
@@ -93,7 +106,18 @@ export default function EditorSoalReviewGatePage({
       setStatusSoal(soalData.status_soal || "review");
       setKunciJawaban(soalData.kunci_jawaban || "");
       setPembahasan(soalData.pembahasan || "");
+      setDireviewAt(soalData.direview_at || null);
       setBabJudul((soalData as any)?.bab?.judul || "Matematika Kelas 8");
+
+      if (Array.isArray(soalData.rubrik) && soalData.rubrik.length > 0) {
+        setRubrikList(soalData.rubrik);
+      } else {
+        setRubrikList([
+          { kriteria: "Pemahaman Konsep & Rumus", bobot: 40, deskriptor: "Ketepatan identifikasi rumus." },
+          { kriteria: "Langkah Perhitungan / Pembuktian", bobot: 40, deskriptor: "Langkah sistematis dan akurat." },
+          { kriteria: "Kesimpulan Akhir & Notasi", bobot: 20, deskriptor: "Notasi dan satuan tepat." },
+        ]);
+      }
 
       const sortedOpsi = ((soalData as any)?.opsi_soal || []).sort(
         (a: OpsiItem, b: OpsiItem) => a.urutan - b.urutan
@@ -102,10 +126,10 @@ export default function EditorSoalReviewGatePage({
         setOpsiList(sortedOpsi);
       } else {
         setOpsiList([
-          { teks_opsi: "", benar: true, urutan: 1 },
-          { teks_opsi: "", benar: false, urutan: 2 },
-          { teks_opsi: "", benar: false, urutan: 3 },
-          { teks_opsi: "", benar: false, urutan: 4 },
+          { teks_opsi: "", benar: true, urutan: 1, label: "A", alasan_salah: "" },
+          { teks_opsi: "", benar: false, urutan: 2, label: "B", alasan_salah: "Miskonsepsi perhitungan." },
+          { teks_opsi: "", benar: false, urutan: 3, label: "C", alasan_salah: "Miskonsepsi tanda operasi." },
+          { teks_opsi: "", benar: false, urutan: 4, label: "D", alasan_salah: "Langkah terbalik." },
         ]);
       }
     } catch (err: any) {
@@ -119,28 +143,26 @@ export default function EditorSoalReviewGatePage({
     setSaving(true);
     setNotification(null);
 
-    const targetStatus = publishImmediately ? "dipublikasi" : statusSoal;
-
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
-      // 1. Update record di table soal
+      // 1. Simpan perubahan konten ke DB
       const { error: updateErr } = await supabase
         .from("soal")
         .update({
           pertanyaan,
           tipe_soal: tipeSoal,
           tingkat_soal: tingkatSoal,
-          status_soal: targetStatus,
           kunci_jawaban: kunciJawaban,
           pembahasan,
+          rubrik: tipeSoal === "esai" ? rubrikList : [],
         })
         .eq("id", soalId);
 
       if (updateErr) throw updateErr;
 
-      // 2. Update opsi_soal jika pilihan ganda
+      // 2. Simpan opsi_soal jika pilihan ganda
       if (tipeSoal === "pilihan_ganda") {
         for (const op of opsiList) {
           if (op.id) {
@@ -149,24 +171,41 @@ export default function EditorSoalReviewGatePage({
               .update({
                 teks_opsi: op.teks_opsi,
                 benar: op.benar,
+                alasan_salah: op.benar ? null : (op.alasan_salah || ""),
               })
               .eq("id", op.id);
           }
         }
       }
 
-      setStatusSoal(targetStatus);
-      setNotification({
-        type: "success",
-        text: publishImmediately
-          ? "🎉 Soal berhasil disetujui & diterbitkan ke siswa (Review Gate Passed)!"
-          : "✅ Perubahan soal berhasil disimpan.",
-      });
-
+      // 3. Jika guru memilih "Terbitkan Soal" -> Panggil Review Gate Server
       if (publishImmediately) {
+        const res = await fetch("/api/guru/terbitkan-soal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ soalId }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Gagal menerbitkan soal.");
+        }
+
+        setStatusSoal("dipublikasi");
+        setDireviewAt(data.direviewAt);
+        setNotification({
+          type: "success",
+          text: `🎉 Review Gate Passed: ${data.message}`,
+        });
+
         setTimeout(() => {
           router.push("/guru/soal");
         }, 1200);
+      } else {
+        setNotification({
+          type: "success",
+          text: "✅ Perubahan bank soal berhasil disimpan sebagai draft/review.",
+        });
       }
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Gagal menyimpan perubahan." });
@@ -175,117 +214,107 @@ export default function EditorSoalReviewGatePage({
     }
   };
 
-  const isReviewStatus = statusSoal === "review" || statusSoal === "perlu_review";
-  const isPublished = statusSoal === "dipublikasi" || statusSoal === "terbit";
+  const handleSetCorrectOption = (targetIndex: number) => {
+    setOpsiList((prev) =>
+      prev.map((op, idx) => ({
+        ...op,
+        benar: idx === targetIndex,
+      }))
+    );
+  };
+
+  const handleUpdateOptionText = (index: number, val: string) => {
+    setOpsiList((prev) =>
+      prev.map((op, idx) => (idx === index ? { ...op, teks_opsi: val } : op))
+    );
+  };
+
+  const handleUpdateOptionDistraktor = (index: number, val: string) => {
+    setOpsiList((prev) =>
+      prev.map((op, idx) => (idx === index ? { ...op, alasan_salah: val } : op))
+    );
+  };
 
   return (
-    <GuruLayout>
-      <div className="space-y-6 max-w-4xl mx-auto pb-20">
-        {/* Navigation & Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+    <GuruLayout activeView="pengelolaan">
+      <div className="max-w-4xl mx-auto space-y-6 pb-20 font-sans">
+        {/* Top Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
             <Link
               href="/guru/soal"
-              className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                  Editor Soal & Review Gate
-                </h1>
-                {isReviewStatus && (
-                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                    Menunggu Review Guru
-                  </span>
-                )}
-                {isPublished && (
-                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Terbit ke Siswa
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Topik: <span className="font-semibold text-slate-700">{babJudul}</span>
-              </p>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                Review Gate & Editor Bank Soal
+              </h1>
+              <p className="text-xs text-slate-500">{babJudul}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSave(false)}
-              disabled={saving}
-              className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                statusSoal === "dipublikasi" || statusSoal === "terbit"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
             >
-              <Save className="w-4 h-4" />
-              <span>Simpan Draft</span>
-            </button>
-
-            <button
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Terbitkan Soal (Review Gate)</span>
-            </button>
+              {statusSoal}
+            </span>
           </div>
         </div>
 
-        {/* Notification Toast */}
+        {/* Notification Banner */}
         {notification && (
           <div
-            className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+            className={`p-4 rounded-2xl text-xs flex items-center gap-2.5 font-medium ${
               notification.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-rose-50 border-rose-200 text-rose-800"
+                ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                : "bg-rose-50 text-rose-900 border border-rose-200"
             }`}
           >
             {notification.type === "success" ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             )}
             <span>{notification.text}</span>
           </div>
         )}
 
-        {loading ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-xs text-slate-500">
-            Memuat rincian soal...
-          </div>
-        ) : (
+        {/* Main Editor Form */}
+        {!loading && (
           <div className="space-y-6">
-            {/* Meta Attributes */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Atribut & Pengaturan Soal
-              </h2>
-
+            {/* Metadata Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
                     Tipe Soal
                   </label>
                   <select
                     value={tipeSoal}
                     onChange={(e) => setTipeSoal(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white"
+                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white font-sans focus:ring-2 focus:ring-[#193446]"
                   >
-                    <option value="pilihan_ganda">Pilihan Ganda (Objektif)</option>
-                    <option value="esai">Esai (Uraian)</option>
+                    <option value="pilihan_ganda">Pilihan Ganda (PG)</option>
+                    <option value="isian_singkat">Isian Singkat</option>
+                    <option value="esai">Uraian / Esai</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
                     Tingkat Kesulitan
                   </label>
                   <select
                     value={tingkatSoal}
                     onChange={(e) => setTingkatSoal(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 bg-white font-sans"
+                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white font-sans focus:ring-2 focus:ring-[#193446]"
                   >
                     <option value="mudah">Mudah</option>
                     <option value="sedang">Sedang</option>
@@ -294,174 +323,215 @@ export default function EditorSoalReviewGatePage({
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                    Status Publikasi
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                    Status Review
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    disabled
                     value={statusSoal}
-                    onChange={(e) => setStatusSoal(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 bg-white font-sans"
-                  >
-                    <option value="review">Perlu Review (Tertahan)</option>
-                    <option value="dipublikasi">Dipublikasi (Aktif untuk Siswa)</option>
-                    <option value="draft">Draft Guru</option>
-                  </select>
+                    className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-600 font-bold uppercase"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Question Text & KaTeX Live Preview */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Teks Pertanyaan (Mendukung LaTeX $...$)
-                </label>
-                <span className="text-[11px] text-slate-400">Gunakan $...$ untuk rumus KaTeX</span>
-              </div>
-
+            {/* Pertanyaan */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                Pertanyaan Soal (Markdown & LaTeX $...$)
+              </label>
               <textarea
                 rows={4}
                 value={pertanyaan}
                 onChange={(e) => setPertanyaan(e.target.value)}
-                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl p-3 font-sans focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100"
-                placeholder="Tuliskan soal di sini, contoh: Tentukan nilai $x$ jika $2x + 6 = 14$..."
+                placeholder="Tuliskan stimulus atau pertanyaan di sini..."
+                className="w-full text-sm border border-slate-200 rounded-xl p-3 font-sans focus:ring-2 focus:ring-[#193446]"
               />
-
-              {/* Live Preview Box */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Pratinjau Tampilan Siswa
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                <span className="font-bold text-slate-500 block mb-1 text-[10px] uppercase">
+                  Pratinjau Rumus:
                 </span>
-                <div className="text-xs sm:text-sm text-slate-900 leading-relaxed">
-                  <MarkdownRenderer content={pertanyaan || "_Belum ada teks pertanyaan._"} />
-                </div>
+                <MarkdownRenderer content={pertanyaan || "_Pratinjau kosong_"} />
               </div>
             </div>
 
-            {/* Options or Essay Answer Key */}
-            {tipeSoal === "pilihan_ganda" ? (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Opsi Jawaban (Tandai Tepat Satu Jawaban Benar)
-                </h2>
+            {/* Answer Options / Isian / Rubric */}
+            {tipeSoal === "pilihan_ganda" && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Opsi Jawaban & Penjelasan Distraktor Miskonsepsi
+                  </h3>
+                  <span className="text-[11px] text-slate-500">Pilih 1 kunci yang benar</span>
+                </div>
 
                 <div className="space-y-3">
                   {opsiList.map((op, idx) => {
-                    const label = String.fromCharCode(65 + idx);
+                    const letter = String.fromCharCode(65 + idx);
                     return (
                       <div
                         key={idx}
-                        className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
-                          op.benar ? "bg-blue-50/60 border-[#1967D2]/40" : "bg-white border-slate-200/80"
+                        className={`p-3.5 rounded-2xl border space-y-2 transition ${
+                          op.benar ? "bg-emerald-50/70 border-emerald-300" : "bg-white border-slate-200"
                         }`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpsiList((prev) =>
-                              prev.map((item, i) => ({ ...item, benar: i === idx }))
-                            );
-                            setKunciJawaban(op.teks_opsi);
-                          }}
-                          className={`mt-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
-                            op.benar ? "bg-[#1967D2] text-white shadow-xs" : "border border-slate-300 text-slate-500 hover:border-slate-400"
-                          }`}
-                        >
-                          {label}
-                        </button>
-
-                        <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleSetCorrectOption(idx)}
+                            className={`w-7 h-7 rounded-xl font-bold text-xs flex items-center justify-center transition ${
+                              op.benar
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            {letter}
+                          </button>
                           <input
                             type="text"
                             value={op.teks_opsi}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setOpsiList((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, teks_opsi: val } : item))
-                              );
-                              if (op.benar) setKunciJawaban(val);
-                            }}
-                            placeholder={`Teks pilihan jawaban ${label}...`}
-                            className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 bg-white font-sans"
+                            onChange={(e) => handleUpdateOptionText(idx, e.target.value)}
+                            placeholder={`Teks pilihan ${letter}...`}
+                            className="flex-1 text-xs border border-slate-200 rounded-xl p-2 bg-white"
                           />
-                          <div className="text-[11px] text-slate-600 px-1">
-                            <MarkdownRenderer content={op.teks_opsi || "_Kosong_"} />
-                          </div>
+                          {op.benar && (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900">
+                              Kunci Resmi
+                            </span>
+                          )}
                         </div>
 
-                        {op.benar && (
-                          <span className="text-[11px] font-bold text-[#1967D2] px-2.5 py-0.5 bg-blue-100 rounded-full self-center">
-                            Kunci Jawaban
-                          </span>
+                        {!op.benar && (
+                          <div className="pl-10">
+                            <input
+                              type="text"
+                              value={op.alasan_salah || ""}
+                              onChange={(e) => handleUpdateOptionDistraktor(idx, e.target.value)}
+                              placeholder={`Penjelasan miskonsepsi/kenapa opsi ${letter} salah...`}
+                              className="w-full text-[11px] border border-amber-200 rounded-lg p-1.5 bg-amber-50/50 text-amber-950 placeholder:text-amber-800/60"
+                            />
+                          </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
               </div>
-            ) : (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-3 shadow-xs">
+            )}
+
+            {tipeSoal === "isian_singkat" && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Kunci Konsep / Rubrik Esai
+                  Kunci Jawaban Isian Singkat
                 </label>
-                <textarea
-                  rows={3}
+                <input
+                  type="text"
                   value={kunciJawaban}
                   onChange={(e) => setKunciJawaban(e.target.value)}
-                  placeholder="Kriteria jawaban benar rujukan materi yang akan digunakan AI untuk menilai..."
-                  className="w-full text-xs border border-slate-200 rounded-xl p-3 focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 font-sans"
+                  placeholder="Contoh: 45 (atau pisahkan alternatif dengan tanda koma jika ada lebih dari 1 bentuk)"
+                  className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-[#193446]"
                 />
               </div>
             )}
 
-            {/* Explanation / Discussion */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-3 shadow-xs">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                Pembahasan Langkah demi Langkah
-              </label>
+            {tipeSoal === "esai" && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                    Rubrik Penilaian Esai AI
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    Total Bobot: {rubrikList.reduce((acc, r) => acc + (Number(r.bobot) || 0), 0)}%
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {rubrikList.map((r, rIdx) => (
+                    <div
+                      key={rIdx}
+                      className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-3 text-xs"
+                    >
+                      <input
+                        type="text"
+                        value={r.kriteria}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setRubrikList((prev) =>
+                            prev.map((item, idx) => (idx === rIdx ? { ...item, kriteria: val } : item))
+                          );
+                        }}
+                        placeholder="Nama kriteria..."
+                        className="flex-1 bg-white border border-slate-200 rounded-lg p-2"
+                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={r.bobot}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setRubrikList((prev) =>
+                              prev.map((item, idx) => (idx === rIdx ? { ...item, bobot: val } : item))
+                            );
+                          }}
+                          className="w-16 bg-white border border-slate-200 rounded-lg p-2 text-center"
+                        />
+                        <span className="text-slate-500 font-bold">%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pembahasan WAJIB */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Pembahasan Langkah demi Langkah (WAJIB Terisi Sebelum Terbit)</span>
+                </label>
+                <span className="text-[10px] text-rose-600 font-bold uppercase">Wajib Diisi</span>
+              </div>
               <textarea
                 rows={4}
                 value={pembahasan}
                 onChange={(e) => setPembahasan(e.target.value)}
-                placeholder="Langkah 1: ...&#10;Langkah 2: ...&#10;Langkah 3: ..."
-                className="w-full text-xs border border-slate-200 rounded-xl p-3 focus:outline-hidden focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 font-sans"
+                placeholder="Langkah 1: Identifikasi nilai awal...&#10;Langkah 2: Terapkan rumus...&#10;Langkah 3: Hitung hasil akhir..."
+                className="w-full text-sm border border-slate-200 rounded-xl p-3 font-sans focus:ring-2 focus:ring-[#193446]"
               />
-
-              {pembahasan && (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Pratinjau Pembahasan
-                  </span>
-                  <div className="text-xs text-slate-800 leading-relaxed">
-                    <MarkdownRenderer content={pembahasan} />
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Bottom Actions Thumb-Zone Bar */}
-            <div className="sticky bottom-4 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-              <span className="text-xs text-slate-500">
-                Pastikan kunci jawaban & pembahasan bebas dari halusinasi sebelum menerbitkan.
-              </span>
+            {/* Sticky Action Footer */}
+            <div className="sticky bottom-4 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                {direviewAt ? (
+                  <span>
+                    Terakhir diverifikasi:{" "}
+                    <strong>{new Date(direviewAt).toLocaleDateString("id-ID")}</strong>
+                  </span>
+                ) : (
+                  <span>Status saat ini: Belum diverifikasi guru</span>
+                )}
+              </div>
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleSave(false)}
                   disabled={saving}
-                  className="flex-1 sm:flex-none px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition"
                 >
-                  Simpan Perubahan
+                  Simpan Draft
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSave(true)}
                   disabled={saving}
-                  className="flex-1 sm:flex-none px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Terbitkan Soal</span>
+                  <span>Terbitkan Soal (Review Gate)</span>
                 </button>
               </div>
             </div>
