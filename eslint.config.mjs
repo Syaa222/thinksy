@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/rules-of-hooks": "warn",
       "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/error-boundaries": "warn",
       "@next/next/no-img-element": "warn",
     },
   },

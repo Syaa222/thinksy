@@ -85,38 +85,43 @@ export default async function DetailUjianPage({
   // Periksa apakah siswa dihapus/dikeluarkan dari daftar peserta ujian oleh guru
   if (ujian.deskripsi && user?.id && !isStaff) {
     const match = ujian.deskripsi.match(/<!-- EXAM_ROSTER:(.*?) -->/);
+    let isExcluded = false;
     if (match) {
       try {
         const parsed = JSON.parse(match[1]);
         if (Array.isArray(parsed.excluded) && parsed.excluded.includes(user.id)) {
-          return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-5">
-                <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
-                  🚫
-                </div>
-                <div className="space-y-2">
-                  <span className="inline-block px-3 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200 text-xs font-black uppercase tracking-wider">
-                    Tidak Terdaftar
-                  </span>
-                  <h2 className="text-xl font-black text-[#0F172A]">
-                    Akses Ujian Tidak Tersedia
-                  </h2>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Nama Anda saat ini tidak terdaftar dalam peserta ujian <strong>&quot;{ujian.judul}&quot;</strong>. Silakan hubungi guru pengampu untuk mendapatkan undangan kembali.
-                  </p>
-                </div>
-                <Link
-                  href="/ujian"
-                  className="block w-full py-3 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
-                >
-                  ← Kembali ke Ruang Ujian
-                </Link>
-              </div>
-            </div>
-          );
+          isExcluded = true;
         }
       } catch {}
+    }
+
+    if (isExcluded) {
+      return (
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
+              🚫
+            </div>
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200 text-xs font-black uppercase tracking-wider">
+                Tidak Terdaftar
+              </span>
+              <h2 className="text-xl font-black text-[#0F172A]">
+                Akses Ujian Tidak Tersedia
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Nama Anda saat ini tidak terdaftar dalam peserta ujian <strong>&quot;{ujian.judul}&quot;</strong>. Silakan hubungi guru pengampu untuk mendapatkan undangan kembali.
+              </p>
+            </div>
+            <Link
+              href="/ujian"
+              className="block w-full py-3 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+            >
+              ← Kembali ke Ruang Ujian
+            </Link>
+          </div>
+        </div>
+      );
     }
   }
 
