@@ -74,6 +74,15 @@ CREATE TABLE profil (
   peran           peran NOT NULL DEFAULT 'siswa',
   poin            INT NOT NULL DEFAULT 0,
   streak          INT NOT NULL DEFAULT 0,
+  nisn            TEXT,
+  nis             TEXT,
+  jurusan         TEXT,
+  tahun_ajaran    TEXT,
+  foto_url        TEXT,
+  jenis_kelamin   TEXT,
+  tempat_lahir    TEXT,
+  tanggal_lahir   TEXT,
+  no_wa           TEXT,
   dibuat_pada     TIMESTAMPTZ NOT NULL DEFAULT now(),
   diperbarui_pada TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -551,6 +560,59 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION get_peringkat_sekolah(UUID) TO authenticated, anon;
+
+-- ============================================================
+-- STEP 6: FUNGSI PEMERIKSA STATUS AKUN & PROFIL (1 AKUN = 1 USER)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.check_user_account_status(p_email TEXT)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_has_auth BOOLEAN := false;
+  v_has_profil BOOLEAN := false;
+  v_nama TEXT := null;
+  v_peran TEXT := null;
+  v_foto TEXT := null;
+  v_normalized_email TEXT;
+BEGIN
+  v_normalized_email := LOWER(TRIM(p_email));
+  
+  -- Cari user di auth.users
+  SELECT id INTO v_user_id
+  FROM auth.users
+  WHERE LOWER(email) = v_normalized_email
+  LIMIT 1;
+  
+  IF v_user_id IS NOT NULL THEN
+    v_has_auth := true;
+    
+    -- Cek apakah sudah punya profil
+    SELECT nama_lengkap, peran::text, foto_url
+    INTO v_nama, v_peran, v_foto
+    FROM public.profil
+    WHERE id = v_user_id;
+    
+    IF v_nama IS NOT NULL THEN
+      v_has_profil := true;
+    END IF;
+  END IF;
+  
+  RETURN json_build_object(
+    'exists', v_has_auth,
+    'has_profile', v_has_profil,
+    'user_id', v_user_id,
+    'nama_lengkap', v_nama,
+    'peran', v_peran,
+    'foto_url', v_foto
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_user_account_status(TEXT) TO anon, authenticated, service_role;
 
 -- ============================================================
 -- SELESAI! Semua tabel, trigger, RLS, dan seed data sudah siap.

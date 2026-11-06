@@ -54,7 +54,7 @@ export default async function SiswaDashboardPage() {
     // Get user profile data
     const { data: profil } = await supabase
       .from("profil")
-      .select("id, nama_lengkap, peran, poin, streak, sekolah_id, nisn, nis, jurusan, tahun_ajaran, foto_url")
+      .select("id, nama_lengkap, peran, poin, streak, sekolah_id, nisn, nis, jurusan, tahun_ajaran, foto_url, jenis_kelamin, tempat_lahir, tanggal_lahir")
       .eq("id", user.id)
       .single();
 
@@ -243,6 +243,26 @@ export default async function SiswaDashboardPage() {
       }
     }
 
+    const userJenisKelamin =
+      profil?.jenis_kelamin ||
+      (user.user_metadata?.jenis_kelamin as string) ||
+      "Laki-laki";
+
+    const tempatLahir =
+      profil?.tempat_lahir ||
+      (user.user_metadata?.tempat_lahir as string) ||
+      "Gunungkidul";
+    const tglLahir =
+      profil?.tanggal_lahir ||
+      (user.user_metadata?.tanggal_lahir as string) ||
+      "12 Agustus 2010";
+    const tempatTglLahir = `${tempatLahir}, ${tglLahir}`;
+
+    const defaultFotoByGender =
+      userJenisKelamin === "Perempuan"
+        ? "/images/pasfoto-siswi-1.jpg"
+        : "/images/pasfoto-siswa-1.jpg";
+
     userProfile = {
       id: user.id,
       nama_lengkap:
@@ -261,11 +281,13 @@ export default async function SiswaDashboardPage() {
       checkInStatus,
       tingkat_kelas: userTingkatKelas,
       nama_kelas: userNamaKelas,
-      nisn: profil?.nisn || "0089247182",
-      nis: profil?.nis || "260481",
+      nisn: profil?.nisn || (user.user_metadata?.nisn as string) || "0089247182",
+      nis: profil?.nis || (user.user_metadata?.nis as string) || "260481",
       jurusan: profil?.jurusan || "Fase D (Kurikulum Merdeka)",
       tahun_ajaran: profil?.tahun_ajaran || "2026/2027",
-      foto_url: profil?.foto_url || null,
+      foto_url: profil?.foto_url || (user.user_metadata?.foto_url as string) || defaultFotoByGender,
+      jenis_kelamin: userJenisKelamin,
+      tempat_tgl_lahir: tempatTglLahir,
     };
   }
 

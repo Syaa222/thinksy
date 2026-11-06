@@ -16,7 +16,7 @@ function getDashboardPath(peran: string): string {
 }
 
 export async function loginAction(prevState: any, formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
   if (!email || !password) {
@@ -25,6 +25,39 @@ export async function loginAction(prevState: any, formData: FormData) {
 
   const supabase = await createClient();
 
+  // 1. Periksa status akun di database sebelum login
+  const { data: statusData } = await supabase.rpc("check_user_account_status", {
+    p_email: email,
+  });
+
+  const accountStatus = statusData as {
+    exists: boolean;
+    has_profile: boolean;
+    user_id: string | null;
+    nama_lengkap: string | null;
+    peran: string | null;
+    foto_url: string | null;
+  } | null;
+
+  // Jika user dideteksi belum memiliki akun di sistem
+  if (!accountStatus?.exists) {
+    return {
+      error: "Akun belum terdaftar. Anda belum memiliki akun, silakan mendaftar terlebih dahulu untuk melengkapi profil data diri Anda.",
+      notRegistered: true,
+      email,
+    };
+  }
+
+  // Jika akun auth ada namun profil belum terbentuk
+  if (accountStatus.exists && !accountStatus.has_profile) {
+    return {
+      error: "Data profil akun Anda belum lengkap. Silakan lakukan pendaftaran untuk melengkapi data profil resmi Anda.",
+      incompleteProfile: true,
+      email,
+    };
+  }
+
+  // 2. Lakukan login dengan kata sandi
   const { data: authData, error: authError } =
     await supabase.auth.signInWithPassword({
       email,
@@ -32,66 +65,18 @@ export async function loginAction(prevState: any, formData: FormData) {
     });
 
   if (authError) {
-    return { error: "Email atau kata sandi tidak valid. Silakan periksa kembali." };
+    return {
+      error: "Kata sandi yang Anda masukkan salah. Silakan periksa kembali.",
+      email,
+    };
   }
 
   if (!authData.user) {
-    return { error: "Gagal mendapatkan data akun." };
+    return { error: "Gagal mendapatkan data akun. Silakan coba lagi." };
   }
 
   const userId = authData.user.id;
-  const userEmail = authData.user.email?.toLowerCase();
-
-  // Ambil peran dari tabel profil
-  const { data: profil } = await supabase
-    .from("profil")
-    .select("peran, sekolah_id")
-    .eq("id", userId)
-    .single();
-
-  let resolvedPeran = profil?.peran;
-
-  // Jika profil belum ada di database, buat profil otomatis
-  if (!resolvedPeran) {
-    let peranBaru = "siswa";
-    let sekolahId: string | null = null;
-
-    if (userEmail) {
-      const { data: undangan } = await supabase
-        .from("undangan")
-        .select("id, peran, sekolah_id")
-        .eq("email", userEmail)
-        .eq("digunakan", false)
-        .gt("kadaluarsa_pada", new Date().toISOString())
-        .order("dibuat_pada", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (undangan) {
-        peranBaru = undangan.peran;
-        sekolahId = undangan.sekolah_id || null;
-        await supabase
-          .from("undangan")
-          .update({ digunakan: true })
-          .eq("id", undangan.id);
-      }
-    }
-
-    const namaLengkap =
-      authData.user.user_metadata?.full_name ||
-      authData.user.user_metadata?.name ||
-      userEmail?.split("@")[0] ||
-      "Pengguna";
-
-    await supabase.from("profil").insert({
-      id: userId,
-      nama_lengkap: namaLengkap,
-      peran: peranBaru,
-      sekolah_id: sekolahId,
-    });
-
-    resolvedPeran = peranBaru;
-  }
+  const resolvedPeran = accountStatus.peran || "siswa";
 
   // Set cookie peran terisolasi dengan user ID
   const cookieStore = await cookies();
@@ -107,14 +92,22 @@ export async function loginAction(prevState: any, formData: FormData) {
 
 export async function registerAction(prevState: any, formData: FormData) {
   const namaLengkap = (formData.get("nama_lengkap") as string)?.trim() || "";
-  const email = (formData.get("email") as string)?.trim() || "";
+  const email = (formData.get("email") as string)?.trim().toLowerCase() || "";
   const password = (formData.get("password") as string) || "";
+  const jenisKelamin = (formData.get("jenis_kelamin") as string)?.trim() || "Laki-laki";
   const noWa = (formData.get("no_wa") as string)?.trim() || "";
   const tempatLahir = (formData.get("tempat_lahir") as string)?.trim() || "";
   const tanggalLahir = (formData.get("tanggal_lahir") as string)?.trim() || "";
   const namaKelas = (formData.get("nama_kelas") as string)?.trim() || "Kelas 8A";
   const nisn = (formData.get("nisn") as string)?.trim() || "";
-  const fotoUrl = (formData.get("foto_url") as string)?.trim() || "/images/pasfoto-siswa-1.jpg";
+  const nis = nisn ? nisn.slice(-6) : "260481";
+  
+  // Tentukan foto profil default berdasarkan jenis kelamin jika foto belum disetel khusus
+  const defaultFotoByGender =
+    jenisKelamin === "Perempuan"
+      ? "/images/pasfoto-siswi-1.jpg"
+      : "/images/pasfoto-siswa-1.jpg";
+  const fotoUrl = (formData.get("foto_url") as string)?.trim() || defaultFotoByGender;
   const asalSekolah = "SMK Muhammadiyah 1";
 
   if (!namaLengkap || !email || !password) {
@@ -131,6 +124,24 @@ export async function registerAction(prevState: any, formData: FormData) {
 
   const supabase = await createClient();
 
+  // 1. Cek apakah user dideteksi sudah memiliki akun dan profil (1 akun hanya untuk 1 pengguna)
+  const { data: statusData } = await supabase.rpc("check_user_account_status", {
+    p_email: email,
+  });
+
+  const accountStatus = statusData as {
+    exists: boolean;
+    has_profile: boolean;
+  } | null;
+
+  if (accountStatus?.exists && accountStatus?.has_profile) {
+    return {
+      error: "Email ini sudah terdaftar dan sudah memiliki profil. 1 akun hanya dapat digunakan oleh 1 pengguna. Silakan masuk melalui jalur login.",
+      alreadyRegistered: true,
+      email,
+    };
+  }
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -139,11 +150,13 @@ export async function registerAction(prevState: any, formData: FormData) {
         nama_lengkap: namaLengkap,
         peran: "siswa",
         asal_sekolah: asalSekolah,
+        jenis_kelamin: jenisKelamin,
         no_wa: noWa,
         tempat_lahir: tempatLahir,
         tanggal_lahir: tanggalLahir,
         nama_kelas: namaKelas,
         nisn: nisn,
+        nis: nis,
         foto_url: fotoUrl,
       },
     },
@@ -158,7 +171,11 @@ export async function registerAction(prevState: any, formData: FormData) {
     const msg = authError.message.toLowerCase();
 
     if (msg.includes("already registered") || msg.includes("user already registered")) {
-      return { error: "Email ini sudah terdaftar. Silakan masuk atau gunakan email lain." };
+      return {
+        error: "Email ini sudah terdaftar dan sudah memiliki profil. 1 akun hanya dapat digunakan oleh 1 pengguna. Silakan masuk melalui jalur login.",
+        alreadyRegistered: true,
+        email,
+      };
     }
     if (msg.includes("email") && (msg.includes("invalid") || msg.includes("not valid"))) {
       return { error: "Format email tidak valid. Gunakan email yang benar (contoh: nama@gmail.com)." };
@@ -185,7 +202,11 @@ export async function registerAction(prevState: any, formData: FormData) {
 
   // Cek apakah email sudah terdaftar sebelumnya
   if (authData.user.identities && authData.user.identities.length === 0) {
-    return { error: "Email ini sudah terdaftar. Silakan masuk atau gunakan email lain." };
+    return {
+      error: "Email ini sudah terdaftar dan sudah memiliki profil. 1 akun hanya dapat digunakan oleh 1 pengguna. Silakan masuk melalui jalur login.",
+      alreadyRegistered: true,
+      email,
+    };
   }
 
   const emailNormalized = email.toLowerCase().trim();
@@ -214,7 +235,7 @@ export async function registerAction(prevState: any, formData: FormData) {
       .eq("id", undangan.id);
   }
 
-  // Upsert profil pengguna di database
+  // Upsert profil pengguna di database lengkap dengan jenis_kelamin & data profil
   try {
     const { error: profilError } = await supabase.from("profil").upsert({
       id: authData.user.id,
@@ -222,7 +243,14 @@ export async function registerAction(prevState: any, formData: FormData) {
       peran: peranBaru,
       sekolah_id: sekolahId,
       nisn: nisn || null,
+      nis: nis || null,
       foto_url: fotoUrl || null,
+      jenis_kelamin: jenisKelamin,
+      tempat_lahir: tempatLahir || null,
+      tanggal_lahir: tanggalLahir || null,
+      no_wa: noWa || null,
+      jurusan: "Fase D (Kurikulum Merdeka)",
+      tahun_ajaran: "2026/2027",
     });
 
     if (profilError) {

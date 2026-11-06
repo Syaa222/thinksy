@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, Suspense, useEffect } from "react";
 import { registerAction } from "../actions";
 import {
   User,
@@ -22,9 +22,10 @@ import {
   Sparkles,
   ShieldCheck,
   Check,
+  Phone,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   saveStoredStudentProfile,
   saveStoredStudentPhoto,
@@ -60,24 +61,68 @@ const PRESET_AVATARS = [
     id: "siswa-1",
     label: "Siswa Putra",
     sublabel: "Seragam Resmi",
+    gender: "Laki-laki",
     src: DEFAULT_STUDENT_PHOTO,
   },
   {
     id: "siswi-1",
     label: "Siswi Putri",
     sublabel: "Hijab Rapi",
+    gender: "Perempuan",
     src: FEMALE_STUDENT_PHOTO,
   },
   {
     id: "avatar-ai",
     label: "Pelajar AI",
     sublabel: "Digital Avatar",
+    gender: "Netral",
     src: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
   },
 ];
 
-export default function DaftarPage() {
+/**
+ * Deteksi cerdas gender berdasarkan nama Indonesia.
+ */
+function detectGenderFromName(name: string): "Perempuan" | "Laki-laki" | null {
+  const n = name.toLowerCase().trim();
+  if (!n || n.length < 2) return null;
+
+  const femaleKeywords = [
+    "siti", "putri", "dewi", "ayu", "nur", "nurul", "rahma", "rahmawati", "annisa",
+    "nisa", "sarah", "nadela", "rina", "wati", "laras", "aulia", "fitri", "fitria",
+    "indah", "dwi", "lestari", "nia", "mega", "nadia", "tasya", "bella", "bunga",
+    "zahra", "nayla", "salsa", "salsabila", "kartika", "anggun", "mutia", "intan",
+    "rani", "amalia", "widya", "retno", "safitri", "tiara", "cantika", "hanifah",
+    "nanoka", "heffa", "agneisca", "alyssa", "khansa", "salma", "syifa", "nabila"
+  ];
+
+  const maleKeywords = [
+    "ahmad", "muhammad", "budi", "santoso", "fauzi", "zafa", "kuncoro", "dimas",
+    "bayu", "pratama", "rizky", "reza", "dani", "adi", "aditya", "agus", "wahyu",
+    "fajar", "ilham", "arif", "yoga", "rendi", "hendra", "joko", "anton", "ferdi",
+    "alif", "bilal", "daffa", "raka", "bagus", "gilang", "arya", "hafiz", "kevin",
+    "aldo", "doni", "eko", "putra", "raditya", "rafli", "zidan", "syahrul"
+  ];
+
+  const words = n.split(/\s+/);
+  for (const word of words) {
+    if (femaleKeywords.includes(word)) return "Perempuan";
+    if (maleKeywords.includes(word)) return "Laki-laki";
+  }
+
+  for (const kw of femaleKeywords) {
+    if (n.includes(kw)) return "Perempuan";
+  }
+  for (const kw of maleKeywords) {
+    if (n.includes(kw)) return "Laki-laki";
+  }
+
+  return null;
+}
+
+function DaftarFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
   // Step state: 1 = Form Pendaftaran, 2 = Pembuatan Profile Foto
@@ -85,18 +130,28 @@ export default function DaftarPage() {
 
   // Form Fields State
   const [namaLengkap, setNamaLengkap] = useState("");
+  const [jenisKelamin, setJenisKelamin] = useState<"Laki-laki" | "Perempuan">("Laki-laki");
+  const [isGenderManual, setIsGenderManual] = useState(false);
+  const [detectedGenderHint, setDetectedGenderHint] = useState<string | null>(null);
+
   const [tempatLahir, setTempatLahir] = useState("");
   const [tanggalLahir, setTanggalLahir] = useState("");
+  const [noWa, setNoWa] = useState("");
   const [namaKelas, setNamaKelas] = useState("Kelas 8A");
   const [nisn, setNisn] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Foto Profil State
+  // Foto Profil State (Default draft disesuaikan dengan jenis kelamin)
   const [selectedPhoto, setSelectedPhoto] = useState<string>(DEFAULT_STUDENT_PHOTO);
   const [customPhotoPreview, setCustomPhotoPreview] = useState<string | null>(null);
+  const [hasCustomPhotoSelected, setHasCustomPhotoSelected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Status Akun & Validasi Email Unik
+  const [isCheckingAccount, setIsCheckingAccount] = useState(false);
+  const [alreadyRegisteredUser, setAlreadyRegisteredUser] = useState<string | null>(null);
 
   // UI helpers
   const [showPassword, setShowPassword] = useState(false);
@@ -104,8 +159,81 @@ export default function DaftarPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Handler validasi Step 1 dan lanjut ke Step 2 (Pembuatan Foto Siswa)
-  const handleProceedToPhotoStep = (e: React.FormEvent) => {
+  // Tanggapi perubahan input email jika ada dari query params
+  useEffect(() => {
+    const queryEmail = searchParams.get("email");
+    if (queryEmail && !email) {
+      setEmail(queryEmail);
+    }
+  }, [searchParams, email]);
+
+  // Handler nama lengkap berubah -> Deteksi cerdas gender & penyesuaian draft profil
+  const handleNameChange = (val: string) => {
+    setNamaLengkap(val);
+    setErrorMessage(null);
+
+    if (!isGenderManual) {
+      const detected = detectGenderFromName(val);
+      if (detected) {
+        setJenisKelamin(detected);
+        setDetectedGenderHint(`Terdeteksi: ${detected === "Perempuan" ? "Siswi Putri 🌸" : "Siswa Putra 👔"}`);
+        // Jika belum memilih foto kustom sendiri, sesuaikan draft foto profil
+        if (!hasCustomPhotoSelected) {
+          setSelectedPhoto(detected === "Perempuan" ? FEMALE_STUDENT_PHOTO : DEFAULT_STUDENT_PHOTO);
+        }
+      } else {
+        setDetectedGenderHint(null);
+      }
+    }
+  };
+
+  // Handler pilih jenis kelamin manual
+  const handleGenderSelect = (gender: "Laki-laki" | "Perempuan") => {
+    setIsGenderManual(true);
+    setJenisKelamin(gender);
+    setDetectedGenderHint(null);
+    setErrorMessage(null);
+
+    // Sesuaikan draft pasfoto profil jika belum upload foto sendiri
+    if (!hasCustomPhotoSelected) {
+      setSelectedPhoto(gender === "Perempuan" ? FEMALE_STUDENT_PHOTO : DEFAULT_STUDENT_PHOTO);
+    }
+  };
+
+  // Periksa apakah email sudah terdaftar di sistem
+  const checkEmailAccountStatus = async (emailToCheck: string): Promise<boolean> => {
+    const cleanEmail = emailToCheck.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) return false;
+
+    setIsCheckingAccount(true);
+    try {
+      const res = await fetch("/api/auth/check-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists && data.hasProfile) {
+          setAlreadyRegisteredUser(cleanEmail);
+          setErrorMessage(
+            "Email ini sudah terdaftar dan sudah memiliki profil. 1 akun hanya dapat digunakan oleh 1 pengguna. Silakan masuk melalui jalur login."
+          );
+          return true;
+        }
+      }
+      setAlreadyRegisteredUser(null);
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setIsCheckingAccount(false);
+    }
+  };
+
+  // Handler validasi Step 1 dan lanjut ke Step 2 (Pembuatan Profile Foto)
+  const handleProceedToPhotoStep = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -139,9 +267,19 @@ export default function DaftarPage() {
       return;
     }
 
+    // Periksa status akun: 1 akun hanya 1 pengguna
+    const isAlready = await checkEmailAccountStatus(email);
+    if (isAlready) {
+      return;
+    }
+
+    // Pastikan foto profil draft default terpasang sesuai jenis kelamin jika belum disetel
+    if (!hasCustomPhotoSelected) {
+      setSelectedPhoto(jenisKelamin === "Perempuan" ? FEMALE_STUDENT_PHOTO : DEFAULT_STUDENT_PHOTO);
+    }
+
     // Lanjut ke Step 2 (Pembuatan Profile Foto)
     setStep(2);
-    // Scroll right container to top smoothly
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -158,6 +296,7 @@ export default function DaftarPage() {
         const base64String = reader.result as string;
         setCustomPhotoPreview(base64String);
         setSelectedPhoto(base64String);
+        setHasCustomPhotoSelected(true);
       };
       reader.readAsDataURL(file);
     }
@@ -169,12 +308,14 @@ export default function DaftarPage() {
 
     const formData = new FormData();
     formData.append("nama_lengkap", namaLengkap.trim());
-    formData.append("email", email.trim());
+    formData.append("email", email.trim().toLowerCase());
     formData.append("password", password);
+    formData.append("jenis_kelamin", jenisKelamin);
     formData.append("tempat_lahir", tempatLahir.trim());
     formData.append("tanggal_lahir", tanggalLahir);
     formData.append("nama_kelas", namaKelas);
     formData.append("nisn", nisn.trim());
+    formData.append("no_wa", noWa.trim());
     formData.append("foto_url", selectedPhoto);
     formData.append("asal_sekolah", "SMK Muhammadiyah 1");
 
@@ -183,6 +324,9 @@ export default function DaftarPage() {
         const res = await registerAction(null, formData);
 
         if (res?.error) {
+          if (res.alreadyRegistered) {
+            setAlreadyRegisteredUser(email.trim().toLowerCase());
+          }
           setErrorMessage(res.error);
           return;
         }
@@ -195,12 +339,12 @@ export default function DaftarPage() {
           nisn: nisn.trim(),
           jurusan: "Fase D (Kurikulum Merdeka)",
           tempat_tgl_lahir: `${tempatLahir.trim()}, ${tanggalLahir}`,
-          jenis_kelamin: selectedPhoto === FEMALE_STUDENT_PHOTO ? "Perempuan" : "Laki-laki",
+          jenis_kelamin: jenisKelamin,
           agama: "Islam",
           tahun_ajaran: "2026/2027",
           foto_url: selectedPhoto,
         });
-        saveStoredStudentPhoto(selectedPhoto);
+        saveStoredStudentPhoto(selectedPhoto, namaLengkap.trim(), nisn.trim());
 
         if (res?.success) {
           setSuccessMessage(
@@ -223,12 +367,11 @@ export default function DaftarPage() {
       {/* SISI KIRI: BRANDING & 3D HERO VISUAL PALLETE THINKSY     */}
       {/* ======================================================== */}
       <div className="lg:w-1/2 min-h-full relative flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-gradient-to-br from-[#0B1A2E] via-[#0D2342] to-[#071324] text-white overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80">
-        {/* Ambient Radial Glowing Orbs */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#1E3A8A_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none" />
 
-        {/* Header Logo Thinksy (Hanya logo dan tulisan Thinksy) */}
+        {/* Header Logo Thinksy */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-2 shadow-xl shadow-blue-900/30 flex items-center justify-center">
             <img
@@ -244,25 +387,20 @@ export default function DaftarPage() {
 
         {/* Centerpiece Hero 3D Illustration & Headlines */}
         <div className="relative z-10 my-auto py-8 sm:py-12 flex flex-col items-center text-center max-w-lg mx-auto">
-          {/* Container Gambar 3D Hero */}
           <div className="relative w-full max-w-[340px] sm:max-w-[400px] aspect-[4/3] mb-8 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(8,20,40,0.6)] border border-white/10 group">
             <img
               src="/images/thinksy-hero.jpg"
               alt="Mulai Perjalanan Belajarmu - Thinksy"
               className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
             />
-            {/* Soft inner glow overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#0B1A2E]/80 via-transparent to-transparent pointer-events-none" />
           </div>
 
-          {/* Heading */}
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white mb-3">
             Mulai Perjalanan Belajarmu
           </h2>
-
-          {/* Subtitle */}
           <p className="text-sm sm:text-base text-slate-300/90 leading-relaxed font-normal max-w-md">
-            Bergabunglah dengan ribuan siswa yang telah sukses meraih prestasi dan menguasai matematika bersama ekosistem cerdas Thinksy.
+            Satu akun resmi untuk satu siswa. Data pendaftaran Anda langsung membentuk profil digital dan Kartu Pelajar terverifikasi.
           </p>
         </div>
 
@@ -283,23 +421,50 @@ export default function DaftarPage() {
       {/* SISI KANAN: FORM PENDAFTARAN SCROLLABLE & DIPERBESAR     */}
       {/* ======================================================== */}
       <div className="lg:w-1/2 min-h-screen bg-[#F8FAFC] flex flex-col justify-start items-center py-10 px-4 sm:px-8 lg:px-12 overflow-y-auto">
-        {/* Main Card Container Diperbesar & Nyaman di Scroll */}
         <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200/80 p-6 sm:p-10 my-auto">
-
           {/* Heading Card */}
           <div className="mb-6 text-center sm:text-left">
+            <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-bold">
+                Langkah {step} dari 2
+              </span>
+              <span className="text-xs text-slate-400">
+                {step === 1 ? "Biodata Siswa" : "Draft Foto & Profil"}
+              </span>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1A2E] tracking-tight">
-              {step === 1 ? "Buat Akun Siswa" : "Lengkapi Pasfoto Profil"}
+              {step === 1 ? "Buat Akun Siswa Baru" : "Sesuaikan Draft Profil Siswa"}
             </h1>
             <p className="text-sm text-slate-500 mt-1 leading-relaxed">
               {step === 1
-                ? "Lengkapi data diri Anda untuk pendaftaran resmi di Thinksy."
-                : "Pilih foto profil resmi Anda untuk Kartu Pelajar Digital & Sistem Akademik."}
+                ? "Lengkapi data diri Anda. 1 akun hanya digunakan oleh 1 pengguna resmi."
+                : `Draft profil ${jenisKelamin === "Perempuan" ? "Siswi Putri" : "Siswa Putra"} disesuaikan otomatis dengan data pendaftaran Anda.`}
             </p>
           </div>
 
-          {/* Pesan Error / Sukses */}
-          {errorMessage && (
+          {/* Notifikasi Khusus: Akun Sudah Terdaftar -> Hanya Jalur Login */}
+          {alreadyRegisteredUser && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-sm text-amber-900">Akun Sudah Memiliki Profil</p>
+                  <p className="text-amber-800 text-xs leading-relaxed">
+                    Email <strong>{alreadyRegisteredUser}</strong> sudah terdaftar di sistem. Satu akun hanya dapat digunakan oleh satu pengguna. Anda tidak perlu mendaftar lagi, silakan masuk ke akun Anda.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={`/masuk?email=${encodeURIComponent(alreadyRegisteredUser)}`}
+                className="block w-full text-center py-2.5 px-4 rounded-xl bg-[#0B1A2E] hover:bg-slate-800 text-white font-bold transition text-xs shadow-md"
+              >
+                Masuk Sekarang Menggunakan Akun Ini →
+              </Link>
+            </div>
+          )}
+
+          {/* Pesan Error Umum */}
+          {errorMessage && !alreadyRegisteredUser && (
             <div className="mb-6 flex items-start gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm animate-in fade-in duration-200">
               <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
               <div>
@@ -326,24 +491,70 @@ export default function DaftarPage() {
             <form onSubmit={handleProceedToPhotoStep} className="space-y-4 sm:space-y-5">
               {/* 1. Nama Lengkap */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 tracking-wide">
-                  Nama Lengkap <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                    Nama Lengkap <span className="text-red-500">*</span>
+                  </label>
+                  {detectedGenderHint && (
+                    <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      {detectedGenderHint}
+                    </span>
+                  )}
+                </div>
                 <div className="relative flex items-center">
                   <User className="w-5 h-5 text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type="text"
                     value={namaLengkap}
-                    onChange={(e) => setNamaLengkap(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     required
                     minLength={3}
-                    placeholder="Masukkan nama lengkap sesuai rapor"
+                    placeholder="Contoh: Siti Rahayu atau Ahmad Fauzi"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-200 shadow-xs"
                   />
                 </div>
               </div>
 
-              {/* 2. Asal Sekolah (DITETAPKAN & TERKUNCI: SMK Muhammadiyah 1) */}
+              {/* 2. Jenis Kelamin (Penyesuai Draft Profil Otomatis) */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                  Jenis Kelamin <span className="text-red-500">*</span>
+                  <span className="ml-1 text-[11px] font-normal text-slate-400">
+                    (Menentukan draft foto & kartu profil siswa)
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleGenderSelect("Laki-laki")}
+                    className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                      jenisKelamin === "Laki-laki"
+                        ? "bg-[#0B1A2E] text-white border-[#0B1A2E] shadow-md ring-2 ring-blue-500/30"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <span>👦</span>
+                    <span>Laki-laki (Putra)</span>
+                    {jenisKelamin === "Laki-laki" && <Check className="w-4 h-4 ml-auto text-blue-400" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenderSelect("Perempuan")}
+                    className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                      jenisKelamin === "Perempuan"
+                        ? "bg-rose-950 text-white border-rose-900 shadow-md ring-2 ring-rose-500/30"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <span>👧</span>
+                    <span>Perempuan (Putri)</span>
+                    {jenisKelamin === "Perempuan" && <Check className="w-4 h-4 ml-auto text-rose-300" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Asal Sekolah (DITETAPKAN: SMK Muhammadiyah 1) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-700 tracking-wide">
@@ -365,13 +576,9 @@ export default function DaftarPage() {
                     <Lock className="w-4 h-4" />
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium">
-                  Sekolah pendaftar dikunci khusus untuk siswa SMK Muhammadiyah 1.
-                </p>
               </div>
 
-
-              {/* 4. Tempat Lahir & Tanggal Lahir (2 Kolom) */}
+              {/* 4. Tempat Lahir & Tanggal Lahir */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700 tracking-wide">
@@ -407,25 +614,43 @@ export default function DaftarPage() {
                 </div>
               </div>
 
-              {/* 5. Pilihan Kelas (Fase D) */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 tracking-wide">
-                  Pilihan Kelas (Fase D) <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={namaKelas}
-                  onChange={(e) => setNamaKelas(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 font-semibold focus:outline-none transition-all duration-200 cursor-pointer shadow-xs"
-                >
-                  {KELAS_OPTIONS.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.label}
-                    </option>
-                  ))}
-                </select>
+              {/* 5. Pilihan Kelas & No WhatsApp */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                    Pilihan Kelas <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={namaKelas}
+                    onChange={(e) => setNamaKelas(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 font-semibold focus:outline-none transition-all duration-200 cursor-pointer shadow-xs"
+                  >
+                    {KELAS_OPTIONS.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                    Nomor WhatsApp / HP
+                  </label>
+                  <div className="relative flex items-center">
+                    <Phone className="w-5 h-5 text-slate-400 absolute left-4 pointer-events-none" />
+                    <input
+                      type="tel"
+                      value={noWa}
+                      onChange={(e) => setNoWa(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="08123456789"
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-200 shadow-xs"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* 6. NISN */}
+              {/* 6. NISN (1 Akun = 1 Siswa) */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700 tracking-wide">
                   NISN (Nomor Induk Siswa Nasional) <span className="text-red-500">*</span>
@@ -438,27 +663,46 @@ export default function DaftarPage() {
                     onChange={(e) => setNisn(e.target.value.replace(/[^0-9]/g, ""))}
                     required
                     maxLength={10}
-                    placeholder="Contoh: 0089247182"
+                    placeholder="Contoh: 0089247182 (10 digit)"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-200 shadow-xs"
                   />
                 </div>
               </div>
 
-              {/* 7. Alamat Email */}
+              {/* 7. Alamat Email (Wajib Unik per Pengguna) */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 tracking-wide">
-                  Alamat Email <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                    Alamat Email <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400">1 akun = 1 pengguna</span>
+                </div>
                 <div className="relative flex items-center">
                   <Mail className="w-5 h-5 text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setAlreadyRegisteredUser(null);
+                      setErrorMessage(null);
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value.includes("@")) {
+                        checkEmailAccountStatus(e.target.value);
+                      }
+                    }}
                     required
-                    placeholder="nama.siswa@gmail.com"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-200 shadow-xs"
+                    placeholder="siswa@sekolah.sch.id"
+                    className={`w-full pl-12 pr-4 py-3.5 bg-slate-50/70 hover:bg-slate-50 border focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-200 shadow-xs ${
+                      alreadyRegisteredUser ? "border-amber-400 ring-2 ring-amber-200" : "border-slate-200 focus:border-blue-500"
+                    }`}
                   />
+                  {isCheckingAccount && (
+                    <div className="absolute right-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -491,7 +735,7 @@ export default function DaftarPage() {
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700 tracking-wide">
-                    Konfirmasi Kata Sandi <span className="text-red-500">*</span>
+                    Ulangi Kata Sandi <span className="text-red-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <Lock className="w-5 h-5 text-slate-400 absolute left-4 pointer-events-none" />
@@ -518,9 +762,10 @@ export default function DaftarPage() {
               {/* Tombol Lanjut: Pembuatan Profile Foto Siswa */}
               <button
                 type="submit"
-                className="w-full mt-4 py-4 bg-[#0B1A2E] hover:bg-[#132A4A] text-white font-bold text-sm sm:text-base rounded-xl transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-950/20 hover:shadow-xl cursor-pointer active:scale-[0.99]"
+                disabled={isCheckingAccount || Boolean(alreadyRegisteredUser)}
+                className="w-full mt-4 py-4 bg-[#0B1A2E] hover:bg-[#132A4A] text-white font-bold text-sm sm:text-base rounded-xl transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-950/20 hover:shadow-xl cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>Daftar Sekarang</span>
+                <span>Lanjut: Sesuaikan Pasfoto & Profil ({jenisKelamin === "Perempuan" ? "Siswi Putri" : "Siswa Putra"})</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -533,46 +778,41 @@ export default function DaftarPage() {
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              {/* Daftar dengan Google (sesuai referensi gambar) */}
+              {/* Masuk jika sudah punya akun */}
               <Link
-                href="/masuk"
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 shadow-xs transition-all"
+                href={`/masuk${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-700 shadow-xs transition-all"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.53 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.89 3.02C6.2 7.74 8.87 5.04 12 5.04z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.4 3.58l3.73 2.89c2.18-2.01 3.7-4.97 3.7-8.62z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.78c-.25-.74-.39-1.53-.39-2.36s.14-1.62.39-2.36L1.39 7.04C.5 8.84 0 10.86 0 13s.5 4.16 1.39 5.96l3.89-3.18z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.73-2.89c-1.11.75-2.53 1.2-4.23 1.2-3.13 0-5.8-2.7-6.72-5.54l-3.89 3.02C3.37 20.33 7.35 23 12 23z"
-                  />
-                </svg>
-                <span>Daftar dengan Google</span>
+                <span>Sudah Punya Akun? Masuk di Sini</span>
+                <ArrowRight className="w-4 h-4 text-slate-400" />
               </Link>
             </form>
           )}
 
           {/* ======================================================== */}
-          {/* STEP 2: PEMBUATAN / PEMILIHAN PROFILE FOTO SISWA        */}
+          {/* STEP 2: PENYESUAIAN DRAFT PROFIL & PASFOTO SISWA        */}
           {/* ======================================================== */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
-              {/* Preview Foto Siswa Terpilih */}
-              <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-blue-50/30 border border-slate-200/80 text-center">
-                <div className="relative group mb-3">
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-xl shadow-blue-900/15 bg-slate-200">
+              {/* Preview Draft Profil Lengkap Sesuai Jenis Kelamin */}
+              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-blue-50/40 border border-slate-200 text-center relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${
+                      jenisKelamin === "Perempuan"
+                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                        : "bg-blue-50 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    <span>{jenisKelamin === "Perempuan" ? "🌸 Siswi Putri" : "👔 Siswa Putra"}</span>
+                  </span>
+                </div>
+
+                <div className="relative group mb-3 mx-auto w-28 h-28 sm:w-32 sm:h-32">
+                  <div className="w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl shadow-blue-900/15 bg-slate-200">
                     <img
                       src={selectedPhoto}
-                      alt="Preview Foto Siswa"
+                      alt="Preview Pasfoto Siswa"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -580,17 +820,22 @@ export default function DaftarPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-[#0B1A2E] text-white flex items-center justify-center shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
-                    title="Ganti atau Unggah Foto"
+                    title="Unggah Pasfoto Pribadi"
                   >
                     <Camera className="w-4 h-4" />
                   </button>
                 </div>
 
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-extrabold text-slate-900">
                   {namaLengkap || "Nama Siswa"}
                 </h3>
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-1.5 text-xs text-slate-500 font-medium">
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {email}
+                </p>
+
+                {/* Badge Detail Profil */}
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-xs text-slate-600 font-medium">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">
                     {namaKelas}
                   </span>
                   <span>•</span>
@@ -598,34 +843,57 @@ export default function DaftarPage() {
                   <span>•</span>
                   <span>NISN: {nisn || "-"}</span>
                 </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-200/70 text-[11px] text-slate-500 flex items-center justify-center gap-4">
+                  <span>TTL: {tempatLahir}, {tanggalLahir}</span>
+                  <span>•</span>
+                  <span>Fase D (Kurikulum Merdeka)</span>
+                </div>
               </div>
 
-              {/* Pilihan Avatar Siap Pakai */}
+              {/* Pilihan Pasfoto Rekomendasi Sesuai Jenis Kelamin */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700 tracking-wide">
-                  Pilih Pasfoto Resmi Siswa
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 tracking-wide">
+                    Pilih Pasfoto Resmi Siswa
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    Draft aktif: {jenisKelamin === "Perempuan" ? "Siswi Putri" : "Siswa Putra"}
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-3 gap-3">
-                  {PRESET_AVATARS.map((av) => (
-                    <button
-                      key={av.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPhoto(av.src);
-                      }}
-                      className={`p-3 rounded-2xl border flex flex-col items-center text-center transition-all cursor-pointer ${
-                        selectedPhoto === av.src
-                          ? "border-blue-600 bg-blue-50/70 shadow-md ring-2 ring-blue-500/20"
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-white shadow-sm">
-                        <img src={av.src} alt={av.label} className="w-full h-full object-cover" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-800">{av.label}</span>
-                      <span className="text-[10px] text-slate-400">{av.sublabel}</span>
-                    </button>
-                  ))}
+                  {PRESET_AVATARS.map((av) => {
+                    const isGenderMatch = av.gender === jenisKelamin;
+                    const isSelected = selectedPhoto === av.src;
+
+                    return (
+                      <button
+                        key={av.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPhoto(av.src);
+                          setHasCustomPhotoSelected(true);
+                        }}
+                        className={`p-3 rounded-2xl border flex flex-col items-center text-center transition-all cursor-pointer relative ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50/80 shadow-md ring-2 ring-blue-500/20"
+                            : "border-slate-200 hover:border-slate-300 bg-white"
+                        }`}
+                      >
+                        {isGenderMatch && (
+                          <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-600 text-white">
+                            Draft
+                          </span>
+                        )}
+                        <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-white shadow-sm">
+                          <img src={av.src} alt={av.label} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">{av.label}</span>
+                        <span className="text-[10px] text-slate-400">{av.sublabel}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -672,7 +940,7 @@ export default function DaftarPage() {
                   {isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Menyimpan Akun & Foto...</span>
+                      <span>Menyimpan Akun & Profil...</span>
                     </>
                   ) : (
                     <>
@@ -690,7 +958,7 @@ export default function DaftarPage() {
             <p className="text-xs text-slate-500 font-medium">
               Sudah punya akun terdaftar?{" "}
               <Link
-                href="/masuk"
+                href={`/masuk${email ? `?email=${encodeURIComponent(email)}` : ""}`}
                 className="text-blue-600 font-bold hover:text-blue-800 hover:underline transition-colors"
               >
                 Masuk Sekarang
@@ -700,5 +968,19 @@ export default function DaftarPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DaftarPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#081220] text-white">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        </div>
+      }
+    >
+      <DaftarFormContent />
+    </Suspense>
   );
 }

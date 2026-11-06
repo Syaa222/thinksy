@@ -14,8 +14,10 @@ function LoginForm() {
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
+  const defaultEmail = searchParams.get("email") || "";
   const oauthError = searchParams.get("error");
   const oauthCode = searchParams.get("code");
+  const [emailInput, setEmailInput] = useState(defaultEmail);
   const [isExchangingCode, setIsExchangingCode] = useState(() => Boolean(oauthCode));
 
   // Supabase mengirim ?code= ke /masuk alih-alih ke /api/auth/callback.
@@ -117,10 +119,60 @@ function LoginForm() {
         </div>
       )}
 
-      {(state?.error || oauthError) && (
+      {/* Notifikasi akun belum terdaftar -> Wajib daftar untuk membuat profil */}
+      {state?.notRegistered && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2.5 animate-in fade-in duration-200">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-amber-900">Akun Belum Terdaftar</p>
+              <p className="text-amber-800 leading-relaxed text-xs">
+                Email <strong>{state.email}</strong> belum memiliki akun di sistem. Anda harus mendaftar terlebih dahulu yang berfungsi untuk membuat dan menyesuaikan data profil Anda.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/daftar?email=${encodeURIComponent(state.email || emailInput || "")}`}
+            className="block w-full text-center py-2.5 px-3 rounded-xl bg-[#0B1A2E] hover:bg-slate-800 text-white font-bold transition text-xs shadow-md"
+          >
+            Daftar Sekarang (Lengkapi Data Profil) →
+          </Link>
+        </div>
+      )}
+
+      {/* Notifikasi profil belum lengkap */}
+      {state?.incompleteProfile && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2.5 animate-in fade-in duration-200">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-amber-900">Profil Belum Lengkap</p>
+              <p className="text-amber-800 leading-relaxed text-xs">
+                Akun ditemukan, namun data profil resmi belum dibuat. Silakan lengkapi formulir pendaftaran untuk membentuk profil Anda.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/daftar?email=${encodeURIComponent(state.email || emailInput || "")}`}
+            className="block w-full text-center py-2.5 px-3 rounded-xl bg-[#0B1A2E] hover:bg-slate-800 text-white font-bold transition text-xs shadow-md"
+          >
+            Lengkapi Profil Sekarang →
+          </Link>
+        </div>
+      )}
+
+      {/* Error umum (misal kata sandi salah) */}
+      {state?.error && !state?.notRegistered && !state?.incompleteProfile && (
+        <div className="flex items-center gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in duration-200">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+          <span>{state.error}</span>
+        </div>
+      )}
+
+      {oauthError && !state?.error && (
         <div className="flex items-center gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-          <span>{state?.error || oauthError}</span>
+          <span>{oauthError}</span>
         </div>
       )}
 
@@ -136,6 +188,8 @@ function LoginForm() {
               type="email"
               name="email"
               required
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
               disabled={isAnyLoading}
               placeholder="siswa@universitas.edu"
               className="w-full pl-12 pr-4 py-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-200/60 focus:border-slate-300 focus:bg-white rounded-xl text-sm text-slate-800 placeholder-slate-400/80 focus:outline-none transition-all duration-200 disabled:opacity-60"

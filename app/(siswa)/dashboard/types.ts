@@ -201,6 +201,8 @@ export interface StudentDashboardProps {
     jurusan?: string | null;
     tahun_ajaran?: string | null;
     foto_url?: string | null;
+    jenis_kelamin?: string | null;
+    tempat_tgl_lahir?: string | null;
   };
   sekolahData?: SekolahData | null;
   schedulesData?: ScheduleItem[];

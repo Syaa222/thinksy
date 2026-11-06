@@ -50,6 +50,7 @@ import {
   applyTheme,
   StudentCardProfile,
   DEFAULT_STUDENT_PHOTO,
+  FEMALE_STUDENT_PHOTO,
 } from "@/lib/student-settings";
 
 export default function StudentDashboardClient({
@@ -75,18 +76,24 @@ export default function StudentDashboardClient({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Dynamic Student Profile (synced with settings & localStorage after mount)
-  const [profileState, setProfileState] = useState<StudentCardProfile>(() => ({
-    nama_lengkap: userProfile?.nama_lengkap || "Siswa Thinksy",
-    nama_kelas: userProfile?.nama_kelas || "Kelas 8",
-    nis: userProfile?.nis || "260481",
-    nisn: userProfile?.nisn || "0089247182",
-    jurusan: userProfile?.jurusan || "Fase D (Kurikulum Merdeka)",
-    tahun_ajaran: userProfile?.tahun_ajaran || "2026/2027",
-    foto_url: userProfile?.foto_url || DEFAULT_STUDENT_PHOTO,
-    tempat_tgl_lahir: "Gunungkidul, 12 Agustus 2010",
-    jenis_kelamin: "Laki-laki",
-    agama: "Islam",
-  }));
+  const [profileState, setProfileState] = useState<StudentCardProfile>(() => {
+    const defaultPhoto =
+      userProfile?.jenis_kelamin === "Perempuan"
+        ? FEMALE_STUDENT_PHOTO
+        : DEFAULT_STUDENT_PHOTO;
+    return getStoredStudentProfile({
+      nama_lengkap: userProfile?.nama_lengkap || "Siswa Thinksy",
+      nama_kelas: userProfile?.nama_kelas || "Kelas 8",
+      nis: userProfile?.nis || "260481",
+      nisn: userProfile?.nisn || "0089247182",
+      jurusan: userProfile?.jurusan || "Fase D (Kurikulum Merdeka)",
+      tahun_ajaran: userProfile?.tahun_ajaran || "2026/2027",
+      foto_url: userProfile?.foto_url || defaultPhoto,
+      tempat_tgl_lahir: userProfile?.tempat_tgl_lahir || "Gunungkidul, 12 Agustus 2010",
+      jenis_kelamin: userProfile?.jenis_kelamin || "Laki-laki",
+      agama: "Islam",
+    });
+  });
 
   // UI Preferences & Themes
   const [isDarkMode, setIsDarkMode] = useState(false);
