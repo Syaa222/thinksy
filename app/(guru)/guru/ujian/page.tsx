@@ -171,7 +171,7 @@ export default async function GuruDaftarUjianPage() {
   });
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="ujian">
       <div className="space-y-6">
         {/* Header Hero */}
         <div className="saas-card rounded-3xl p-6 sm:p-8 bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">

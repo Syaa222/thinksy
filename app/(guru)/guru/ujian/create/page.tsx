@@ -279,7 +279,7 @@ function GuruBuatUjianContent() {
   const activeBab = babList.find((b) => b.id === selectedBabId) || MATEMATIKA_SMP_BAB_LIST[0];
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="ujian">
       <form onSubmit={handleSaveExam} className="space-y-8 max-w-5xl mx-auto pb-16">
         {/* Navigation & Action */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -244,7 +244,7 @@ export default function EditUjianPage({
   const esaiCount = soalList.filter((s) => s.tipeSoal === "esai").length;
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="ujian">
       <div className="max-w-5xl mx-auto space-y-6 pb-24">
         {/* Top Header */}
         <div className="flex items-center justify-between gap-4">

@@ -50,15 +50,74 @@ export default function GuruClassroomSidebar({
   activeView,
   onSelectView,
   pendingReviewCount = 2,
-  classes = [
-    { id: "mat-8", name: "Matematika (Kelas 8)", themeColor: "#1967D2" },
-  ],
+  classes: classesProp,
   onCreateClassClick,
   onCloseMobile,
 }: GuruClassroomSidebarProps) {
   const pathname = usePathname() || "";
   const router = useRouter();
   const [isTeachingOpen, setIsTeachingOpen] = useState(true);
+
+  // Load and keep classes synced across all pages from localStorage
+  const [internalClasses, setInternalClasses] = useState<SidebarClassItem[]>(() => {
+    if (classesProp && classesProp.length > 0) return classesProp;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("thinksy_guru_classes");
+        const archivedRaw = localStorage.getItem("thinksy_archived_classes");
+        const archivedIds: string[] = archivedRaw ? JSON.parse(archivedRaw) : [];
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const active = parsed.filter((c: any) => !archivedIds.includes(c.id));
+            if (active.length > 0) return active;
+          }
+        }
+      } catch {}
+    }
+    return [
+      { id: "mat-8", name: "Matematika (Kelas 8)", themeColor: "#1967D2" },
+    ];
+  });
+
+  useEffect(() => {
+    if (classesProp && classesProp.length > 0) {
+      setInternalClasses(classesProp);
+      return;
+    }
+
+    const loadFromStorage = () => {
+      try {
+        const stored = localStorage.getItem("thinksy_guru_classes");
+        const archivedRaw = localStorage.getItem("thinksy_archived_classes");
+        const archivedIds: string[] = archivedRaw ? JSON.parse(archivedRaw) : [];
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const active = parsed.filter((c: any) => !archivedIds.includes(c.id));
+            if (active.length > 0) {
+              setInternalClasses(active);
+              return;
+            }
+          }
+        }
+        setInternalClasses([
+          { id: "mat-8", name: "Matematika (Kelas 8)", themeColor: "#1967D2" },
+        ]);
+      } catch {}
+    };
+
+    loadFromStorage();
+    window.addEventListener("storage", loadFromStorage);
+    window.addEventListener("thinksy_guru_classes_updated", loadFromStorage);
+
+    return () => {
+      window.removeEventListener("storage", loadFromStorage);
+      window.removeEventListener("thinksy_guru_classes_updated", loadFromStorage);
+    };
+  }, [classesProp]);
+
+  const displayClasses = classesProp && classesProp.length > 0 ? classesProp : internalClasses;
 
   // Client-side query parameter inspection
   const [queryState, setQueryState] = useState<{ view: string; classId: string }>({
@@ -79,7 +138,7 @@ export default function GuruClassroomSidebar({
       window.addEventListener("popstate", updateParams);
       return () => window.removeEventListener("popstate", updateParams);
     }
-  }, []);
+  }, [pathname]);
 
   if (!isOpen) return null;
 
@@ -90,21 +149,20 @@ export default function GuruClassroomSidebar({
     activeView === "ujian" || pathname.startsWith("/guru/ujian");
   const isPresensi =
     activeView === "presensi" ||
-    (pathname === "/guru" && queryState.view === "presensi");
+    (pathname === "/guru" && (queryState.view === "presensi" || activeView === "presensi"));
   const isCalendar =
     activeView === "calendar" ||
-    (pathname === "/guru" && queryState.view === "calendar");
+    (pathname === "/guru" && (queryState.view === "calendar" || activeView === "calendar"));
   const isToReview =
     activeView === "to_review" ||
-    (pathname === "/guru" && queryState.view === "to_review");
+    (pathname === "/guru" && (queryState.view === "to_review" || activeView === "to_review"));
   const isRekapan =
     activeView === "rekapan" || pathname.startsWith("/guru/rekapan");
 
   const isClassSelected = (clsId: string) =>
     activeView === clsId ||
     (activeView === "matematika" && clsId === "mat-8") ||
-    (pathname === "/guru" && queryState.classId === clsId) ||
-    (pathname === "/guru" && queryState.view === clsId);
+    (pathname === "/guru" && (queryState.classId === clsId || queryState.view === clsId));
 
   const isAnySpecific =
     isKelolaSiswa ||
@@ -113,22 +171,32 @@ export default function GuruClassroomSidebar({
     isCalendar ||
     isToReview ||
     isRekapan ||
-    classes.some((c) => isClassSelected(c.id));
+    displayClasses.some((c) => isClassSelected(c.id));
 
   const isHome =
     activeView === "home" ||
-    (!isAnySpecific && (pathname === "/guru" || pathname === "/guru/"));
+    (!isAnySpecific && (pathname === "/guru" || pathname === "/guru/") && !queryState.view && !queryState.classId);
 
   const handleNavigate = (view: GuruClassroomViewMode, targetHref: string) => {
     if (onCloseMobile) onCloseMobile();
 
+    // Rute halaman mandiri terpisah (Kelola Siswa, Rekapan, Ujian) - langsung navigasi 1 kali klik!
+    const isStandaloneRoute =
+      targetHref.startsWith("/guru/siswa") ||
+      targetHref.startsWith("/guru/rekapan") ||
+      targetHref.startsWith("/guru/ujian");
+
+    if (isStandaloneRoute) {
+      router.push(targetHref);
+      return;
+    }
+
+    // Jika sedang berada di /guru dan ada handler internal onSelectView
     if (pathname === "/guru" && onSelectView) {
       onSelectView(view);
-      if (targetHref.includes("?") || targetHref !== "/guru") {
-        try {
-          window.history.pushState(null, "", targetHref);
-        } catch {}
-      }
+      try {
+        window.history.pushState(null, "", targetHref);
+      } catch {}
     } else {
       router.push(targetHref);
     }
@@ -295,7 +363,7 @@ export default function GuruClassroomSidebar({
               </button>
 
               {/* Class: Matematika (Kelas 8) & Dynamic Classes */}
-              {classes.map((cls) => {
+              {displayClasses.map((cls) => {
                 const isSelected = isClassSelected(cls.id);
                 const initial = cls.name.charAt(0).toUpperCase() || "M";
 

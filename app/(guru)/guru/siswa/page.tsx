@@ -482,7 +482,7 @@ export default function GuruKelolaSiswaPage() {
   };
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="kelola_siswa">
       <div className="space-y-6 pb-20">
         {/* Top Hero Banner */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">

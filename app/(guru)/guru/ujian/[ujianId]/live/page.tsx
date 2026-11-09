@@ -140,7 +140,7 @@ export default async function GuruLiveMonitorPage({
   }));
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="ujian">
       <LiveMonitorClient
         ujian={ujianData}
         initialStudents={initialStudents}

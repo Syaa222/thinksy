@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import GuruClassroomTopBar from "@/components/guru/classroom/GuruClassroomTopBar";
 import GuruClassroomSidebar, {
   GuruClassroomViewMode,
@@ -150,15 +151,34 @@ export default function GuruDashboardPage() {
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
+  const router = useRouter();
+
   const [activeView, setActiveView] = useState<GuruClassroomViewMode>(() => {
     if (typeof window !== "undefined") {
       try {
         const params = new URLSearchParams(window.location.search);
-        const rawTab = params.get("tab");
+        const rawTab = params.get("tab") || params.get("view");
+        const classParam = params.get("class");
+        if (classParam) return classParam;
         if (rawTab) {
-          const tab = rawTab === "manajemen_siswa" ? "presensi" : rawTab === "manajemen_kelas" ? "home" : rawTab === "pengaturan" ? "settings" : rawTab;
+          const tab =
+            rawTab === "manajemen_siswa"
+              ? "presensi"
+              : rawTab === "manajemen_kelas"
+              ? "home"
+              : rawTab === "pengaturan"
+              ? "settings"
+              : rawTab;
           if (
-            ["home", "calendar", "presensi", "to_review", "matematika", "archived", "settings"].includes(tab)
+            [
+              "home",
+              "calendar",
+              "presensi",
+              "to_review",
+              "matematika",
+              "archived",
+              "settings",
+            ].includes(tab)
           ) {
             return tab as GuruClassroomViewMode;
           }
@@ -171,16 +191,56 @@ export default function GuruDashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingReviewCount, setPendingReviewCount] = useState<number>(2);
 
-  // Sync tab from URL query if present (e.g. ?tab=home or ?tab=calendar)
+  // Sync tab from URL query if present (e.g. ?tab=home or ?view=presensi or ?class=...)
   useEffect(() => {
     const syncTabFromUrl = () => {
       try {
         const params = new URLSearchParams(window.location.search);
-        const rawTab = params.get("tab");
+        const rawTab = params.get("tab") || params.get("view");
+        const classParam = params.get("class");
+        const actionParam = params.get("action");
+
+        if (actionParam === "create_class") {
+          setIsCreateClassModalOpen(true);
+        }
+
+        if (classParam) {
+          setActiveClassId(classParam === "matematika" ? "mat-8" : classParam);
+          setActiveView(classParam);
+          return;
+        }
+
         if (rawTab) {
-          const tab = (rawTab === "manajemen_siswa" ? "presensi" : rawTab === "manajemen_kelas" ? "home" : rawTab === "pengaturan" ? "settings" : rawTab) as GuruClassroomViewMode;
+          // Direct navigation if standalone routes are hit via query params
+          if (rawTab === "kelola_siswa") {
+            router.push("/guru/siswa");
+            return;
+          }
+          if (rawTab === "rekapan") {
+            router.push("/guru/rekapan");
+            return;
+          }
+          if (rawTab === "ujian") {
+            router.push("/guru/ujian");
+            return;
+          }
+
+          const tab = (rawTab === "manajemen_siswa"
+            ? "presensi"
+            : rawTab === "manajemen_kelas"
+            ? "home"
+            : rawTab === "pengaturan"
+            ? "settings"
+            : rawTab) as GuruClassroomViewMode;
           setActiveView(tab);
-          if (tab !== "home" && tab !== "calendar" && tab !== "presensi" && tab !== "to_review" && tab !== "archived" && tab !== "settings") {
+          if (
+            tab !== "home" &&
+            tab !== "calendar" &&
+            tab !== "presensi" &&
+            tab !== "to_review" &&
+            tab !== "archived" &&
+            tab !== "settings"
+          ) {
             setActiveClassId(tab === "matematika" ? "mat-8" : tab);
           }
         } else {
@@ -205,7 +265,7 @@ export default function GuruDashboardPage() {
       window.removeEventListener("popstate", syncTabFromUrl);
       window.removeEventListener("guru-navigate-home", handleHomeNavigate);
     };
-  }, []);
+  }, [router]);
 
   // Simpan kelas ke localStorage saat ada perubahan
   const handleCreateClass = (newClass: NewClassData) => {
@@ -248,13 +308,40 @@ export default function GuruDashboardPage() {
   };
 
   const handleSelectView = (view: GuruClassroomViewMode) => {
+    // Rute mandiri terpisah harus selalu diarahkan via router.push langsung!
+    if (view === "kelola_siswa") {
+      router.push("/guru/siswa");
+      return;
+    }
+    if (view === "rekapan") {
+      router.push("/guru/rekapan");
+      return;
+    }
+    if (view === "ujian") {
+      router.push("/guru/ujian");
+      return;
+    }
+
     setActiveView(view);
-    if (view !== "home" && view !== "calendar" && view !== "presensi" && view !== "to_review" && view !== "archived" && view !== "settings") {
+    if (
+      view !== "home" &&
+      view !== "calendar" &&
+      view !== "presensi" &&
+      view !== "to_review" &&
+      view !== "archived" &&
+      view !== "settings"
+    ) {
       setActiveClassId(view === "matematika" ? "mat-8" : view);
     }
     try {
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", view);
+      if (view === "home") {
+        url.search = "";
+      } else if (classes.some((c) => c.id === view)) {
+        url.search = `?class=${view}`;
+      } else {
+        url.search = `?view=${view}`;
+      }
       window.history.pushState(null, "", url.toString());
     } catch {}
   };
@@ -404,6 +491,12 @@ export default function GuruDashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          ) : activeView === "kelola_siswa" || activeView === "rekapan" || activeView === "ujian" ? (
+            /* Loading redirect guard - never show ManagementKelasTabScreen as false overlay */
+            <div className="py-24 flex flex-col items-center justify-center text-slate-500 gap-3">
+              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-medium">Mengarahkan ke halaman...</span>
             </div>
           ) : (
             /* Main Classroom View with Stream, Classwork, People, Grades */

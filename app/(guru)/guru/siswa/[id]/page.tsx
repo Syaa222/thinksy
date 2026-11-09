@@ -186,7 +186,7 @@ export default function GuruDetailSiswaPage({
   const correctAnswersCount = displayedAnswers.filter((a) => a.is_benar).length;
 
   return (
-    <GuruLayout>
+    <GuruLayout activeView="kelola_siswa">
       <div className="space-y-6">
         {/* 1. TOP HEADER NAVIGATION & ACTIONS */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

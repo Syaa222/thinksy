@@ -4,6 +4,7 @@ import { useState } from "react";
 import GuruClassroomTopBar from "@/components/guru/classroom/GuruClassroomTopBar";
 import GuruClassroomSidebar, {
   GuruClassroomViewMode,
+  SidebarClassItem,
 } from "@/components/guru/classroom/GuruClassroomSidebar";
 import FloatingGuruSpeedDial from "@/components/guru/FloatingGuruSpeedDial";
 
@@ -15,6 +16,7 @@ export type GuruNavView =
   | "presensi"
   | "ujian"
   | "to_review"
+  | "rekapan"
   | "matematika"
   | "manajemen_siswa"
   | "manajemen_kelas"
@@ -31,12 +33,14 @@ interface GuruLayoutProps {
   };
   activeView?: GuruNavView;
   onViewChange?: (view: GuruNavView) => void;
+  classes?: SidebarClassItem[];
 }
 
 export default function GuruLayout({
   children,
   userProfile,
   activeView,
+  classes,
 }: GuruLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -54,6 +58,7 @@ export default function GuruLayout({
         <GuruClassroomSidebar
           isOpen={isSidebarOpen}
           activeView={activeView as GuruClassroomViewMode}
+          classes={classes}
           onCloseMobile={() => setIsSidebarOpen(false)}
         />
 
