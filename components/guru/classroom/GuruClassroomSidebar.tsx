@@ -119,63 +119,44 @@ export default function GuruClassroomSidebar({
 
   const displayClasses = classesProp && classesProp.length > 0 ? classesProp : internalClasses;
 
-  // Client-side query parameter inspection
-  const [queryState, setQueryState] = useState<{ view: string; classId: string }>({
-    view: "",
-    classId: "",
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const updateParams = () => {
-        const sp = new URLSearchParams(window.location.search);
-        setQueryState({
-          view: sp.get("view") || sp.get("tab") || "",
-          classId: sp.get("class") || "",
-        });
-      };
-      updateParams();
-      window.addEventListener("popstate", updateParams);
-      return () => window.removeEventListener("popstate", updateParams);
-    }
-  }, [pathname]);
-
   if (!isOpen) return null;
 
-  // Active status determinations
-  const isKelolaSiswa =
-    activeView === "kelola_siswa" || pathname.startsWith("/guru/siswa");
-  const isUjian =
-    activeView === "ujian" || pathname.startsWith("/guru/ujian");
-  const isPresensi =
-    activeView === "presensi" ||
-    (pathname === "/guru" && (queryState.view === "presensi" || activeView === "presensi"));
-  const isCalendar =
-    activeView === "calendar" ||
-    (pathname === "/guru" && (queryState.view === "calendar" || activeView === "calendar"));
-  const isToReview =
-    activeView === "to_review" ||
-    (pathname === "/guru" && (queryState.view === "to_review" || activeView === "to_review"));
-  const isRekapan =
-    activeView === "rekapan" || pathname.startsWith("/guru/rekapan");
+  // Penentuan menu aktif secara MUTUALLY EXCLUSIVE (Hanya tepat 1 item yang boleh aktif / biru)
+  const currentActive = (() => {
+    // 1. Rute halaman mandiri terpisah
+    if (pathname.startsWith("/guru/siswa")) return "kelola_siswa";
+    if (pathname.startsWith("/guru/rekapan")) return "rekapan";
+    if (pathname.startsWith("/guru/ujian")) return "ujian";
 
-  const isClassSelected = (clsId: string) =>
-    activeView === clsId ||
-    (activeView === "matematika" && clsId === "mat-8") ||
-    (pathname === "/guru" && (queryState.classId === clsId || queryState.view === clsId));
+    // 2. Jika prop activeView diberikan dari parent (/guru)
+    if (activeView) {
+      if (activeView === "matematika") return "mat-8";
+      return activeView;
+    }
 
-  const isAnySpecific =
-    isKelolaSiswa ||
-    isUjian ||
-    isPresensi ||
-    isCalendar ||
-    isToReview ||
-    isRekapan ||
-    displayClasses.some((c) => isClassSelected(c.id));
+    // 3. Fallback jika activeView tidak di-pass (misal akses URL /guru secara langsung)
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const v = sp.get("view") || sp.get("tab") || sp.get("class");
+      if (v) {
+        if (v === "manajemen_siswa") return "presensi";
+        if (v === "matematika") return "mat-8";
+        return v;
+      }
+    }
 
-  const isHome =
-    activeView === "home" ||
-    (!isAnySpecific && (pathname === "/guru" || pathname === "/guru/") && !queryState.view && !queryState.classId);
+    return "home";
+  })();
+
+  // Status aktif eksklusif - tidak akan pernah menumpuk lebih dari 1
+  const isHome = currentActive === "home";
+  const isCalendar = currentActive === "calendar";
+  const isKelolaSiswa = currentActive === "kelola_siswa";
+  const isPresensi = currentActive === "presensi";
+  const isUjian = currentActive === "ujian";
+  const isToReview = currentActive === "to_review";
+  const isRekapan = currentActive === "rekapan";
+  const isClassSelected = (clsId: string) => currentActive === clsId;
 
   const handleNavigate = (view: GuruClassroomViewMode, targetHref: string) => {
     if (onCloseMobile) onCloseMobile();
@@ -194,9 +175,6 @@ export default function GuruClassroomSidebar({
     // Jika sedang berada di /guru dan ada handler internal onSelectView
     if (pathname === "/guru" && onSelectView) {
       onSelectView(view);
-      try {
-        window.history.pushState(null, "", targetHref);
-      } catch {}
     } else {
       router.push(targetHref);
     }
