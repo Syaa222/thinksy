@@ -72,9 +72,8 @@ export default function EditUjianPage({
   const [openPetunjuk, setOpenPetunjuk] = useState<Record<string, boolean>>({});
   const [showMisconceptions, setShowMisconceptions] = useState(false);
 
-  // AI Modal & Variasi State
+  // AI Generator Modal State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [generatingVariasiId, setGeneratingVariasiId] = useState<string | null>(null);
 
   // Load Exam Data on Mount
   useEffect(() => {
@@ -212,41 +211,6 @@ export default function EditUjianPage({
       return copy;
     });
     setCurrentIdx(toIdx);
-  };
-
-  // AI Variasi Single Question
-  const handleAiVariasi = async () => {
-    if (!currentQ) return;
-    setGeneratingVariasiId(currentQ.id);
-    try {
-      const res = await fetch("/api/guru/generate-soal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topik: `${babJudul || "Matematika SMP"} - Variasi Soal: ${currentQ.pertanyaan.substring(0, 100)}`,
-          babId,
-          mapel,
-          tipeSoal: currentQ.tipeSoal,
-          tingkatSoal: "sedang",
-          mode: "soal",
-          jumlah: 1,
-        }),
-      });
-      const data = await res.json();
-      if (data.soal && data.soal[0]) {
-        const newQ = data.soal[0];
-        handleUpdateCurrentQuestion({
-          pertanyaan: newQ.pertanyaan,
-          kunciJawaban: newQ.kunciJawaban,
-          pembahasan: newQ.pembahasan,
-          opsi: newQ.opsi || currentQ.opsi,
-        });
-      }
-    } catch (err: any) {
-      alert("Gagal membuat variasi AI: " + err.message);
-    } finally {
-      setGeneratingVariasiId(null);
-    }
   };
 
   // AI Modal Question Inserts
@@ -623,14 +587,15 @@ export default function EditUjianPage({
             <div className="lg:col-span-8 space-y-4">
               {currentQ ? (
                 <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 space-y-6 animate-in fade-in duration-150">
-                  {/* 1. Header Toolbar Soal (Nomor, Tipe, Poin, & Mode Preview/Edit) */}
-                  <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 gap-3">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      {/* Black circle badge nomor soal persis gaya siswa */}
+                  {/* 1. Header Toolbar Soal (Nomor, Tipe, Poin di kiri; Toggle & Aksi di kanan) */}
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100 gap-3 w-full">
+                    {/* Kiri: Nomor, Info, Jenis Soal, & Poin */}
+                    <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                      {/* Black rounded badge nomor soal persis gaya siswa */}
                       <span className="w-8 h-8 rounded-xl bg-slate-900 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
                         {currentIdx + 1}
                       </span>
-                      <span className="text-xs font-bold text-slate-500">
+                      <span className="text-xs font-bold text-slate-500 hidden sm:inline">
                         Soal {currentIdx + 1} dari {soalList.length}
                       </span>
 
@@ -639,7 +604,7 @@ export default function EditUjianPage({
                         value={currentQ.tipeSoal}
                         onChange={(e) =>
                           handleUpdateCurrentQuestion({
-                            tipeSoal: e.target.value as any,
+                            tipeSoal: e.target.value as "pilihan_ganda" | "isian_singkat" | "esai",
                             // Inisialisasi opsi default jika beralih ke PG
                             opsi:
                               e.target.value === "pilihan_ganda" && (!currentQ.opsi || currentQ.opsi.length === 0)
@@ -652,7 +617,7 @@ export default function EditUjianPage({
                                 : currentQ.opsi,
                           })
                         }
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer"
+                        className="text-[11px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer hover:bg-slate-200/70 transition"
                       >
                         <option value="pilihan_ganda">Pilihan Ganda</option>
                         <option value="isian_singkat">Isian Singkat</option>
@@ -660,7 +625,7 @@ export default function EditUjianPage({
                       </select>
 
                       {/* Input Bobot Poin */}
-                      <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-bold">
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
                         <span>Poin:</span>
                         <input
                           type="number"
@@ -670,73 +635,68 @@ export default function EditUjianPage({
                           onChange={(e) =>
                             handleUpdateCurrentQuestion({ poin: Number(e.target.value) })
                           }
-                          className="w-10 bg-transparent text-center font-extrabold text-blue-900 focus:outline-none"
+                          className="w-8 sm:w-10 bg-transparent text-center font-extrabold text-blue-900 focus:outline-none"
                         />
                       </div>
                     </div>
 
-                    {/* Toolbar Actions Right */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {/* Variasikan AI */}
-                      <button
-                        type="button"
-                        onClick={handleAiVariasi}
-                        disabled={generatingVariasiId === currentQ.id}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 transition border border-indigo-200 cursor-pointer disabled:opacity-50"
-                        title="Buat variasi butir soal serupa menggunakan AI"
-                      >
-                        <Sparkles
-                          className={`w-3.5 h-3.5 text-indigo-600 ${
-                            generatingVariasiId === currentQ.id ? "animate-spin" : ""
-                          }`}
-                        />
-                        <span className="hidden sm:inline">
-                          {generatingVariasiId === currentQ.id ? "Variasi..." : "Variasikan AI"}
-                        </span>
-                      </button>
-
-                      {/* Mode Toggle: Pratinjau Siswa vs Mode Edit */}
-                      <button
-                        type="button"
-                        onClick={() => setIsPreviewMode(!isPreviewMode)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                          isPreviewMode
-                            ? "bg-emerald-600 text-white shadow-2xs"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-                        }`}
-                        title="Alihkan pratinjau tampilan siswa vs mode pengeditan teks"
-                      >
-                        {isPreviewMode ? <Eye className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
-                        <span>{isPreviewMode ? "Pratinjau Siswa" : "Mode Edit"}</span>
-                      </button>
-
-                      {/* Geser Posisi Soal */}
-                      {currentIdx > 0 && (
+                    {/* Kanan: Toggle Mode (Icon-Only), Geser Posisi, & Hapus */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Toggle Mode Edit vs Pratinjau Siswa (Segmented Icon-Only) */}
+                      <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
                         <button
                           type="button"
+                          onClick={() => setIsPreviewMode(false)}
+                          className={`p-1.5 rounded-lg transition cursor-pointer ${
+                            !isPreviewMode
+                              ? "bg-white text-blue-600 shadow-2xs font-bold"
+                              : "text-slate-400 hover:text-slate-700"
+                          }`}
+                          title="Mode Edit Teks Soal"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsPreviewMode(true)}
+                          className={`p-1.5 rounded-lg transition cursor-pointer ${
+                            isPreviewMode
+                              ? "bg-white text-emerald-600 shadow-2xs font-bold"
+                              : "text-slate-400 hover:text-slate-700"
+                          }`}
+                          title="Pratinjau Tampilan Siswa"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Geser Posisi Soal */}
+                      <div className="flex items-center bg-slate-100/70 p-1 rounded-xl border border-slate-200/80">
+                        <button
+                          type="button"
+                          disabled={currentIdx === 0}
                           onClick={() => handleMoveQuestion(currentIdx, currentIdx - 1)}
-                          className="p-1.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-                          title="Geser posisi soal ke atas/sebelumnya"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Geser posisi soal ke atas / sebelumnya"
                         >
                           <ArrowUp className="w-4 h-4" />
                         </button>
-                      )}
-                      {currentIdx < soalList.length - 1 && (
                         <button
                           type="button"
+                          disabled={currentIdx === soalList.length - 1}
                           onClick={() => handleMoveQuestion(currentIdx, currentIdx + 1)}
-                          className="p-1.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-                          title="Geser posisi soal ke bawah/berikutnya"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Geser posisi soal ke bawah / berikutnya"
                         >
                           <ArrowDown className="w-4 h-4" />
                         </button>
-                      )}
+                      </div>
 
                       {/* Hapus Soal */}
                       <button
                         type="button"
                         onClick={() => handleDeleteQuestion(currentIdx)}
-                        className="p-1.5 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer ml-1"
+                        className="p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 transition cursor-pointer"
                         title="Hapus butir soal ini"
                       >
                         <Trash2 className="w-4 h-4" />
