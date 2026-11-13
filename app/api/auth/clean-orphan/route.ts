@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -27,16 +26,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminClient = createAdminClient();
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
+    // Bersihkan user auth tanpa profil menggunakan RPC SECURITY DEFINER
+    const { data: deleted, error: deleteError } = await supabase.rpc(
+      "delete_orphan_auth_user_by_id",
+      { p_user_id: userId }
+    );
 
     if (deleteError) {
-      console.warn("[clean-orphan] Gagal menghapus user via admin:", deleteError.message);
+      console.warn("[clean-orphan] Gagal menghapus user via RPC:", deleteError.message);
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
-    console.log(`[clean-orphan] Berhasil membersihkan user auth tanpa profil: ${userId}`);
-    return NextResponse.json({ success: true });
+    console.log(`[clean-orphan] Berhasil membersihkan user auth tanpa profil (${userId}):`, deleted);
+    return NextResponse.json({ success: true, deleted });
   } catch (err: any) {
     console.error("[clean-orphan] Exception:", err);
     return NextResponse.json(
@@ -45,4 +47,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
