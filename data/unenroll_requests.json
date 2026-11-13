@@ -1,5 +1,16 @@
 [
   {
+    "id": "unenroll-1794561019708-40on",
+    "studentId": "e7ce652c-7c1f-466d-8235-24e56c5bc146",
+    "studentName": "Lian Dev",
+    "classId": "ipa-8",
+    "className": "IPA (Ilmu Pengetahuan Alam)",
+    "status": "approved",
+    "requestedAt": "2026-11-13T09:10:19.708Z",
+    "processedAt": "2026-11-13T09:11:13.578Z",
+    "autoDeleted": true
+  },
+  {
     "id": "unenroll-1794365581760-085b",
     "studentId": "60c954d5-a58c-4ed8-8144-a110c2bdeb1e",
     "studentName": "syaa px",
@@ -7,7 +18,7 @@
     "className": "IPA (Ilmu Pengetahuan Alam)",
     "status": "approved",
     "requestedAt": "2026-11-11T02:53:01.760Z",
-    "processedAt": "2026-11-13T04:14:14.134Z",
+    "processedAt": "2026-11-13T09:11:13.578Z",
     "autoDeleted": true
   }
 ]

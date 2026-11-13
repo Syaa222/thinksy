@@ -19,6 +19,20 @@ export function sanitizeMathContent(content: string): string {
   cleanText = cleanText.replace(/[↑⬆▲]rac/gi, "\\frac");
   cleanText = cleanText.replace(/(?<![\\a-zA-Z])rac\{/g, "\\frac{");
 
+  // Perbaiki tab-escaped LaTeX akibat single backslash di JS string literal (\times -> \t + imes, \text -> \t + ext)
+  cleanText = cleanText.replace(/\times\b/g, "\\times");
+  cleanText = cleanText.replace(/\text(?=\{|\b)/g, "\\text");
+  cleanText = cleanText.replace(/\theta\b/g, "\\theta");
+
+  // Perbaiki unescaped sqrt yang kehilangan backslash (misal: sqrt{3}, sqrt(3), sqrt3, atau di dalam frac{sqrt3+sqrt2}{...})
+  cleanText = cleanText.replace(/(?<![\\a-zA-Z])sqrt\s*\{([^{}]+)\}/g, "\\sqrt{$1}");
+  cleanText = cleanText.replace(/(?<![\\a-zA-Z])sqrt\s*\(([^()]+)\)/g, "\\sqrt{$1}");
+  cleanText = cleanText.replace(/(?<![\\a-zA-Z])sqrt\s*(\d+)/g, "\\sqrt{$1}");
+  cleanText = cleanText.replace(/(?<![\\a-zA-Z])sqrt(?=[{\d(])/g, "\\sqrt");
+
+  // Perbaiki simbol derajat
+  cleanText = cleanText.replace(/\^circ\b/g, "^\\circ");
+
   // Normalisasi double-escaped LaTeX
   cleanText = cleanText.replace(/\\\\(frac|sqrt|text|times|div|pm|cdot|approx|neq|le|ge|alpha|beta|theta|pi|degree|circ|implies|quad|sum|int|infty|Delta|angle)\b/g, "\\$1");
 
@@ -31,7 +45,18 @@ export function sanitizeMathContent(content: string): string {
 
   let masked = cleanText.replace(/(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|`[^`]+?`)/g, protect);
 
-  // 3. Deteksi apakah ada baris yang memuat sintaks formula LaTeX yang belum dibungkus $
+  // 3. Tangani pecahan mandiri dengan dukungan nested braces (misal \frac{\sqrt{3}}{\sqrt{2}})
+  const bracePattern = '\\{(?:[^{}]|\\{[^{}]*\\})*\\}';
+  const fracRegex = new RegExp(`(?:\\b\\d+\\s*)?\\\\frac${bracePattern}${bracePattern}`, 'g');
+  masked = masked.replace(fracRegex, (m) => protect(`$${m.trim()}$`));
+
+  // Tangani akar mandiri yang belum terbungkus
+  const sqrtRegex = new RegExp(`(?:\\b\\d+\\s*)?\\\\sqrt${bracePattern}`, 'g');
+  masked = masked.replace(sqrtRegex, (m) => protect(`$${m.trim()}$`));
+
+  masked = masked.replace(/(?:\b\d+\s*)?\\text\{[^{}]+\}(?:\^[0-9a-zA-Z]+|\^\{[^{}]+\})?/g, (m) => protect(`$${m.trim()}$`));
+
+  // 4. Deteksi apakah ada baris yang memuat sintaks formula LaTeX yang belum dibungkus $
   const hasLatexRegex = /\\(?:frac|sqrt|text|times|div|pm|cdot|circ|degree|angle|Delta|alpha|beta|theta|pi|sum|int|le|ge|neq|approx|implies)\b/;
 
   if (hasLatexRegex.test(masked)) {

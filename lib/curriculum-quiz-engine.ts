@@ -96,20 +96,20 @@ export function resolveSpecificHint(
 
   // 1. Bilangan Berpangkat / Eksponen
   if (pLower.includes("pangkat") || pLower.includes("eksponen") || pLower.includes("^")) {
-    if (pLower.includes("\times") || pLower.includes("perkalian") || pLower.includes("dikali")) {
-      return "Ingat sifat operasi eksponen: pada perkalian bilangan berpangkat dengan basis yang sama ($a^m \times a^n$), jumlahkan pangkat-pangkatnya ($m + n$).";
+    if (pLower.includes("\\times") || pLower.includes("perkalian") || pLower.includes("dikali")) {
+      return "Ingat sifat operasi eksponen: pada perkalian bilangan berpangkat dengan basis yang sama ($a^m \\times a^n$), jumlahkan pangkat-pangkatnya ($m + n$).";
     }
     if (pLower.includes("/") || pLower.includes("bagi") || pLower.includes("pembagian") || pLower.includes("frac")) {
       return "Gunakan sifat pembagian eksponen dengan basis sama ($a^m : a^n$): kurangkan pangkat pembilang dengan pangkat penyebut ($m - n$).";
     }
     if (pLower.includes("pangkatkan lagi") || pLower.includes(")^")) {
-      return "Terapkan aturan pemangkatan berulang: $(a^m)^n = a^{m \times n}$. Kalikan nilai kedua eksponennya.";
+      return "Terapkan aturan pemangkatan berulang: $(a^m)^n = a^{m \\times n}$. Kalikan nilai kedua eksponennya.";
     }
     if (pLower.includes("0") || pLower.includes("negatif") || pLower.includes("^-")) {
       return "Ingat prinsip penting: bilangan bukan nol dipangkatkan 0 bernilai 1 ($a^0 = 1$), dan pangkat negatif diubah menjadi pecahan ($a^{-n} = \\frac{1}{a^n}$).";
     }
     if (pLower.includes("notasi ilmiah") || pLower.includes("bentuk baku")) {
-      return "Bentuk baku dituliskan sebagai $a \times 10^n$ dengan syarat $1 \le a < 10$. Geser tanda koma hingga tersisa 1 angka di depan koma.";
+      return "Bentuk baku dituliskan sebagai $a \\times 10^n$ dengan syarat $1 \\le a < 10$. Geser tanda koma hingga tersisa 1 angka di depan koma.";
     }
     return "Pahami sifat dasar eksponen: $a^n$ menyatakan perkalian berulang bilangan pokok ($a$) sebanyak $n$ kali.";
   }
@@ -120,7 +120,7 @@ export function resolveSpecificHint(
       return "Rasionalkan penyebut dengan mengalikan pembilang dan penyebut dengan bentuk sekawan penyebutnya.";
     }
     if (pLower.includes("sederhana") || pLower.includes("penyederhanaan")) {
-      return "Faktorkan bilangan di dalam akar menjadi perkalian bilangan kuadrat sempurna terbesar, lalu gunakan rumus $\sqrt{a \times b} = \sqrt{a} \times \sqrt{b}$.";
+      return "Faktorkan bilangan di dalam akar menjadi perkalian bilangan kuadrat sempurna terbesar, lalu gunakan rumus $\\sqrt{a \\times b} = \\sqrt{a} \\times \\sqrt{b}$.";
     }
     return "Kelompokkan dan operasikan bentuk akar yang sejenis (angka di dalam tanda akar harus bernilai sama).";
   }
@@ -128,7 +128,7 @@ export function resolveSpecificHint(
   // 3. Pola Bilangan & Barisan
   if (pLower.includes("barisan") || pLower.includes("deret") || pLower.includes("aritmatika") || pLower.includes("geometri")) {
     if (pLower.includes("geometri") || pLower.includes("rasio")) {
-      return "Tentukan rasio pengali ($r = U_2 / U_1$), lalu gunakan rumus suku ke-$n$: $U_n = a \times r^{n-1}$.";
+      return "Tentukan rasio pengali ($r = U_2 / U_1$), lalu gunakan rumus suku ke-$n$: $U_n = a \\times r^{n-1}$.";
     }
     if (pLower.includes("jumlah") || pLower.includes("deret") || pLower.includes("s_")) {
       return "Gunakan rumus jumlah deret aritmatika: $S_n = \\frac{n}{2}[2a + (n-1)b]$.";
@@ -461,72 +461,72 @@ function getBilanganBerpangkat15(): QuizQuestionData[] {
     },
     {
       id: "q-6",
-      pertanyaan: "6. Bentuk paling sederhana dari operasi bentuk akar $\sqrt{75} + \sqrt{48} - \sqrt{27}$ adalah...",
+      pertanyaan: "6. Bentuk paling sederhana dari operasi bentuk akar $\\sqrt{75} + \\sqrt{48} - \\sqrt{27}$ adalah...",
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-6-1", teksOpsi: "$6\sqrt{3}$", benar: true },
-        { id: "opt-6-2", teksOpsi: "$4\sqrt{3}$", benar: false },
-        { id: "opt-6-3", teksOpsi: "$5\sqrt{3}$", benar: false },
-        { id: "opt-6-4", teksOpsi: "$7\sqrt{3}$", benar: false },
+        { id: "opt-6-1", teksOpsi: "$6\\sqrt{3}$", benar: true },
+        { id: "opt-6-2", teksOpsi: "$4\\sqrt{3}$", benar: false },
+        { id: "opt-6-3", teksOpsi: "$5\\sqrt{3}$", benar: false },
+        { id: "opt-6-4", teksOpsi: "$7\\sqrt{3}$", benar: false },
       ],
-      kunciJawaban: "$6\sqrt{3}$",
-      pembahasan: "Faktorkan dengan bilangan kuadrat sempurna: $\sqrt{75} = \sqrt{25 \times 3} = 5\sqrt{3}$, $\sqrt{48} = \sqrt{16 \times 3} = 4\sqrt{3}$, $\sqrt{27} = \sqrt{9 \times 3} = 3\sqrt{3}$. Maka $(5 + 4 - 3)\sqrt{3} = 6\sqrt{3}$.",
-      hintSokratik: "Pisahkan bilangan kuadrat sempurna ($25, 16, 9$) dari dalam akar, sehingga semua bersisa $\sqrt{3}$, lalu operasikan koefisiennya.",
+      kunciJawaban: "$6\\sqrt{3}$",
+      pembahasan: "Faktorkan dengan bilangan kuadrat sempurna: $\\sqrt{75} = \\sqrt{25 \\times 3} = 5\\sqrt{3}$, $\\sqrt{48} = \\sqrt{16 \\times 3} = 4\\sqrt{3}$, $\\sqrt{27} = \\sqrt{9 \\times 3} = 3\\sqrt{3}$. Maka $(5 + 4 - 3)\\sqrt{3} = 6\\sqrt{3}$.",
+      hintSokratik: "Pisahkan bilangan kuadrat sempurna ($25, 16, 9$) dari dalam akar, sehingga semua bersisa $\\sqrt{3}$, lalu operasikan koefisiennya.",
     },
     {
       id: "q-7",
-      pertanyaan: "7. Hasil perkalian bentuk akar $2\sqrt{6} \times 3\sqrt{8}$ adalah...",
+      pertanyaan: "7. Hasil perkalian bentuk akar $2\\sqrt{6} \\times 3\\sqrt{8}$ adalah...",
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-7-1", teksOpsi: "$24\sqrt{3}$", benar: true },
-        { id: "opt-7-2", teksOpsi: "$18\sqrt{3}$", benar: false },
-        { id: "opt-7-3", teksOpsi: "$12\sqrt{48}$", benar: false },
-        { id: "opt-7-4", teksOpsi: "$36\sqrt{2}$", benar: false },
+        { id: "opt-7-1", teksOpsi: "$24\\sqrt{3}$", benar: true },
+        { id: "opt-7-2", teksOpsi: "$18\\sqrt{3}$", benar: false },
+        { id: "opt-7-3", teksOpsi: "$12\\sqrt{48}$", benar: false },
+        { id: "opt-7-4", teksOpsi: "$36\\sqrt{2}$", benar: false },
       ],
-      kunciJawaban: "$24\sqrt{3}$",
-      pembahasan: "$(2 \times 3)\sqrt{6 \times 8} = 6\sqrt{48} = 6\sqrt{16 \times 3} = 6 \times 4\sqrt{3} = 24\sqrt{3}$.",
-      hintSokratik: "Kalikan bilangan di luar akar ($2 \times 3 = 6$) dan bilangan di dalam akar ($\sqrt{48}$), lalu sederhanakan $\sqrt{48} = 4\sqrt{3}$.",
+      kunciJawaban: "$24\\sqrt{3}$",
+      pembahasan: "$(2 \\times 3)\\sqrt{6 \\times 8} = 6\\sqrt{48} = 6\\sqrt{16 \\times 3} = 6 \\times 4\\sqrt{3} = 24\\sqrt{3}$.",
+      hintSokratik: "Kalikan bilangan di luar akar ($2 \\times 3 = 6$) dan bilangan di dalam akar ($\\sqrt{48}$), lalu sederhanakan $\\sqrt{48} = 4\\sqrt{3}$.",
     },
     {
       id: "q-8",
-      pertanyaan: "8. Bentuk rasional dari pecahan $\\frac{12}{\sqrt{6}}$ adalah...",
+      pertanyaan: "8. Bentuk rasional dari pecahan $\\frac{12}{\\sqrt{6}}$ adalah...",
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-8-1", teksOpsi: "$2\sqrt{6}$", benar: true },
-        { id: "opt-8-2", teksOpsi: "$3\sqrt{6}$", benar: false },
-        { id: "opt-8-3", teksOpsi: "$6\sqrt{2}$", benar: false },
-        { id: "opt-8-4", teksOpsi: "$4\sqrt{6}$", benar: false },
+        { id: "opt-8-1", teksOpsi: "$2\\sqrt{6}$", benar: true },
+        { id: "opt-8-2", teksOpsi: "$3\\sqrt{6}$", benar: false },
+        { id: "opt-8-3", teksOpsi: "$6\\sqrt{2}$", benar: false },
+        { id: "opt-8-4", teksOpsi: "$4\\sqrt{6}$", benar: false },
       ],
-      kunciJawaban: "$2\sqrt{6}$",
-      pembahasan: "Rasionalkan dengan mengalikan $\\frac{\sqrt{6}}{\sqrt{6}}$: $\\frac{12}{\sqrt{6}} \times \\frac{\sqrt{6}}{\sqrt{6}} = \\frac{12\sqrt{6}}{6} = 2\sqrt{6}$.",
-      hintSokratik: "Kalikan pembilang dan penyebut dengan $\sqrt{6}$ agar penyebutnya menjadi bilangan rasional $6$, lalu bagi $12 : 6$.",
+      kunciJawaban: "$2\\sqrt{6}$",
+      pembahasan: "Rasionalkan dengan mengalikan $\\frac{\\sqrt{6}}{\\sqrt{6}}$: $\\frac{12}{\\sqrt{6}} \\times \\frac{\\sqrt{6}}{\\sqrt{6}} = \\frac{12\\sqrt{6}}{6} = 2\\sqrt{6}$.",
+      hintSokratik: "Kalikan pembilang dan penyebut dengan $\\sqrt{6}$ agar penyebutnya menjadi bilangan rasional $6$, lalu bagi $12 : 6$.",
     },
     {
       id: "q-9",
-      pertanyaan: "9. Bentuk rasional dari pecahan dengan penyebut suku dua $\\frac{8}{\sqrt{5} + 1}$ adalah...",
+      pertanyaan: "9. Bentuk rasional dari pecahan dengan penyebut suku dua $\\frac{8}{\\sqrt{5} + 1}$ adalah...",
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-9-1", teksOpsi: "$2(\sqrt{5} - 1)$", benar: true },
-        { id: "opt-9-2", teksOpsi: "$2(\sqrt{5} + 1)$", benar: false },
-        { id: "opt-9-3", teksOpsi: "$4(\sqrt{5} - 1)$", benar: false },
-        { id: "opt-9-4", teksOpsi: "$4\sqrt{5} + 4$", benar: false },
+        { id: "opt-9-1", teksOpsi: "$2(\\sqrt{5} - 1)$", benar: true },
+        { id: "opt-9-2", teksOpsi: "$2(\\sqrt{5} + 1)$", benar: false },
+        { id: "opt-9-3", teksOpsi: "$4(\\sqrt{5} - 1)$", benar: false },
+        { id: "opt-9-4", teksOpsi: "$4\\sqrt{5} + 4$", benar: false },
       ],
-      kunciJawaban: "$2(\sqrt{5} - 1)$",
-      pembahasan: "Kalikan dengan bentuk sekawannya $(\sqrt{5} - 1)$: $\\frac{8(\sqrt{5} - 1)}{(\sqrt{5})^2 - 1^2} = \\frac{8(\sqrt{5} - 1)}{5 - 1} = \\frac{8(\sqrt{5} - 1)}{4} = 2(\sqrt{5} - 1)$.",
-      hintSokratik: "Kalikan pembilang dan penyebut dengan bentuk sekawan $(\sqrt{5} - 1)$. Pada penyebut berlaku selisih kuadrat: $(\sqrt{5})^2 - 1^2 = 4$.",
+      kunciJawaban: "$2(\\sqrt{5} - 1)$",
+      pembahasan: "Kalikan dengan bentuk sekawannya $(\\sqrt{5} - 1)$: $\\frac{8(\\sqrt{5} - 1)}{(\\sqrt{5})^2 - 1^2} = \\frac{8(\\sqrt{5} - 1)}{5 - 1} = \\frac{8(\\sqrt{5} - 1)}{4} = 2(\\sqrt{5} - 1)$.",
+      hintSokratik: "Kalikan pembilang dan penyebut dengan bentuk sekawan $(\\sqrt{5} - 1)$. Pada penyebut berlaku selisih kuadrat: $(\\sqrt{5})^2 - 1^2 = 4$.",
     },
     {
       id: "q-10",
       pertanyaan: "10. Notasi ilmiah (bentuk baku) dari bilangan $0{,}00000345$ dan $450.000.000$ berturut-turut adalah...",
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-10-1", teksOpsi: "$3{,}45 \times 10^{-6}$ dan $4{,}5 \times 10^8$", benar: true },
-        { id: "opt-10-2", teksOpsi: "$3{,}45 \times 10^{-5}$ dan $4{,}5 \times 10^7$", benar: false },
-        { id: "opt-10-3", teksOpsi: "$34{,}5 \times 10^{-7}$ dan $45 \times 10^7$", benar: false },
-        { id: "opt-10-4", teksOpsi: "$3{,}45 \times 10^6$ dan $4{,}5 \times 10^{-8}$", benar: false },
+        { id: "opt-10-1", teksOpsi: "$3{,}45 \\times 10^{-6}$ dan $4{,}5 \\times 10^8$", benar: true },
+        { id: "opt-10-2", teksOpsi: "$3{,}45 \\times 10^{-5}$ dan $4{,}5 \\times 10^7$", benar: false },
+        { id: "opt-10-3", teksOpsi: "$34{,}5 \\times 10^{-7}$ dan $45 \\times 10^7$", benar: false },
+        { id: "opt-10-4", teksOpsi: "$3{,}45 \\times 10^6$ dan $4{,}5 \\times 10^{-8}$", benar: false },
       ],
-      kunciJawaban: "$3{,}45 \times 10^{-6}$ dan $4{,}5 \times 10^8$",
-      pembahasan: "Bentuk baku $a \times 10^n$ dengan $1 \le a < 10$. Untuk $0{,}00000345$, geser koma 6 kali ke kanan $\Rightarrow 3{,}45 \times 10^{-6}$. Untuk $450.000.000$, geser koma 8 kali ke kiri $\Rightarrow 4{,}5 \times 10^8$.",
+      kunciJawaban: "$3{,}45 \\times 10^{-6}$ dan $4{,}5 \\times 10^8$",
+      pembahasan: "Bentuk baku $a \\times 10^n$ dengan $1 \\le a < 10$. Untuk $0{,}00000345$, geser koma 6 kali ke kanan $\\Rightarrow 3{,}45 \\times 10^{-6}$. Untuk $450.000.000$, geser koma 8 kali ke kiri $\\Rightarrow 4{,}5 \\times 10^8$.",
       hintSokratik: "Pastikan angka di depan koma berada di antara 1 dan 10 ($3{,}45$ dan $4{,}5$). Hitung jumlah pergeseran koma sebagai pangkat 10.",
     },
     {
@@ -539,18 +539,18 @@ function getBilanganBerpangkat15(): QuizQuestionData[] {
     },
     {
       id: "q-12",
-      pertanyaan: "12. [Jawaban Singkat] Tentukan nilai akhir dari operasi bentuk akar: $(\sqrt{100} \times \sqrt{9}) - \sqrt{64}$!",
+      pertanyaan: "12. [Jawaban Singkat] Tentukan nilai akhir dari operasi bentuk akar: $(\\sqrt{100} \\times \\sqrt{9}) - \\sqrt{64}$!",
       tipeSoal: "isian_singkat",
       kunciJawaban: "22",
-      pembahasan: "$\sqrt{100} = 10$, $\sqrt{9} = 3$, dan $\sqrt{64} = 8$. Maka $(10 \times 3) - 8 = 30 - 8 = 22$.",
-      hintSokratik: "Tarik akar kuadrat masing-masing bilangan kuadrat: $\sqrt{100} = 10$, $\sqrt{9} = 3$, $\sqrt{64} = 8$, dahulukan perkalian baru pengurangan.",
+      pembahasan: "$\\sqrt{100} = 10$, $\\sqrt{9} = 3$, dan $\\sqrt{64} = 8$. Maka $(10 \\times 3) - 8 = 30 - 8 = 22$.",
+      hintSokratik: "Tarik akar kuadrat masing-masing bilangan kuadrat: $\\sqrt{100} = 10$, $\\sqrt{9} = 3$, $\\sqrt{64} = 8$, dahulukan perkalian baru pengurangan.",
     },
     {
       id: "q-13",
       pertanyaan: "13. [Jawaban Singkat] Berapakah nilai dari bilangan berpangkat pecahan $81^{3/4}$?",
       tipeSoal: "isian_singkat",
       kunciJawaban: "27",
-      pembahasan: "Ubah 81 ke basis berpangkat: $81 = 3^4$. Maka $(3^4)^{3/4} = 3^{4 \times \\frac{3}{4}} = 3^3 = 27$.",
+      pembahasan: "Ubah 81 ke basis berpangkat: $81 = 3^4$. Maka $(3^4)^{3/4} = 3^{4 \\times \\frac{3}{4}} = 3^3 = 27$.",
       hintSokratik: "Ubah 81 menjadi $3^4$, kemudian kalikan pangkatnya dengan $\\frac{3}{4}$ sehingga diperoleh $3^3$.",
     },
     {
@@ -558,16 +558,16 @@ function getBilanganBerpangkat15(): QuizQuestionData[] {
       pertanyaan: "14. [Jawaban Panjang / Soal Cerita] Suatu kultur bakteri membelah diri menjadi 2 setiap 15 menit. Pada awal pengamatan terdapat 20 bakteri. (a) Berapa kali bakteri membelah selama 1,5 jam? (b) Hitunglah jumlah total bakteri setelah 1,5 jam tersebut!",
       tipeSoal: "esai",
       kunciJawaban: "(a) n = 6 kali pembelahan, (b) Total = 1.280 bakteri",
-      pembahasan: "(a) Total waktu $= 1{,}5 \text{ jam} = 90 \text{ menit}$. Banyak pembelahan $n = \\frac{90}{15} = 6 \text{ kali}$. (b) Rumus pertumbuhan eksponensial: $P_n = P_0 \times 2^n = 20 \times 2^6 = 20 \times 64 = 1.280 \text{ bakteri}$.",
-      hintSokratik: "Konversi 1,5 jam ke menit (90 menit) dan bagi dengan 15 menit untuk mencari $n$. Lalu hitung $P_n = P_0 \times 2^n$ dengan $P_0 = 20$.",
+      pembahasan: "(a) Total waktu $= 1{,}5 \\text{ jam} = 90 \\text{ menit}$. Banyak pembelahan $n = \\frac{90}{15} = 6 \\text{ kali}$. (b) Rumus pertumbuhan eksponensial: $P_n = P_0 \\times 2^n = 20 \\times 2^6 = 20 \\times 64 = 1.280 \\text{ bakteri}$.",
+      hintSokratik: "Konversi 1,5 jam ke menit (90 menit) dan bagi dengan 15 menit untuk mencari $n$. Lalu hitung $P_n = P_0 \\times 2^n$ dengan $P_0 = 20$.",
     },
     {
       id: "q-15",
-      pertanyaan: "15. [Jawaban Panjang / Pembuktian Aljabar] Rasionalkan penyebut pecahan $\\frac{\sqrt{3} + \sqrt{2}}{\sqrt{3} - \sqrt{2}}$ dan tunjukkan langkah-langkah aljabarnya secara bertahap hingga bentuk paling sederhana!",
+      pertanyaan: "15. [Jawaban Panjang / Pembuktian Aljabar] Rasionalkan penyebut pecahan $\\frac{\\sqrt{3} + \\sqrt{2}}{\\sqrt{3} - \\sqrt{2}}$ dan tunjukkan langkah-langkah aljabarnya secara bertahap hingga bentuk paling sederhana!",
       tipeSoal: "esai",
       kunciJawaban: "5 + 2√6",
-      pembahasan: "Kalikan pembilang dan penyebut dengan sekawan $(\sqrt{3} + \sqrt{2})$: $\\frac{(\sqrt{3} + \sqrt{2})^2}{(\sqrt{3} - \sqrt{2})(\sqrt{3} + \sqrt{2})} = \\frac{(\sqrt{3})^2 + 2\sqrt{6} + (\sqrt{2})^2}{(\sqrt{3})^2 - (\sqrt{2})^2} = \\frac{3 + 2\sqrt{6} + 2}{3 - 2} = \\frac{5 + 2\sqrt{6}}{1} = 5 + 2\sqrt{6}$.",
-      hintSokratik: "Kalikan dengan sekawan $(\sqrt{3} + \sqrt{2})$. Gunakan rumus $(a+b)^2 = a^2 + 2ab + b^2$ di pembilang dan selisih kuadrat $(a-b)(a+b) = a^2 - b^2$ di penyebut.",
+      pembahasan: "Kalikan pembilang dan penyebut dengan sekawan $(\\sqrt{3} + \\sqrt{2})$: $\\frac{(\\sqrt{3} + \\sqrt{2})^2}{(\\sqrt{3} - \\sqrt{2})(\\sqrt{3} + \\sqrt{2})} = \\frac{(\\sqrt{3})^2 + 2\\sqrt{6} + (\\sqrt{2})^2}{(\\sqrt{3})^2 - (\\sqrt{2})^2} = \\frac{3 + 2\\sqrt{6} + 2}{3 - 2} = \\frac{5 + 2\\sqrt{6}}{1} = 5 + 2\\sqrt{6}$.",
+      hintSokratik: "Kalikan dengan sekawan $(\\sqrt{3} + \\sqrt{2})$. Gunakan rumus $(a+b)^2 = a^2 + 2ab + b^2$ di pembilang dan selisih kuadrat $(a-b)(a+b) = a^2 - b^2$ di penyebut.",
     },
   ];
 }

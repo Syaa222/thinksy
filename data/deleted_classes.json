@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "ipa-8",
+    "name": "IPA (Ilmu Pengetahuan Alam)",
+    "subjectCode": "ipa8xpk",
+    "kode_kelas": "ipa8xpk",
+    "deletedAt": "2026-11-13T09:11:13.574Z"
+  }
+]

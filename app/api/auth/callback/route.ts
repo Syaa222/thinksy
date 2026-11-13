@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Helper: tentukan path dashboard berdasarkan peran
 function getDashboardPath(peran: string): string {
@@ -78,70 +79,53 @@ export async function GET(request: Request) {
     );
   }
 
-  // Cek apakah profil sudah ada
+  // Cek apakah user sudah memiliki profil resmi di tabel profil
   const { data: profilLama } = await supabase
     .from("profil")
-    .select("peran")
+    .select("id, peran, nama_lengkap")
     .eq("id", user.id)
     .single();
 
-  let finalRole = profilLama?.peran;
+  // =========================================================================
+  // SKENARIO 1: Akun BELUM terdaftar di profil (belum pernah registrasi resmi)
+  // Tombol Google / GitHub HANYA untuk login akun yang sudah ada.
+  // =========================================================================
+  if (!profilLama) {
+    console.warn(`[OAuth Callback] User ${user.email} belum terdaftar di profil. Membatalkan sesi & mengarahkan ke registrasi...`);
 
-  if (!finalRole) {
-    // Profil belum ada → ini user baru via OAuth.
-    // Cek apakah ada undangan untuk email ini
-    const emailUser = user.email?.toLowerCase();
-    let peranBaru = "siswa"; // default
-    let sekolahId: string | null = null;
+    // 1. Cabut sesi login dari browser
+    await supabase.auth.signOut();
+    cookieStore.delete("user_role");
 
-    if (emailUser) {
-      const { data: undangan } = await supabase
-        .from("undangan")
-        .select("id, peran, sekolah_id")
-        .eq("email", emailUser)
-        .eq("digunakan", false)
-        .gt("kadaluarsa_pada", new Date().toISOString())
-        .order("dibuat_pada", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (undangan) {
-        console.log("Undangan: ✅ ditemukan, peran =", undangan.peran);
-        peranBaru = undangan.peran;
-        sekolahId = undangan.sekolah_id || null;
-
-        // Tandai undangan sebagai sudah digunakan
-        await supabase
-          .from("undangan")
-          .update({ digunakan: true })
-          .eq("id", undangan.id);
-      } else {
-        console.log("Undangan: tidak ditemukan → default siswa");
-      }
+    // 2. Bersihkan akun auth sementara di auth.users agar email tidak terkunci
+    try {
+      const adminClient = createAdminClient();
+      await adminClient.auth.admin.deleteUser(user.id);
+      console.log(`[OAuth Callback] User auth sementara ${user.id} (${user.email}) berhasil dibersihkan.`);
+    } catch (cleanErr: any) {
+      console.warn("[OAuth Callback] Peringatan saat membersihkan user auth sementara:", cleanErr?.message);
     }
 
-    // Buat profil baru
-    const namaLengkap =
+    // 3. Ambil data nama & email dari metadata Google/GitHub untuk prefill form pendaftaran
+    const emailUser = user.email || "";
+    const namaUser =
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
-      user.email?.split("@")[0] ||
-      "Pengguna";
+      emailUser.split("@")[0] ||
+      "";
 
-    const { error: profilError } = await supabase.from("profil").insert({
-      id: user.id,
-      nama_lengkap: namaLengkap,
-      peran: peranBaru,
-      sekolah_id: sekolahId,
-    });
-
-    if (profilError) {
-      console.error("❌ Gagal buat profil:", profilError.message);
-    } else {
-      console.log("Profil: ✅ dibuat baru dengan peran =", peranBaru);
-    }
-
-    finalRole = peranBaru;
+    // 4. Redirect ke /daftar dengan notifikasi ramah & form pre-filled
+    return NextResponse.redirect(
+      `${origin}/daftar?email=${encodeURIComponent(emailUser)}&nama=${encodeURIComponent(namaUser)}&error=unregistered_oauth`
+    );
   }
+
+  // =========================================================================
+  // SKENARIO 2: Akun SUDAH terdaftar di profil resmi
+  // Lanjutkan proses login langsung ke dashboard yang sesuai
+  // =========================================================================
+  const finalRole = profilLama.peran || "siswa";
+  console.log(`[OAuth Callback] User ${user.email} terverifikasi dengan peran "${finalRole}". Lanjut ke dashboard.`);
 
   // Set cookie peran terikat dengan user ID
   cookieStore.set("user_role", `${user.id}:${finalRole}`, {

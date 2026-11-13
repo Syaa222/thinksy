@@ -21,28 +21,5 @@
     "nama_guru": "Ibu Siti Rahmawati, M.Pd.",
     "studentCount": 32,
     "description": "Aljabar, Teorema Pythagoras, Persamaan Linear, Statistika, Peluang & Penalaran Matematika."
-  },
-  {
-    "id": "ipa-8",
-    "name": "IPA (Ilmu Pengetahuan Alam)",
-    "nama_kelas": "IPA (Ilmu Pengetahuan Alam)",
-    "mapel": "IPA",
-    "mata_pelajaran": "IPA",
-    "section": "Kelas 8 • Laboratorium Sains",
-    "room": "Lab IPA",
-    "ruang": "Lab IPA",
-    "subjectCode": "ipa8xpk",
-    "kode_kelas": "ipa8xpk",
-    "themeColor": "#0F9D58",
-    "banner_color": "#0F9D58",
-    "bgGradient": "from-emerald-600 via-teal-600 to-slate-950",
-    "bannerType": "illustration",
-    "bannerIllustration": "science",
-    "banner_pattern": "science",
-    "bannerPhotoUrl": "",
-    "teacherName": "Ibu Siti Rahmawati, M.Pd.",
-    "nama_guru": "Ibu Siti Rahmawati, M.Pd.",
-    "studentCount": 32,
-    "description": "Sistem Organisasi Kehidupan, Gerak dan Gaya, Usaha dan Energi, Struktur Bumi & Tata Surya."
   }
 ]

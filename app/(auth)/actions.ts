@@ -132,6 +132,7 @@ export async function registerAction(prevState: any, formData: FormData) {
   const accountStatus = statusData as {
     exists: boolean;
     has_profile: boolean;
+    user_id: string | null;
   } | null;
 
   if (accountStatus?.exists && accountStatus?.has_profile) {
@@ -140,6 +141,19 @@ export async function registerAction(prevState: any, formData: FormData) {
       alreadyRegistered: true,
       email,
     };
+  }
+
+  // Jika akun auth pernah terbentuk sementara (misal saat mencoba login Google/GitHub) tapi belum punya profil,
+  // bersihkan user auth tersebut terlebih dahulu agar pendaftaran resmi dengan sandi berjalan mulus.
+  if (accountStatus?.exists && !accountStatus?.has_profile && accountStatus?.user_id) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const adminClient = createAdminClient();
+      await adminClient.auth.admin.deleteUser(accountStatus.user_id);
+      console.log(`[REGISTER] Berhasil membersihkan user auth sementara (${accountStatus.user_id}) sebelum signUp.`);
+    } catch (cleanErr: any) {
+      console.warn("[REGISTER] Peringatan saat membersihkan user auth sementara:", cleanErr?.message);
+    }
   }
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
