@@ -324,7 +324,7 @@ export default function EditUjianPage({
                   </span>
                 )}
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight mt-0.5">
                 {judul || "Lembar Kerja Soal Ujian"}
               </h1>
             </div>
@@ -366,15 +366,15 @@ export default function EditUjianPage({
             onClick={() => setActiveTab("soal")}
             className={`px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
               activeTab === "soal"
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                : "bg-white text-slate-600 hover:bg-blue-50/50 hover:text-blue-700 border border-slate-200"
             }`}
           >
-            <FileText className="w-4 h-4 text-amber-400" />
+            <FileText className={`w-4 h-4 ${activeTab === "soal" ? "text-white" : "text-blue-600"}`} />
             <span>Lembar Soal (Tampilan Siswa)</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                activeTab === "soal" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
+                activeTab === "soal" ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700 border border-blue-100"
               }`}
             >
               {soalList.length}
@@ -386,11 +386,11 @@ export default function EditUjianPage({
             onClick={() => setActiveTab("pengaturan")}
             className={`px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
               activeTab === "pengaturan"
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                : "bg-white text-slate-600 hover:bg-blue-50/50 hover:text-blue-700 border border-slate-200"
             }`}
           >
-            <Settings className="w-4 h-4 text-blue-400" />
+            <Settings className={`w-4 h-4 ${activeTab === "pengaturan" ? "text-white" : "text-slate-500"}`} />
             <span>Pengaturan & Informasi Umum Ujian</span>
           </button>
         </div>
@@ -412,7 +412,7 @@ export default function EditUjianPage({
                   <Settings className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-900">
+                  <h2 className="text-base font-extrabold text-slate-800">
                     Pengaturan & Informasi Umum Ujian
                   </h2>
                   <p className="text-xs text-slate-500">
@@ -515,7 +515,7 @@ export default function EditUjianPage({
                     className="w-4 h-4 text-blue-600 rounded-md focus:ring-blue-500"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block">Acak Urutan Soal Siswa</span>
+                    <span className="text-xs font-bold text-slate-800 block">Acak Urutan Soal Siswa</span>
                     <span className="text-[11px] text-slate-500">Urutan butir soal berbeda untuk tiap siswa</span>
                   </div>
                 </label>
@@ -528,7 +528,7 @@ export default function EditUjianPage({
                     className="w-4 h-4 text-blue-600 rounded-md focus:ring-blue-500"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block">Acak Opsi Pilihan Ganda</span>
+                    <span className="text-xs font-bold text-slate-800 block">Acak Opsi Pilihan Ganda</span>
                     <span className="text-[11px] text-slate-500">Urutan opsi A-D diacak otomatis di layar siswa</span>
                   </div>
                 </label>
@@ -570,8 +570,8 @@ export default function EditUjianPage({
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100 gap-3 w-full">
                     {/* Kiri: Nomor, Info, Jenis Soal, & Poin */}
                     <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                      {/* Black rounded badge nomor soal persis gaya siswa */}
-                      <span className="w-8 h-8 rounded-xl bg-slate-900 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+                      {/* Royal blue badge nomor soal khas Thinksy */}
+                      <span className="w-8 h-8 rounded-xl bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs shadow-blue-500/20">
                         {currentIdx + 1}
                       </span>
                       <span className="text-xs font-bold text-slate-500 hidden sm:inline">
@@ -655,7 +655,7 @@ export default function EditUjianPage({
                           type="button"
                           disabled={currentIdx === 0}
                           onClick={() => handleMoveQuestion(currentIdx, currentIdx - 1)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Geser posisi soal ke atas / sebelumnya"
                         >
                           <ArrowUp className="w-4 h-4" />
@@ -664,7 +664,7 @@ export default function EditUjianPage({
                           type="button"
                           disabled={currentIdx === soalList.length - 1}
                           onClick={() => handleMoveQuestion(currentIdx, currentIdx + 1)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-white transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Geser posisi soal ke bawah / berikutnya"
                         >
                           <ArrowDown className="w-4 h-4" />
@@ -686,7 +686,7 @@ export default function EditUjianPage({
                   {/* 2. Deskripsi / Pertanyaan Soal */}
                   <div className="space-y-2.5">
                     {isPreviewMode ? (
-                      <div className="text-sm sm:text-base text-slate-900 leading-relaxed font-normal p-3 rounded-2xl bg-slate-50/50 border border-slate-100">
+                      <div className="text-sm sm:text-base text-slate-800 leading-relaxed font-normal p-3 rounded-2xl bg-slate-50/50 border border-slate-100">
                         <MarkdownRenderer content={currentQ.pertanyaan} />
                       </div>
                     ) : (
@@ -727,7 +727,7 @@ export default function EditUjianPage({
                           value={currentQ.pertanyaan}
                           onChange={(e) => handleUpdateCurrentQuestion({ pertanyaan: e.target.value })}
                           placeholder="Tuliskan butir soal di sini..."
-                          className="w-full p-4 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-xs sm:text-sm text-slate-900 leading-relaxed transition"
+                          className="w-full p-4 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-xs sm:text-sm text-slate-800 leading-relaxed transition"
                         />
 
                         {/* Live KaTeX Render Preview di bawah editor */}
@@ -792,7 +792,7 @@ export default function EditUjianPage({
                                   {/* Teks Opsi (Preview vs Edit) */}
                                   <div className="flex-1 pt-0.5">
                                     {isPreviewMode ? (
-                                      <div className="text-xs sm:text-sm text-slate-900 leading-relaxed font-normal">
+                                      <div className="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal">
                                         <MarkdownRenderer content={opt.teks} />
                                       </div>
                                     ) : (
@@ -804,7 +804,7 @@ export default function EditUjianPage({
                                         className={`w-full px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-medium transition ${
                                           isCorrect
                                             ? "border-emerald-300 bg-white text-emerald-950 font-semibold focus:ring-2 focus:ring-emerald-400"
-                                            : "border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-blue-400"
+                                            : "border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-blue-400"
                                         }`}
                                       />
                                     )}
@@ -875,7 +875,7 @@ export default function EditUjianPage({
                           value={currentQ.kunciJawaban}
                           onChange={(e) => handleUpdateCurrentQuestion({ kunciJawaban: e.target.value })}
                           placeholder="Tuliskan kunci langkah penyelesaian, rumus yang digunakan, atau rubrik penilaian..."
-                          className="w-full p-4 rounded-2xl bg-white border border-amber-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-y"
+                          className="w-full p-4 rounded-2xl bg-white border border-amber-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-y"
                         />
                       </div>
                     )}
@@ -891,7 +891,7 @@ export default function EditUjianPage({
                           [currentQ.id]: !prev[currentQ.id],
                         }))
                       }
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-600 transition cursor-pointer"
                     >
                       <Lightbulb className="w-4 h-4 text-amber-500" />
                       <span>Petunjuk & Pembahasan Konsep</span>
@@ -915,7 +915,7 @@ export default function EditUjianPage({
                                 handleUpdateCurrentQuestion({ pembahasan: e.target.value })
                               }
                               placeholder="Tuliskan petunjuk sokratik atau pembahasan konsep di sini..."
-                              className="w-full p-3 rounded-xl bg-white border border-amber-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                              className="w-full p-3 rounded-xl bg-white border border-amber-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                             />
                             <div className="text-[11px] text-amber-900 font-medium">
                               Pratinjau Petunjuk Siswa:
@@ -958,9 +958,9 @@ export default function EditUjianPage({
                       <button
                         type="button"
                         onClick={handleAddQuestion}
-                        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition shadow-xs cursor-pointer active:scale-98"
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs shadow-blue-500/20 cursor-pointer active:scale-98"
                       >
-                        <Plus className="w-4 h-4 text-amber-400" />
+                        <Plus className="w-4 h-4 text-white" />
                         <span>Tambah Soal Baru</span>
                       </button>
                     )}
@@ -978,7 +978,7 @@ export default function EditUjianPage({
                     <button
                       type="button"
                       onClick={() => setIsAiModalOpen(true)}
-                      className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-xs flex items-center gap-2 shadow-sm"
+                      className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs flex items-center gap-2 shadow-xs transition"
                     >
                       <Sparkles className="w-4 h-4 text-amber-300" />
                       <span>Buat Soal dengan AI</span>
@@ -986,9 +986,9 @@ export default function EditUjianPage({
                     <button
                       type="button"
                       onClick={handleAddQuestion}
-                      className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white font-bold text-xs flex items-center gap-2"
+                      className="px-5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 border border-slate-200 shadow-2xs transition cursor-pointer"
                     >
-                      <Plus className="w-4 h-4 text-amber-400" />
+                      <Plus className="w-4 h-4 text-blue-600" />
                       <span>Tambah Manual</span>
                     </button>
                   </div>
@@ -1004,7 +1004,7 @@ export default function EditUjianPage({
                 {/* Header Card Palet */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-sm text-slate-900">Nomor Soal</h3>
+                    <h3 className="font-extrabold text-sm text-slate-800">Nomor Soal</h3>
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
                       Grid
                     </span>
@@ -1042,7 +1042,7 @@ export default function EditUjianPage({
 
                     if (isCurrent) {
                       btnStyle =
-                        "bg-slate-900 text-white font-black ring-2 ring-slate-900 ring-offset-2 shadow-sm scale-102";
+                        "bg-blue-600 text-white font-black ring-2 ring-blue-500 ring-offset-2 shadow-sm shadow-blue-500/30 scale-102";
                     }
 
                     return (
@@ -1062,7 +1062,7 @@ export default function EditUjianPage({
                         <span
                           className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
                             isCurrent
-                              ? "bg-amber-400"
+                              ? "bg-white"
                               : isPg
                               ? "bg-blue-500"
                               : isIsian
@@ -1087,10 +1087,10 @@ export default function EditUjianPage({
                     <button
                       type="button"
                       onClick={handleAddQuestion}
-                      className="py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-98"
+                      className="py-2.5 px-3 rounded-2xl bg-white hover:bg-blue-50/70 text-blue-700 hover:text-blue-800 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-blue-200 shadow-2xs active:scale-98"
                       title="Tambah butir soal baru secara manual"
                     >
-                      <Plus className="w-4 h-4 text-amber-400" />
+                      <Plus className="w-4 h-4 text-blue-600" />
                       <span>+ Tambah Soal</span>
                     </button>
                     <button
