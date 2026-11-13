@@ -169,7 +169,7 @@ export async function registerAction(prevState: any, formData: FormData) {
         nama_kelas: namaKelas,
         nisn: nisn,
         nis: nis,
-        foto_url: fotoUrl,
+        foto_url: fotoUrl.startsWith("data:") ? defaultFotoByGender : fotoUrl,
       },
     },
   });
@@ -237,7 +237,7 @@ export async function registerAction(prevState: any, formData: FormData) {
             nama_kelas: namaKelas,
             nisn: nisn,
             nis: nis,
-            foto_url: fotoUrl,
+            foto_url: fotoUrl.startsWith("data:") ? defaultFotoByGender : fotoUrl,
           },
         },
       });
