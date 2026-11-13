@@ -4,7 +4,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ExamRoomClient from "./ExamRoomClient";
 import { shuffleOptionsForStudent } from "@/lib/curriculum-quiz-engine";
-import { getExamQuestions, ExamQuestion, ExamQuestionOption } from "@/lib/exam-questions-store";
+import {
+  getExamPackage,
+  getExamQuestions,
+  ExamQuestion,
+  ExamQuestionOption,
+} from "@/lib/exam-questions-store";
 
 export default async function DetailUjianPage({
   params,
@@ -68,6 +73,49 @@ export default async function DetailUjianPage({
     if (ujianByBab) {
       ujian = ujianByBab;
     }
+  }
+
+  // Fallback ke central exam store (ujian_store.json) jika ujian belum tercatat di database Supabase
+  const localPackage = getExamPackage(effectiveUjianId);
+  if (!ujian && localPackage) {
+    ujian = {
+      id: localPackage.id,
+      judul: localPackage.judul,
+      deskripsi: localPackage.deskripsi,
+      mapel: localPackage.mapel || "Matematika",
+      tipe: localPackage.tipe || "ulangan",
+      durasi_menit: localPackage.durasi_menit || 60,
+      passing_grade: localPackage.passing_grade || 75,
+      waktu_mulai: null,
+      waktu_berakhir: null,
+      status: localPackage.status || "dipublikasi",
+      bab_id: localPackage.bab_id || null,
+    };
+
+    // Sinkronisasikan secara otomatis ke Supabase agar foreign key dan sesi_ujian aman
+    try {
+      await adminSupabase.from("ujian").upsert({
+        id: localPackage.id,
+        judul: localPackage.judul,
+        deskripsi: localPackage.deskripsi || "",
+        mapel: localPackage.mapel || "Matematika",
+        tipe: localPackage.tipe || "ulangan",
+        durasi_menit: localPackage.durasi_menit || 60,
+        passing_grade: localPackage.passing_grade || 75,
+        status: localPackage.status || "dipublikasi",
+        token: localPackage.token || "MTK-SEM1",
+      });
+    } catch {}
+  } else if (ujian && localPackage) {
+    // Selaraskan judul, status, durasi terbaru dari local package jika baru diedit guru
+    ujian = {
+      ...ujian,
+      judul: localPackage.judul || ujian.judul,
+      deskripsi: localPackage.deskripsi || ujian.deskripsi,
+      durasi_menit: localPackage.durasi_menit || ujian.durasi_menit,
+      passing_grade: localPackage.passing_grade || ujian.passing_grade,
+      status: localPackage.status || ujian.status,
+    };
   }
 
   if (!ujian) {
