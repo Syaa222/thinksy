@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import ReviewStyleQuestionCard, {
-  ReviewQuestionItem,
-} from "./ReviewStyleQuestionCard";
+import { ReviewQuestionItem } from "./ReviewStyleQuestionCard";
 import {
   Sparkles,
   X,
   BookOpen,
-  Layers,
   Award,
-  CheckCircle2,
-  AlertCircle,
+  HelpCircle,
+  Hash,
+  FileEdit,
   Loader2,
-  Plus,
-  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 export const MATEMATIKA_SMP_BAB_LIST = [
@@ -45,7 +42,7 @@ export default function AiQuestionGeneratorModal({
   onInsertQuestion,
   onInsertMultipleQuestions,
 }: AiQuestionGeneratorModalProps) {
-  // Determine initial chapter
+  // Tentukan bab awal dari props
   const initialBab = MATEMATIKA_SMP_BAB_LIST.find(
     (b) =>
       b.id === defaultBabId ||
@@ -59,20 +56,20 @@ export default function AiQuestionGeneratorModal({
   const [isCustomBab, setIsCustomBab] = useState(false);
   const [customBabText, setCustomBabText] = useState("");
 
-  const [tipeSoal, setTipeSoal] = useState<
-    "pilihan_ganda" | "isian_singkat" | "esai" | "paket_15"
-  >("pilihan_ganda");
   const [tingkatKesulitan, setTingkatKesulitan] = useState<
     "mudah" | "sedang" | "sulit"
   >("sedang");
-  const [fokusTopik, setFokusTopik] = useState("");
+
+  const [jumlahSoal, setJumlahSoal] = useState<number>(3);
+
+  const [tipeSoal, setTipeSoal] = useState<
+    "pilihan_ganda" | "isian_singkat" | "esai" | "campuran"
+  >("pilihan_ganda");
+
+  const [instruksiTambahan, setInstruksiTambahan] = useState("");
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Result state
-  const [generatedList, setGeneratedList] = useState<ReviewQuestionItem[]>([]);
-  const [activeGeneratedIndex, setActiveGeneratedIndex] = useState(0);
 
   if (!isOpen) return null;
 
@@ -80,142 +77,121 @@ export default function AiQuestionGeneratorModal({
     ? customBabText.trim() || "Topik Matematika Khusus"
     : selectedBabJudul;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsGenerating(true);
     setErrorMsg(null);
-    setGeneratedList([]);
 
     try {
-      const is15 = tipeSoal === "paket_15";
-      const fullTopik = fokusTopik.trim()
-        ? `${activeTopikName} - Fokus Materi: ${fokusTopik.trim()}`
-        : activeTopikName;
-
       const res = await fetch("/api/guru/generate-soal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topik: fullTopik,
+          topik: activeTopikName,
           babId: isCustomBab ? null : selectedBabId,
           mapel: "Matematika",
-          tipeSoal,
           tingkatSoal: tingkatKesulitan,
-          mode: is15 ? "paket_15" : "soal",
-          jumlah: is15 ? 15 : 1,
+          tipeSoal: tipeSoal,
+          jumlah: jumlahSoal,
+          instruksiTambahan: instruksiTambahan.trim(),
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok && !data.soal && !data.draft) {
-        throw new Error(data.error || "Gagal membuat soal dengan AI.");
+      if (!res.ok || (!data.soal && !data.draft)) {
+        throw new Error(data.error || "Gagal menghasilkan soal dengan AI.");
       }
 
+      let generatedQuestions: ReviewQuestionItem[] = [];
+
       if (Array.isArray(data.soal) && data.soal.length > 0) {
-        const formatted: ReviewQuestionItem[] = data.soal.map(
-          (s: any, idx: number) => ({
-            id: s.id || `ai-${Date.now()}-${idx + 1}`,
-            pertanyaan: s.pertanyaan || "Pertanyaan matematika...",
-            tipeSoal: (s.tipeSoal || "pilihan_ganda") as
-              | "pilihan_ganda"
-              | "isian_singkat"
-              | "esai",
-            kunciJawaban: s.kunciJawaban || "",
-            pembahasan: s.pembahasan || "",
-            poin: 10,
-            opsi: (s.opsi || []).map((o: any, oi: number) => ({
-              id: `opt-${idx}-${oi}`,
-              teks: o.teks || o.teksOpsi || "",
-              benar: Boolean(o.benar),
-              alasanSalah:
-                o.alasanSalah ||
-                o.alasan_salah ||
-                (o.benar ? "" : "Konsep dasar materi ini perlu diperiksa kembali."),
-            })),
-          })
-        );
-        setGeneratedList(formatted);
-        setActiveGeneratedIndex(0);
-      } else if (data.draft) {
-        const d = data.draft;
-        const singleQ: ReviewQuestionItem = {
-          id: `ai-${Date.now()}-1`,
-          pertanyaan: d.pertanyaan || "Pertanyaan matematika...",
-          tipeSoal: (d.tipeSoal || tipeSoal) as
+        generatedQuestions = data.soal.map((s: any, idx: number) => ({
+          id: s.id || `ai-${Date.now()}-${idx + 1}`,
+          pertanyaan: s.pertanyaan || "Pertanyaan matematika...",
+          tipeSoal: (s.tipeSoal || tipeSoal === "campuran" ? (s.tipeSoal || "pilihan_ganda") : tipeSoal) as
             | "pilihan_ganda"
             | "isian_singkat"
             | "esai",
-          kunciJawaban: d.kunciJawaban || "",
-          pembahasan: d.pembahasan || "",
+          kunciJawaban: s.kunciJawaban || "",
+          pembahasan: s.pembahasan || "",
           poin: 10,
-          opsi: (d.opsiSoal || []).map((o: any, oi: number) => ({
-            id: `opt-1-${oi}`,
-            teks: o.teksOpsi || o.teks || "",
+          opsi: (s.opsi || []).map((o: any, oi: number) => ({
+            id: `opt-${idx}-${oi}`,
+            teks: o.teks || o.teksOpsi || "",
             benar: Boolean(o.benar),
             alasanSalah:
               o.alasanSalah ||
               o.alasan_salah ||
               (o.benar ? "" : "Konsep dasar materi ini perlu diperiksa kembali."),
           })),
-        };
-        setGeneratedList([singleQ]);
-        setActiveGeneratedIndex(0);
-      } else {
-        throw new Error("Format respons AI tidak dikenali.");
+        }));
+      } else if (data.draft) {
+        const d = data.draft;
+        generatedQuestions = [
+          {
+            id: `ai-${Date.now()}-1`,
+            pertanyaan: d.pertanyaan || "Pertanyaan matematika...",
+            tipeSoal: (d.tipeSoal || tipeSoal) as
+              | "pilihan_ganda"
+              | "isian_singkat"
+              | "esai",
+            kunciJawaban: d.kunciJawaban || "",
+            pembahasan: d.pembahasan || "",
+            poin: 10,
+            opsi: (d.opsiSoal || []).map((o: any, oi: number) => ({
+              id: `opt-1-${oi}`,
+              teks: o.teksOpsi || o.teks || "",
+              benar: Boolean(o.benar),
+              alasanSalah:
+                o.alasanSalah ||
+                o.alasan_salah ||
+                (o.benar ? "" : "Konsep dasar materi ini perlu diperiksa kembali."),
+            })),
+          },
+        ];
       }
+
+      if (generatedQuestions.length === 0) {
+        throw new Error("AI tidak mengembalikan butir soal yang valid. Silakan coba kembali.");
+      }
+
+      // Otomatis tambahkan soal yang dibuat langsung ke lembar ujian
+      if (onInsertMultipleQuestions) {
+        onInsertMultipleQuestions(generatedQuestions);
+      } else {
+        generatedQuestions.forEach((q) => onInsertQuestion(q));
+      }
+
+      // Tutup modal
+      onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || "Terjadi kesalahan saat memanggil AI.");
+      setErrorMsg(err.message || "Terjadi kesalahan saat memproses permintaan AI.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleInsertActive = () => {
-    const q = generatedList[activeGeneratedIndex];
-    if (q) {
-      onInsertQuestion(q);
-      onClose();
-    }
-  };
-
-  const handleInsertAll = () => {
-    if (onInsertMultipleQuestions && generatedList.length > 0) {
-      onInsertMultipleQuestions(generatedList);
-      onClose();
-    } else if (generatedList.length > 0) {
-      generatedList.forEach((q) => onInsertQuestion(q));
-      onClose();
-    }
-  };
-
-  const handleUpdateGeneratedItem = (patch: Partial<ReviewQuestionItem>) => {
-    setGeneratedList((prev) => {
-      const copy = [...prev];
-      copy[activeGeneratedIndex] = { ...copy[activeGeneratedIndex], ...patch };
-      return copy;
-    });
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[94vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white">
-                  Kurikulum Merdeka Asisten Guru
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                  Kurikulum Merdeka • SMP
                 </span>
-                <span className="text-[10px] font-bold text-blue-200">
-                  Didukung Gemini AI
+                <span className="text-[10px] font-bold text-blue-100">
+                  Google Gemini AI
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
-                Generator Soal AI Berbasis Bab Materi
+                Generate Soal dengan AI
               </h2>
             </div>
           </div>
@@ -223,24 +199,34 @@ export default function AiQuestionGeneratorModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            disabled={isGenerating}
+            className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40"
+            title="Tutup Form"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {/* Controls: Bab & Parameters */}
-          <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Select Bab Materi */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Materi / Bab Kurikulum:</span>
-                </label>
-                {!isCustomBab ? (
+        {/* Modal Form Body */}
+        <form onSubmit={handleGenerate} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            {errorMsg && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-semibold">{errorMsg}</span>
+              </div>
+            )}
+
+            {/* 1. Form Field: Materi / Bab Kurikulum */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-blue-600" />
+                <span>Materi / Bab Kurikulum</span>
+                <span className="text-rose-500">*</span>
+              </label>
+
+              {!isCustomBab ? (
+                <div className="space-y-1.5">
                   <select
                     value={selectedBabId}
                     onChange={(e) => {
@@ -253,244 +239,221 @@ export default function AiQuestionGeneratorModal({
                         if (found) setSelectedBabJudul(found.judul);
                       }
                     }}
-                    className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-2xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition cursor-pointer"
                   >
                     {MATEMATIKA_SMP_BAB_LIST.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.judul}
                       </option>
                     ))}
-                    <option value="custom">✍️ Tulis Bab / Topik Khusus Lainnya...</option>
+                    <option value="custom">✍️ Tulis Topik / Materi Khusus Lainnya...</option>
                   </select>
-                ) : (
+                </div>
+              ) : (
+                <div className="space-y-1.5">
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={customBabText}
                       onChange={(e) => setCustomBabText(e.target.value)}
-                      placeholder="Ketik judul bab atau materi matematika..."
-                      className="flex-1 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-600"
+                      placeholder="Masukkan nama bab atau topik matematika khusus..."
+                      className="flex-1 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-2xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                      autoFocus
                     />
                     <button
                       type="button"
                       onClick={() => setIsCustomBab(false)}
-                      className="px-2.5 py-1 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200"
+                      className="px-3.5 py-2 text-xs font-bold rounded-2xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition cursor-pointer"
                     >
                       Batal
                     </button>
                   </div>
-                )}
+                  <span className="text-[11px] text-slate-500">
+                    Contoh: <i>Penerapan Barisan Geometri dalam Pertumbuhan Bakteri</i>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Form Field: Tingkat Kesulitan (Taksonomi Akademik) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  <span>Tingkat Kesulitan Soal</span>
+                  <span className="text-rose-500">*</span>
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  Standar Taksonomi Bloom
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    id: "mudah",
+                    title: "Mudah (LOTS)",
+                    desc: "C1–C2: Ingatan, definisi, dan operasi hitung dasar",
+                    color: "border-emerald-300 bg-emerald-50/40 text-emerald-800",
+                    activeRing: "ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/80",
+                  },
+                  {
+                    id: "sedang",
+                    title: "Sedang (MOTS)",
+                    desc: "C3: Penerapan rumus & prosedur konsep matematika",
+                    color: "border-blue-200 bg-blue-50/40 text-blue-800",
+                    activeRing: "ring-2 ring-blue-500 border-blue-500 bg-blue-50/80",
+                  },
+                  {
+                    id: "sulit",
+                    title: "Sulit (HOTS)",
+                    desc: "C4–C6: Analisis, penalaran & soal cerita kontekstual",
+                    color: "border-purple-200 bg-purple-50/40 text-purple-800",
+                    activeRing: "ring-2 ring-purple-500 border-purple-500 bg-purple-50/80",
+                  },
+                ].map((item) => {
+                  const isActive = tingkatKesulitan === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setTingkatKesulitan(item.id as any)}
+                      className={`p-3 rounded-2xl text-left border transition cursor-pointer relative ${
+                        isActive
+                          ? item.activeRing
+                          : "border-slate-200 bg-white hover:bg-slate-50/80 text-slate-700"
+                      }`}
+                    >
+                      <div className="font-bold text-xs sm:text-[13px] text-slate-800">
+                        {item.title}
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight mt-1">
+                        {item.desc}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3 & 4. Baris: Jumlah Soal (Maks 5) & Jenis Soal */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Jumlah Soal (Maksimal 5) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Hash className="w-4 h-4 text-blue-600" />
+                    <span>Jumlah Soal</span>
+                    <span className="text-rose-500">*</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-blue-700">
+                    Maks. 5 Soal
+                  </span>
+                </label>
+
+                <div className="grid grid-cols-5 gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/80">
+                  {[1, 2, 3, 4, 5].map((num) => {
+                    const isActive = jumlahSoal === num;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setJumlahSoal(num)}
+                        className={`py-2 rounded-xl text-xs font-extrabold transition cursor-pointer text-center ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] text-slate-400 block px-1">
+                  Pilih antara 1 sampai 5 butir soal per generate.
+                </span>
               </div>
 
-              {/* Format / Tipe Soal */}
+              {/* Jenis Soal */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Format Soal yang Ingin Dibuat:</span>
+                  <HelpCircle className="w-4 h-4 text-indigo-600" />
+                  <span>Jenis / Format Soal</span>
+                  <span className="text-rose-500">*</span>
                 </label>
+
                 <select
                   value={tipeSoal}
                   onChange={(e) => setTipeSoal(e.target.value as any)}
-                  className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-2xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition cursor-pointer"
                 >
-                  <option value="pilihan_ganda">1 Butir Pilihan Ganda (A-D + Miskonsepsi)</option>
-                  <option value="isian_singkat">1 Butir Isian Singkat (Jawaban Presisi)</option>
-                  <option value="esai">1 Butir Esai & Uraian Kontekstual</option>
-                  <option value="paket_15">📦 Paket Lengkap 15 Soal Standar (10 PG + 3 Isian + 2 Esai)</option>
+                  <option value="pilihan_ganda">Pilihan Ganda (A-D + Analisis Miskonsepsi)</option>
+                  <option value="isian_singkat">Isian Singkat (Kunci Kata/Angka Pasti)</option>
+                  <option value="esai">Soal Esai & Uraian (Rubrik Bertahap)</option>
+                  <option value="campuran">Campuran (Proporsional PG, Isian & Esai)</option>
                 </select>
+                <span className="text-[10px] text-slate-400 block px-1">
+                  Format disesuaikan dengan jenis asesmen ujian.
+                </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Tingkat Kesulitan */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Tingkat Kesulitan:</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["mudah", "sedang", "sulit"] as const).map((lvl) => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() => setTingkatKesulitan(lvl)}
-                      className={`py-1.5 px-2 rounded-xl text-xs font-bold capitalize transition border cursor-pointer ${
-                        tingkatKesulitan === lvl
-                          ? lvl === "mudah"
-                            ? "bg-emerald-500 text-white border-emerald-600 shadow-xs"
-                            : lvl === "sedang"
-                            ? "bg-blue-600 text-white border-blue-700 shadow-xs"
-                            : "bg-purple-600 text-white border-purple-700 shadow-xs"
-                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {lvl === "sulit" ? "HOTS (Sulit)" : lvl}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* 5. Form Field: Instruksi / Catatan Tambahan Guru (Opsional) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <FileEdit className="w-4 h-4 text-blue-600" />
+                  <span>Instruksi / Catatan Tambahan</span>
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  Opsional
+                </span>
+              </label>
 
-              {/* Fokus Topik Spesifik / Catatan Tambahan */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Fokus Sub-Bab / Catatan Guru (Opsional):</span>
-                </label>
-                <input
-                  type="text"
-                  value={fokusTopik}
-                  onChange={(e) => setFokusTopik(e.target.value)}
-                  placeholder="Contoh: Sifat eksponen perkalian & pembagian bertingkat..."
-                  className="w-full px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-600"
-                />
-              </div>
-            </div>
-
-            {/* Tombol Eksekusi AI */}
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-slate-500 font-medium">
-                💡 Formula otomatis diformat dengan KaTeX matematis ($...$).
+              <textarea
+                rows={3}
+                value={instruksiTambahan}
+                onChange={(e) => setInstruksiTambahan(e.target.value)}
+                placeholder="Contoh: Fokus pada soal cerita kontekstual bertema pasar tradisional, sertakan perbandingan pecahan, gunakan angka bulat yang mudah dihitung siswa..."
+                className="w-full p-3.5 rounded-2xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition resize-none placeholder:text-slate-400"
+              />
+              <span className="text-[11px] text-slate-500">
+                💡 AI secara otomatis memformat semua rumus matematika dengan standar KaTeX ($...$).
               </span>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs flex items-center gap-2 shadow-sm transition active:scale-98 cursor-pointer disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>AI Sedang Menyusun Soal...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Buat Soal dengan AI Sekarang</span>
-                  </>
-                )}
-              </button>
             </div>
           </div>
 
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+          {/* Modal Footer Actions */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isGenerating}
+              className="px-5 py-2.5 rounded-2xl text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200/70 border border-slate-200 bg-white transition cursor-pointer disabled:opacity-40"
+            >
+              Batal
+            </button>
 
-          {/* Hasil Generate Preview: Review-Style Question Card */}
-          {generatedList.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-sm font-black text-slate-900">
-                    Hasil Draft Soal AI ({generatedList.length} Soal Berhasil Dibuat)
-                  </h3>
-                </div>
-
-                {generatedList.length > 1 && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                    {generatedList.map((_, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setActiveGeneratedIndex(idx)}
-                        className={`w-7 h-7 rounded-lg text-xs font-black transition cursor-pointer ${
-                          activeGeneratedIndex === idx
-                            ? "bg-blue-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                        }`}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Render Review-Style Question Card */}
-              {generatedList[activeGeneratedIndex] && (
-                <div className="rounded-3xl border-2 border-indigo-200 shadow-sm p-1 bg-indigo-50/20">
-                  <ReviewStyleQuestionCard
-                    question={generatedList[activeGeneratedIndex]}
-                    index={activeGeneratedIndex}
-                    total={generatedList.length}
-                    onUpdate={handleUpdateGeneratedItem}
-                    onDelete={() => {
-                      const filtered = generatedList.filter(
-                        (_, i) => i !== activeGeneratedIndex
-                      );
-                      setGeneratedList(filtered);
-                      if (activeGeneratedIndex >= filtered.length) {
-                        setActiveGeneratedIndex(Math.max(0, filtered.length - 1));
-                      }
-                    }}
-                    onAiVariasi={handleGenerate}
-                    isGeneratingVariasi={isGenerating}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Modal Footer Actions */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/70 transition cursor-pointer"
-          >
-            Tutup
-          </button>
-
-          {generatedList.length > 0 && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? "animate-spin" : ""}`} />
-                <span>Buat Ulang</span>
-              </button>
-
-              {generatedList.length > 1 ? (
+            <button
+              type="submit"
+              disabled={isGenerating}
+              className="px-6 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-sm shadow-blue-500/20 transition active:scale-98 cursor-pointer disabled:opacity-50"
+            >
+              {isGenerating ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleInsertActive}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Masukkan Soal #{activeGeneratedIndex + 1} Saja</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleInsertAll}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Masukkan Semua {generatedList.length} Soal</span>
-                  </button>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Menyusun {jumlahSoal} Soal dengan AI...</span>
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleInsertActive}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Masukkan Soal Ini ke Lembar Ujian / Kuis</span>
-                </button>
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Generate Soal Sekarang</span>
+                </>
               )}
-            </div>
-          )}
-        </div>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

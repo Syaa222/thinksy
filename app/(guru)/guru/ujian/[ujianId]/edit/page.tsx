@@ -215,12 +215,22 @@ export default function EditUjianPage({
 
   // AI Modal Question Inserts
   const handleInsertAiQuestion = (newQ: ReviewQuestionItem) => {
+    const newIdx = soalList.length;
     setSoalList((prev) => [...prev, newQ]);
-    setCurrentIdx(soalList.length);
+    setCurrentIdx(newIdx);
+    setActiveTab("soal");
+    setSuccessMsg("Berhasil menambahkan 1 butir soal baru dengan AI!");
+    setTimeout(() => setSuccessMsg(null), 4000);
   };
 
   const handleInsertMultipleAiQuestions = (newQs: ReviewQuestionItem[]) => {
+    if (!newQs || newQs.length === 0) return;
+    const startIndex = soalList.length;
     setSoalList((prev) => [...prev, ...newQs]);
+    setCurrentIdx(startIndex);
+    setActiveTab("soal");
+    setSuccessMsg(`Berhasil menambahkan ${newQs.length} butir soal baru dengan AI!`);
+    setTimeout(() => setSuccessMsg(null), 4000);
   };
 
   // Save Exam Full
@@ -981,7 +991,7 @@ export default function EditUjianPage({
                       className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs flex items-center gap-2 shadow-xs transition"
                     >
                       <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Buat Soal dengan AI</span>
+                      <span>Generate Soal</span>
                     </button>
                     <button
                       type="button"
@@ -1005,9 +1015,6 @@ export default function EditUjianPage({
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <h3 className="font-extrabold text-sm text-slate-800">Nomor Soal</h3>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                      Grid
-                    </span>
                   </div>
                   <span className="text-xs text-slate-500 font-bold">
                     {soalList.length > 0 ? `${currentIdx + 1} / ${soalList.length} Terpilih` : "0 Soal"}
@@ -1091,16 +1098,16 @@ export default function EditUjianPage({
                       title="Tambah butir soal baru secara manual"
                     >
                       <Plus className="w-4 h-4 text-blue-600" />
-                      <span>+ Tambah Soal</span>
+                      <span>Tambah Soal</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsAiModalOpen(true)}
                       className="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-98 cursor-pointer"
-                      title="Buat butir soal otomatis menggunakan AI"
+                      title="Generate butir soal baru otomatis menggunakan AI"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Buat Soal AI</span>
+                      <span>Generate Soal</span>
                     </button>
                   </div>
                 </div>

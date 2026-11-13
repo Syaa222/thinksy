@@ -44,7 +44,13 @@ export async function POST(req: Request) {
       fileBase64,
       fileMimeType,
       mode = "auto", // "soal" | "materi" | "paket_15" | "auto"
+      instruksiTambahan = "",
+      catatanTambahan = "",
     } = body;
+
+    const userInstruction = (instruksiTambahan || catatanTambahan || "").trim();
+    const is15Pack = tipeSoal === "paket_15" || mode === "paket_15" || jumlah === 15;
+    const cleanJumlah = is15Pack ? 15 : Math.min(Math.max(Number(jumlah) || 1, 1), 5);
 
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
@@ -111,31 +117,41 @@ MENGEMBALIKAN HANYA JSON:
   ]
 }`;
     } else {
-      promptText = `Kamu adalah Pembuat Soal ${mapel} profesional untuk SMP Kelas 8.
-Tugasmu adalah menghasilkan draft butir soal berkualitas tinggi sesuai kurikulum, serta mendeteksi/menelaah materi dari berkas foto atau dokumen PDF yang dilampirkan jika ada.
+      promptText = `Kamu adalah Pakar Kurikulum dan Pembuat Soal ${mapel} profesional untuk SMP Kelas 8.
+Tugasmu adalah menghasilkan TEPAT ${cleanJumlah} BUTIR SOAL berkualitas tinggi sesuai standar Kurikulum Merdeka.
 
 SPESIFIKASI SOAL:
-- Topik Spesifik: ${topik}
+- Materi / Bab Kurikulum: ${topik}
 - Mata Pelajaran: ${mapel}
 - Tingkat Kesulitan: ${tingkatSoal} (mudah / sedang / sulit)
-- Tipe Soal: ${tipeSoal} (pilihan_ganda, isian_singkat, atau esai)
+- Jenis Soal yang Diminta: ${tipeSoal === "campuran" ? "Campuran proporsional antara Pilihan Ganda, Isian Singkat, dan Esai" : tipeSoal}
+${userInstruction ? `- Instruksi & Catatan Tambahan Khusus Guru: "${userInstruction}"` : ""}
 
-ATURAN FORMULA:
-Gunakan format KaTeX ($...$ untuk inline, $$...$$ untuk blok).
+ATURAN FORMULA MATEMATIKA:
+WAJIB gunakan notasi KaTeX ($...$ untuk formula sebaris/inline, $$...$$ untuk formula blok terpisah).
 
-WAJIB MENGEMBALIKAN HANYA FORMAT JSON SAJA:
+WAJIB MENGEMBALIKAN HANYA FORMAT JSON BERIKUT (TANPA MARKDOWN DI LUAR JSON):
 {
-  "pertanyaan": "<teks pertanyaan soal lengkap beserta ekspresi KaTeX>",
-  "kunciJawaban": "<kunci jawaban atau ringkasan rubrik>",
-  "pembahasan": "<penjelasan dan langkah penyelesaian rinci>",
-  "opsiSoal": [
-    { "teksOpsi": "<pilihan A>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa siswa memilih opsi A>" },
-    { "teksOpsi": "<pilihan B>", "benar": true, "alasanSalah": "" },
-    { "teksOpsi": "<pilihan C>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa siswa memilih opsi C>" },
-    { "teksOpsi": "<pilihan D>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa siswa memilih opsi D>" }
+  "daftarSoal": [
+    {
+      "nomor": 1,
+      "tipeSoal": "${tipeSoal === "campuran" ? "pilihan_ganda" : tipeSoal}",
+      "pertanyaan": "<teks pertanyaan lengkap beserta ekspresi KaTeX>",
+      "kunciJawaban": "<kunci jawaban atau ringkasan rubrik penskoran>",
+      "pembahasan": "<penjelasan dan petunjuk langkah demi langkah penyelesaian konsep>",
+      "opsiSoal": [
+        { "teksOpsi": "<pilihan A>", "benar": true, "alasanSalah": "" },
+        { "teksOpsi": "<pilihan B>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa opsi B salah>" },
+        { "teksOpsi": "<pilihan C>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa opsi C salah>" },
+        { "teksOpsi": "<pilihan D>", "benar": false, "alasanSalah": "<alasan miskonsepsi mengapa opsi D salah>" }
+      ]
+    }
   ]
 }
-Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai array kosong []. Jika 'pilihan_ganda', buat tepat 4 opsi dengan tepat 1 opsi yang benar = true dan 3 opsi salah dengan 'alasanSalah' yang jelas.`;
+Catatan:
+- Hasilkan TEPAT ${cleanJumlah} butir soal di dalam array "daftarSoal".
+- Untuk tipe 'pilihan_ganda', buat tepat 4 opsi (A-D) dengan tepat 1 opsi benar=true dan 3 opsi salah dengan penjelasan alasanSalah miskonsepsi yang jelas.
+- Untuk tipe 'isian_singkat' atau 'esai', buat opsiSoal sebagai array kosong [].`;
     }
 
     if (fileBase64 && fileMimeType) {
@@ -220,7 +236,6 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
       });
     }
 
-    const is15Pack = tipeSoal === "paket_15" || mode === "paket_15" || jumlah === 15;
     let finalSoalList: any[] = [];
 
     if (is15Pack && Array.isArray(draftData.daftarSoal) && draftData.daftarSoal.length === 15) {
@@ -253,13 +268,31 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
           alasanSalah: o.benar ? "" : "Konsep dasar materi pada opsi ini perlu diperiksa kembali.",
         })),
       }));
+    } else if (Array.isArray(draftData.daftarSoal) && draftData.daftarSoal.length > 0) {
+      finalSoalList = draftData.daftarSoal.map((s: any, idx: number) => {
+        const correctOpt = Array.isArray(s.opsiSoal) ? s.opsiSoal.find((o: any) => o.benar) : null;
+        const qType = s.tipeSoal || (tipeSoal === "campuran" ? "pilihan_ganda" : tipeSoal);
+        return {
+          id: `ai-${Date.now()}-${idx + 1}`,
+          pertanyaan: sanitizeMathContent(s.pertanyaan || "Pertanyaan matematika..."),
+          tipeSoal: qType as "pilihan_ganda" | "isian_singkat" | "esai",
+          kunciJawaban: sanitizeMathContent(s.kunciJawaban || (correctOpt?.teksOpsi || correctOpt?.teks || "")),
+          pembahasan: sanitizeMathContent(s.pembahasan || ""),
+          poin: 10,
+          opsi: (s.opsiSoal || []).map((o: any) => ({
+            teks: sanitizeMathContent(o.teksOpsi || o.teks || ""),
+            benar: Boolean(o.benar),
+            alasanSalah: o.alasanSalah || o.alasan_salah || (o.benar ? "" : "Konsep dasar materi pada opsi ini perlu diperiksa kembali."),
+          })),
+        };
+      });
     } else {
       const correctOpt = Array.isArray(draftData.opsiSoal) ? draftData.opsiSoal.find((o: any) => o.benar) : null;
       const singleQ = {
         id: `ai-${Date.now()}-1`,
         pertanyaan: sanitizeMathContent(draftData.pertanyaan || "Pertanyaan matematika..."),
-        tipeSoal: (draftData.tipeSoal || tipeSoal) as "pilihan_ganda" | "isian_singkat" | "esai",
-        kunciJawaban: sanitizeMathContent(draftData.kunciJawaban || (tipeSoal === "pilihan_ganda" ? (correctOpt?.teksOpsi || correctOpt?.teks || "") : "")),
+        tipeSoal: (draftData.tipeSoal || (tipeSoal === "campuran" ? "pilihan_ganda" : tipeSoal)) as "pilihan_ganda" | "isian_singkat" | "esai",
+        kunciJawaban: sanitizeMathContent(draftData.kunciJawaban || (correctOpt?.teksOpsi || correctOpt?.teks || "")),
         pembahasan: sanitizeMathContent(draftData.pembahasan || ""),
         poin: 10,
         opsi: (draftData.opsiSoal || []).map((o: any) => ({
