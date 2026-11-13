@@ -6,12 +6,12 @@ import path from "path";
 import GuruLayout from "@/components/guru/GuruLayout";
 import ExamStatusToggle from "@/components/guru/ExamStatusToggle";
 import DeleteExamButton from "@/components/guru/DeleteExamButton";
+import { getExamPackage } from "@/lib/exam-questions-store";
 import {
   Plus,
   Clock,
   Award,
   Users,
-  Radio,
   Sparkles,
   TrendingUp,
   Edit3,
@@ -125,7 +125,13 @@ export default async function GuruDaftarUjianPage() {
 
   const guruExamsMap = new Map<string, any>();
   CANONICAL_GURU_EXAMS.forEach((item) => {
-    guruExamsMap.set(item.id, item);
+    const localPkg = getExamPackage(item.id);
+    guruExamsMap.set(item.id, {
+      ...item,
+      status: localPkg?.status || item.status,
+      durasi_menit: localPkg?.durasi_menit || item.durasi_menit,
+      passing_grade: localPkg?.passing_grade || item.passing_grade,
+    });
   });
 
   (rawExams || [])
@@ -142,13 +148,15 @@ export default async function GuruDaftarUjianPage() {
         /pts|pas|ujian resmi/i.test(e.judul || "");
       const calculatedTipe: "ulangan" | "ujian" = isOfficial ? "ujian" : "ulangan";
       const judul = isOfficial ? "Ujian Resmi Matematika #1" : e.judul;
+      const localPkg = getExamPackage(e.id);
 
       guruExamsMap.set(e.id, {
         ...e,
         judul,
         tipe: calculatedTipe,
-        durasi_menit: e.durasi_menit || (isOfficial ? 90 : 60),
-        passing_grade: e.passing_grade || 75,
+        status: localPkg?.status || e.status || "dipublikasi",
+        durasi_menit: localPkg?.durasi_menit || e.durasi_menit || (isOfficial ? 90 : 60),
+        passing_grade: localPkg?.passing_grade || e.passing_grade || 75,
       });
     });
 
@@ -165,7 +173,6 @@ export default async function GuruDaftarUjianPage() {
       nama_kelas: (e.kelas as any)?.nama_kelas || "Kelas 8 (Matematika)",
       peserta_total: st.total,
       peserta_selesai: st.selesai,
-      peserta_sedang: st.sedang,
       rata_rata_nilai: avgScore,
     };
   });
@@ -183,7 +190,7 @@ export default async function GuruDaftarUjianPage() {
               Ruang Kelola Ujian & Penilaian
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Rancang lembar ujian terstandar, integrasikan soal AI, dan pantau jalannya ujian siswa secara langsung (Real-Time Live Monitor).
+              Rancang lembar ujian terstandar, integrasikan butir soal, dan terbitkan asesmen kompetensi untuk siswa.
             </p>
           </div>
 
@@ -239,20 +246,17 @@ export default async function GuruDaftarUjianPage() {
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <Link
-                          href={`/guru/ujian/${u.id}/live`}
-                          className={`text-[10px] font-black px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition cursor-pointer ${
-                            u.peserta_sedang > 0
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse hover:bg-emerald-200"
-                              : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                          }`}
-                          title="Buka Live Monitor Siswa (Aktif & Tidak Aktif)"
-                        >
-                          <Radio className={`w-3 h-3 ${u.peserta_sedang > 0 ? "text-emerald-600" : "text-slate-500"}`} />
-                          <span>{u.peserta_sedang > 0 ? `${u.peserta_sedang} Live` : "Live"}</span>
-                        </Link>
-                      </div>
+                      <span
+                        className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                          isUjian
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : isPerBab
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}
+                      >
+                        {isUjian ? "Ujian Resmi" : isPerBab ? "Ulangan Bab" : "Formatif"}
+                      </span>
 
                       <ExamStatusToggle ujianId={u.id} initialStatus={u.status} />
                     </div>
@@ -293,15 +297,6 @@ export default async function GuruDaftarUjianPage() {
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Edit Soal</span>
-                    </Link>
-
-                    <Link
-                      href={`/guru/ujian/${u.id}/live`}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1.5 transition shadow-xs"
-                      title="Live Monitor Siswa (Aktif & Tidak Aktif)"
-                    >
-                      <Radio className="w-3.5 h-3.5" />
-                      <span>Live Monitor</span>
                     </Link>
 
                     <DeleteExamButton ujianId={u.id} judul={u.judul} />

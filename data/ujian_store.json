@@ -10,7 +10,6 @@
     "status": "dipublikasi",
     "token": "MTK-SEM1",
     "bab_id": "b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
-    "diperbarui_pada": "2026-11-11T04:45:27.313Z",
     "soalList": [
       {
         "id": "qu1-sem1-soal1",
@@ -156,8 +155,179 @@
             "alasanSalah": "Rumus terbalik antara $\\Delta y$ dan $\\Delta x$."
           }
         ]
+      },
+      {
+        "id": "ai-1794604720294-1",
+        "pertanyaan": "Sebuah tangga sepanjang $10\\text{ m}$ disandarkan pada dinding. Jika jarak kaki tangga ke dinding adalah $6\\text{ m}$, berapakah tinggi dinding yang dicapai oleh tangga tersebut?",
+        "tipeSoal": "pilihan_ganda",
+        "kunciJawaban": "8 m",
+        "pembahasan": "Gunakan Teorema Pythagoras $a^2 + b^2 = c^2$. Diketahui sisi miring $c = 10$ dan alas $a = 6$. Maka $h^2 = 10^2 - 6^2 = 100 - 36 = 64$. Sehingga $h = \\sqrt{64} = 8\\text{ m}$.",
+        "poin": 10,
+        "opsi": [
+          {
+            "id": "opt-0-0",
+            "teks": "8 m",
+            "benar": true,
+            "alasanSalah": ""
+          },
+          {
+            "id": "opt-0-1",
+            "teks": "4 m",
+            "benar": false,
+            "alasanSalah": "Siswa melakukan kesalahan dengan mengurangkan angka secara langsung (10-6) tanpa menguadratkan."
+          },
+          {
+            "id": "opt-0-2",
+            "teks": "12 m",
+            "benar": false,
+            "alasanSalah": "Siswa salah menjumlahkan kuadrat sisi (10^2 + 6^2) alih-alih mencari tinggi."
+          },
+          {
+            "id": "opt-0-3",
+            "teks": "16 m",
+            "benar": false,
+            "alasanSalah": "Siswa menjumlahkan 10 dan 6 tanpa mempertimbangkan hubungan sisi segitiga siku-siku."
+          }
+        ]
+      },
+      {
+        "id": "ai-1794604720296-2",
+        "pertanyaan": "Manakah di antara kelompok tiga bilangan berikut yang membentuk segitiga siku-siku?",
+        "tipeSoal": "pilihan_ganda",
+        "kunciJawaban": "7, 24, 25",
+        "pembahasan": "Periksa dengan $a^2 + b^2 = c^2$. Untuk $7, 24, 25$: $7^2 + 24^2 = 49 + 576 = 625 = 25^2$. Ini memenuhi syarat.",
+        "poin": 10,
+        "opsi": [
+          {
+            "id": "opt-1-0",
+            "teks": "7, 24, 25",
+            "benar": true,
+            "alasanSalah": ""
+          },
+          {
+            "id": "opt-1-1",
+            "teks": "3, 4, 6",
+            "benar": false,
+            "alasanSalah": "Siswa tidak teliti menghitung $3^2 + 4^2 = 25$, sedangkan $6^2 = 36$. $25 \\neq 36$."
+          },
+          {
+            "id": "opt-1-2",
+            "teks": "5, 12, 14",
+            "benar": false,
+            "alasanSalah": "Siswa hanya menebak angka tanpa menguji dengan rumus Pythagoras."
+          },
+          {
+            "id": "opt-1-3",
+            "teks": "8, 10, 12",
+            "benar": false,
+            "alasanSalah": "Siswa terjebak dengan urutan angka yang terlihat konsisten namun tidak memenuhi $a^2 + b^2 = c^2$."
+          }
+        ]
+      },
+      {
+        "id": "ai-1794604720296-3",
+        "pertanyaan": "Sebuah persegi panjang memiliki panjang $12\\text{ cm}$ dan diagonal $13\\text{ cm}$. Berapakah luas persegi panjang tersebut?",
+        "tipeSoal": "pilihan_ganda",
+        "kunciJawaban": "60 cm²",
+        "pembahasan": "Cari lebar ($l$) menggunakan Pythagoras: $l^2 = 13^2 - 12^2 = 169 - 144 = 25$, sehingga $l = 5\\text{ cm}$. Luas = $p \\times l = 12 \\times 5 = 60\\text{ cm}^2$.",
+        "poin": 10,
+        "opsi": [
+          {
+            "id": "opt-2-0",
+            "teks": "60 cm²",
+            "benar": true,
+            "alasanSalah": ""
+          },
+          {
+            "id": "opt-2-1",
+            "teks": "156 cm²",
+            "benar": false,
+            "alasanSalah": "Siswa mengalikan diagonal dengan panjang (13 x 12) tanpa mencari lebar terlebih dahulu."
+          },
+          {
+            "id": "opt-2-2",
+            "teks": "65 cm²",
+            "benar": false,
+            "alasanSalah": "Siswa salah menghitung lebar sebagai 13-12=1, lalu mengalikan 12 dengan 1."
+          },
+          {
+            "id": "opt-2-3",
+            "teks": "30 cm²",
+            "benar": false,
+            "alasanSalah": "Siswa mungkin menggunakan rumus luas segitiga (1/2 x 12 x 5) padahal yang ditanya adalah luas persegi panjang."
+          }
+        ]
+      },
+      {
+        "id": "ai-1794604720296-4",
+        "pertanyaan": "Jika panjang sisi-sisi segitiga adalah $x$, $x+1$, dan $x+2$, berapakah nilai $x$ agar segitiga tersebut siku-siku?",
+        "tipeSoal": "pilihan_ganda",
+        "kunciJawaban": "3",
+        "pembahasan": "Substitusi ke $x^2 + (x+1)^2 = (x+2)^2$. $x^2 + x^2 + 2x + 1 = x^2 + 4x + 4$. Sederhanakan menjadi $x^2 - 2x - 3 = 0$. Faktorkan $(x-3)(x+1) = 0$. Karena panjang harus positif, maka $x = 3$.",
+        "poin": 10,
+        "opsi": [
+          {
+            "id": "opt-3-0",
+            "teks": "3",
+            "benar": true,
+            "alasanSalah": ""
+          },
+          {
+            "id": "opt-3-1",
+            "teks": "4",
+            "benar": false,
+            "alasanSalah": "Siswa salah dalam melakukan ekspansi aljabar $(x+1)^2$ atau $(x+2)^2$."
+          },
+          {
+            "id": "opt-3-2",
+            "teks": "2",
+            "benar": false,
+            "alasanSalah": "Siswa gagal dalam memfaktorkan persamaan kuadrat yang dihasilkan."
+          },
+          {
+            "id": "opt-3-3",
+            "teks": "5",
+            "benar": false,
+            "alasanSalah": "Siswa melakukan kesalahan perhitungan saat memindahkan ruas persamaan."
+          }
+        ]
+      },
+      {
+        "id": "ai-1794604720296-5",
+        "pertanyaan": "Sebuah kapal berlayar ke arah barat sejauh $80\\text{ km}$, kemudian berbelok ke arah utara sejauh $60\\text{ km}$. Berapakah jarak kapal sekarang dari titik awal?",
+        "tipeSoal": "pilihan_ganda",
+        "kunciJawaban": "100 km",
+        "pembahasan": "Ini adalah tripel Pythagoras (8, 6, 10) dikali 10. Jarak = $\\sqrt{80^2 + 60^2} = \\sqrt{6400 + 3600} = \\sqrt{10000} = 100\\text{ km}$.",
+        "poin": 10,
+        "opsi": [
+          {
+            "id": "opt-4-0",
+            "teks": "100 km",
+            "benar": true,
+            "alasanSalah": ""
+          },
+          {
+            "id": "opt-4-1",
+            "teks": "140 km",
+            "benar": false,
+            "alasanSalah": "Siswa hanya menjumlahkan jarak (80+60) tanpa menggunakan konsep Pythagoras."
+          },
+          {
+            "id": "opt-4-2",
+            "teks": "20 km",
+            "benar": false,
+            "alasanSalah": "Siswa mengurangkan jarak (80-60) karena kurang teliti memahami arah perpindahan."
+          },
+          {
+            "id": "opt-4-3",
+            "teks": "70 km",
+            "benar": false,
+            "alasanSalah": "Siswa menghitung rata-rata dari kedua jarak tersebut."
+          }
+        ]
       }
-    ]
+    ],
+    "diperbarui_pada": "2026-11-13T21:19:18.896Z"
   },
   "u2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22": {
     "id": "u2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",

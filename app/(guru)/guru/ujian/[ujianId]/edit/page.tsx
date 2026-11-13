@@ -325,9 +325,6 @@ export default function EditUjianPage({
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                  Mode Edit Ujian
-                </span>
                 {babJudul && (
                   <span className="text-xs font-semibold text-slate-500 truncate max-w-xs">
                     • {babJudul}
