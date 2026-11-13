@@ -47,6 +47,7 @@ import {
   getStoredStudentPhoto,
   getStoredThemeMode,
   getStoredThemeColor,
+  getStoredLanguage,
   applyTheme,
   StudentCardProfile,
   DEFAULT_STUDENT_PHOTO,
@@ -73,7 +74,8 @@ export default function StudentDashboardClient({
     "Home" | "Belajar" | "Ruang Ujian" | "Peringkat" | "Pencapaian"
   >("Home");
   const [classroomView, setClassroomView] = useState<ClassroomViewMode>("home");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedSubjectClass, setSelectedSubjectClass] = useState<string>("Matematika");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Dynamic Student Profile (synced with settings & localStorage after mount)
   const [profileState, setProfileState] = useState<StudentCardProfile>(() => {
@@ -129,8 +131,9 @@ export default function StudentDashboardClient({
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-  // Sync joined classes from localStorage on mount (Permanen)
+  // Sync joined classes from localStorage on mount & dengarkan event kelas baru / kelas dihapus
   useEffect(() => {
+    // 1. Inisialisasi awal dari localStorage
     try {
       const saved =
         localStorage.getItem("thinksy_joined_classes") ||
@@ -146,6 +149,242 @@ export default function StudentDashboardClient({
         }
       }
     } catch {}
+
+    // Helper untuk menghapus kelas yang dihapus atau di-unenroll
+    const removeClassById = (classIdOrCode: string) => {
+      if (!classIdOrCode) return;
+      const clean = classIdOrCode.toLowerCase().trim();
+
+      setEnrolledClasses((prev) => {
+        const next = prev.filter((c: any) => {
+          const cId = (c.id || "").toLowerCase();
+          const cCode = (c.kode_kelas || c.subjectCode || "").toLowerCase();
+          const cName = (c.nama_kelas || "").toLowerCase();
+          const cSubj = (c.mata_pelajaran || "").toLowerCase();
+
+          if (cId === clean || cId.includes(clean) || clean.includes(cId)) return false;
+          if (cCode && (cCode === clean || cCode.includes(clean) || clean.includes(cCode))) return false;
+          if (cName && (cName === clean || clean.includes(cName))) return false;
+          if (clean.includes("ipa") && (cId.includes("ipa") || cSubj.includes("ipa") || cName.includes("ipa"))) return false;
+          if (clean.includes("mat") && (cId.includes("mat") || cSubj.includes("mat") || cName.includes("mat"))) return false;
+          return true;
+        });
+
+        try {
+          localStorage.setItem("thinksy_joined_classes", JSON.stringify(next));
+          localStorage.setItem("thinksy_permanent_classes", JSON.stringify(next));
+        } catch {}
+
+        return next;
+      });
+
+      // Jika sedang membuka kelas yang baru saja dihapus atau diarsipkan, kembalikan ke home
+      setSelectedSubjectClass((prevSubj) => {
+        const prevClean = (prevSubj || "").toLowerCase();
+        if (
+          prevClean === clean ||
+          prevClean.includes(clean) ||
+          clean.includes(prevClean) ||
+          (clean.includes("ipa") && prevClean.includes("ipa")) ||
+          (clean.includes("mat") && prevClean.includes("mat"))
+        ) {
+          setClassroomView("home");
+          return "Matematika";
+        }
+        return prevSubj;
+      });
+    };
+
+    // 2. Sinkronisasi dengan server: hapus kelas yang sudah di-blacklist/dihapus atau diarsipkan/di-unenroll guru
+    async function syncClassesWithServer() {
+      try {
+        const res = await fetch("/api/classroom/classes");
+        if (res.ok) {
+          const data = await res.json();
+          const deletedIds: string[] = (data.deletedClassIds || []).map((d: string) => d.toLowerCase());
+          const archivedIds: string[] = (data.archivedClassIds || []).map((a: string) => a.toLowerCase());
+          const inactiveIds = [...deletedIds, ...archivedIds];
+
+          if (inactiveIds.length > 0) {
+            setEnrolledClasses((prev) => {
+              const cleaned = prev.filter((c: any) => {
+                const cId = (c.id || "").toLowerCase();
+                const cCode = (c.kode_kelas || c.subjectCode || "").toLowerCase();
+                const cName = (c.nama_kelas || "").toLowerCase();
+                const isInactive = inactiveIds.some(
+                  (d) =>
+                    d === cId ||
+                    cId.includes(d) ||
+                    (cCode && (d === cCode || cCode.includes(d))) ||
+                    (cName && (d === cName || cName.includes(d)))
+                );
+                return !isInactive;
+              });
+
+              try {
+                localStorage.setItem("thinksy_joined_classes", JSON.stringify(cleaned));
+                localStorage.setItem("thinksy_permanent_classes", JSON.stringify(cleaned));
+              } catch {}
+              return cleaned;
+            });
+          }
+        }
+
+        // Cek juga apakah ada permohonan unenroll yang sudah disetujui guru
+        const unres = await fetch("/api/classroom/unenroll-request");
+        if (unres.ok) {
+          const unData = await unres.json();
+          if (unData.requests && Array.isArray(unData.requests)) {
+            const approvedReqs = unData.requests.filter((r: any) => r.status === "approved");
+            for (const req of approvedReqs) {
+              if (req.classId) removeClassById(req.classId);
+              if (req.className) removeClassById(req.className);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[STUDENT SYNC ERROR]", err);
+      }
+    }
+    syncClassesWithServer();
+
+    // 3. Event Handlers
+    const handleClassJoined = (e: any) => {
+      if (e.detail?.classData) {
+        const newCls = e.detail.classData;
+        setEnrolledClasses((prev) => {
+          if (prev.some((c: any) => c.id === newCls.id)) return prev;
+          return [newCls, ...prev];
+        });
+      }
+    };
+
+    const handleClassLeft = (e: any) => {
+      const idToRemove = e.detail?.classId;
+      if (idToRemove) removeClassById(idToRemove);
+    };
+
+    const handleClassArchived = (e: any) => {
+      const idToRemove = e.detail?.classId;
+      if (idToRemove) {
+        removeClassById(idToRemove);
+        const isEn = getStoredLanguage() === "en";
+        setToastNotification({
+          show: true,
+          title: isEn ? "Class Unenrolled" : "Kelas Di-unenroll",
+          message: isEn
+            ? "A class has been unenrolled by the teacher and moved to archive."
+            : "Kelas telah di-unenroll oleh guru pengampu dan dipindahkan ke arsip.",
+          time: isEn ? "Just now" : "Baru saja",
+          type: "info",
+        });
+      }
+    };
+
+    const handleClassDeleted = (e: any) => {
+      const idToRemove = e.detail?.classId;
+      if (idToRemove) {
+        removeClassById(idToRemove);
+        const isEn = getStoredLanguage() === "en";
+        setToastNotification({
+          show: true,
+          title: isEn ? "Class Removed" : "Kelas Dihapus Pengampu",
+          message: isEn
+            ? "A class has been permanently deleted by the teacher."
+            : "Kelas telah dihapus secara permanen oleh guru pengampu.",
+          time: isEn ? "Just now" : "Baru saja",
+          type: "info",
+        });
+      }
+    };
+
+    const handleUnenrollApproved = (e: any) => {
+      const classId = e.detail?.classId;
+      const className = e.detail?.className || "Kelas";
+      if (classId) {
+        removeClassById(classId);
+
+        try {
+          const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+          const nextPending = pending.filter((id: string) => id !== classId);
+          localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(nextPending));
+        } catch {}
+
+        const isEn = getStoredLanguage() === "en";
+        setToastNotification({
+          show: true,
+          title: isEn ? "Class Left (Approved)" : "Keluar Kelas Disetujui",
+          message: isEn
+            ? `Teacher has approved your request to leave ${className}.`
+            : `Guru telah menyetujui permintaan Anda untuk keluar dari kelas ${className}.`,
+          time: isEn ? "Just now" : "Baru saja",
+          type: "success",
+        });
+      }
+    };
+
+    const handleUnenrollRejected = (e: any) => {
+      const classId = e.detail?.classId;
+      const className = e.detail?.className || "Kelas";
+      if (classId) {
+        try {
+          const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+          const nextPending = pending.filter((id: string) => id !== classId);
+          localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(nextPending));
+        } catch {}
+
+        const isEn = getStoredLanguage() === "en";
+        setToastNotification({
+          show: true,
+          title: isEn ? "Request Declined" : "Permintaan Ditolak",
+          message: isEn
+            ? `Teacher declined your request to leave ${className}. You remain enrolled.`
+            : `Guru menolak permintaan keluar dari kelas ${className}. Anda tetap terdaftar di kelas.`,
+          time: isEn ? "Just now" : "Baru saja",
+          type: "info",
+        });
+      }
+    };
+
+    // Cross-tab synchronization via storage event
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "thinksy_class_archived_event" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.classId) removeClassById(data.classId);
+        } catch {}
+      }
+      if (e.key === "thinksy_class_deleted_event" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.classId) removeClassById(data.classId);
+        } catch {}
+      }
+      if (e.key === "thinksy_unenroll_approved_event" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.classId) removeClassById(data.classId);
+        } catch {}
+      }
+    };
+
+    window.addEventListener("thinksy_class_joined", handleClassJoined);
+    window.addEventListener("thinksy_class_left", handleClassLeft);
+    window.addEventListener("thinksy_class_archived", handleClassArchived);
+    window.addEventListener("thinksy_class_deleted", handleClassDeleted);
+    window.addEventListener("thinksy_unenroll_approved", handleUnenrollApproved);
+    window.addEventListener("thinksy_unenroll_rejected", handleUnenrollRejected);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("thinksy_class_joined", handleClassJoined);
+      window.removeEventListener("thinksy_class_left", handleClassLeft);
+      window.removeEventListener("thinksy_class_archived", handleClassArchived);
+      window.removeEventListener("thinksy_class_deleted", handleClassDeleted);
+      window.removeEventListener("thinksy_unenroll_approved", handleUnenrollApproved);
+      window.removeEventListener("thinksy_unenroll_rejected", handleUnenrollRejected);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   // UAT Mock Time State (persisted & synced with localStorage after mount to prevent hydration mismatch)
@@ -213,16 +452,16 @@ export default function StudentDashboardClient({
       setClassroomView("home");
     }
   }, [searchParams]);
-  // Auto-collapse sidebar on mobile screen on mount
+  // Auto-expand sidebar on desktop screen (>= 1024px) on mount
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setIsSidebarOpen(false);
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
     }
   }, []);
 
   const handleSelectClassroomView = (view: ClassroomViewMode) => {
     setClassroomView(view);
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
     if (view === "home") {
@@ -231,6 +470,24 @@ export default function StudentDashboardClient({
     } else if (view === "todo" || view === "matematika") {
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleOpenClassSubject = (classId?: string, subjectName?: string) => {
+    let resolvedSubj = "Matematika";
+    if (subjectName) {
+      resolvedSubj = subjectName.toLowerCase().includes("ipa") ? "IPA" : subjectName;
+    } else if (classId) {
+      const found = enrolledClasses.find((c: any) => c.id === classId);
+      if (found) {
+        resolvedSubj = (found.mata_pelajaran || found.nama_kelas || "").toLowerCase().includes("ipa") ? "IPA" : "Matematika";
+      }
+    }
+    setSelectedSubjectClass(resolvedSubj);
+    setClassroomView("matematika");
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Sync mockTime across tabs/windows & initial load after mount
@@ -1118,15 +1375,23 @@ export default function StudentDashboardClient({
   };
 
   const handleJoinClassSuccess = (newClass: any) => {
+    const isIpa =
+      (newClass.nama_kelas || "").toLowerCase().includes("ipa") ||
+      (newClass.mata_pelajaran || "").toLowerCase().includes("ipa");
+
     const formattedClass = {
       id: newClass.id || `class-${Date.now()}`,
       nama_kelas: newClass.nama_kelas,
       nama_guru: newClass.nama_guru || "Ibu Siti Rahmawati, M.Pd.",
-      mata_pelajaran: newClass.mata_pelajaran || "Matematika",
-      ruang: newClass.ruang || "Ruang 8-A",
-      kode_kelas: newClass.kode_kelas || "mtk8xpk",
-      banner_color: newClass.banner_color || "#1967D2",
-      banner_pattern: newClass.banner_pattern || "matematika",
+      mata_pelajaran: newClass.mata_pelajaran || (isIpa ? "IPA" : "Matematika"),
+      ruang: newClass.ruang || (isIpa ? "Lab IPA" : "Ruang 8-A"),
+      kode_kelas: newClass.kode_kelas || newClass.subjectCode || (isIpa ? "ipa8xpk" : "mtk8xpk"),
+      banner_color: newClass.banner_color || newClass.themeColor || (isIpa ? "#0F9D58" : "#1967D2"),
+      banner_pattern: newClass.banner_pattern || newClass.bannerIllustration || (isIpa ? "science" : "matematika"),
+      bgGradient: newClass.bgGradient || (isIpa ? "from-emerald-600 via-teal-700 to-slate-950" : "from-blue-700 via-indigo-700 to-slate-900"),
+      bannerPhotoUrl: newClass.bannerPhotoUrl || "",
+      bannerType: newClass.bannerPhotoUrl ? "photo" : (newClass.bannerType || "illustration"),
+      description: newClass.description || `Kelas ${newClass.nama_kelas}`,
     };
 
     setEnrolledClasses((prev) => {
@@ -1183,6 +1448,93 @@ export default function StudentDashboardClient({
       message: `Selamat, Anda telah terdaftar secara permanen di kelas ${formattedClass.nama_kelas} (${formattedClass.nama_guru}). Kelas aktif selamanya di dashboard Anda.`,
       time: "Baru saja",
       type: "success",
+    });
+  };
+
+  const handleLeaveClass = async (classId: string, className: string) => {
+    // 1. Simpan status pending di localStorage
+    try {
+      const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+      if (!pending.includes(classId)) {
+        pending.push(classId);
+        localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(pending));
+      }
+    } catch {}
+
+    // 2. Kirim request ke backend unenroll API
+    try {
+      await fetch("/api/classroom/unenroll-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: userProfile?.id || "student-1",
+          studentName: userProfile?.nama_lengkap || profileState.nama_lengkap || studentName || "Siswa Thinksy",
+          classId,
+          className,
+        }),
+      });
+    } catch (err) {
+      console.warn("Failed to send unenroll request:", err);
+    }
+
+    // 3. Dispatch event agar UI bereaksi langsung
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("thinksy_unenroll_requested", {
+          detail: { classId, className },
+        })
+      );
+    }
+
+    // 4. Tampilkan Toast Pending Konfirmasi Guru
+    const isEn = getStoredLanguage() === "en";
+    setToastNotification({
+      show: true,
+      title: isEn ? "Request Submitted" : "Permintaan Dikirim",
+      message: isEn
+        ? "Unenroll request submitted. Waiting for teacher's confirmation."
+        : "Permintaan keluar kelas telah dikirim. Menunggu konfirmasi dari guru pengampu.",
+      time: isEn ? "Just now" : "Baru saja",
+      type: "info",
+    });
+  };
+
+  const handleCancelLeaveRequest = async (classId: string) => {
+    try {
+      const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+      const nextPending = pending.filter((id: string) => id !== classId);
+      localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(nextPending));
+    } catch {}
+
+    try {
+      await fetch("/api/classroom/unenroll-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: userProfile?.id || "student-1",
+          classId,
+          action: "cancel",
+        }),
+      });
+    } catch {}
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("thinksy_unenroll_canceled", {
+          detail: { classId },
+        })
+      );
+    }
+
+    const isEn = getStoredLanguage() === "en";
+    setToastNotification({
+      show: true,
+      title: isEn ? "Request Canceled" : "Permintaan Dibatalkan",
+      message: isEn
+        ? "Unenroll request has been canceled."
+        : "Permintaan keluar kelas telah dibatalkan.",
+      time: isEn ? "Just now" : "Baru saja",
+      type: "info",
     });
   };
 
@@ -1812,21 +2164,24 @@ export default function StudentDashboardClient({
           schoolName={sekolahData?.nama || "SMK Muhammadiyah 1"}
           studentPhoto={studentPhoto}
           isActive={true}
+          enrolledClasses={enrolledClasses}
+          selectedSubject={selectedSubjectClass}
+          onSelectSubjectClass={(classId, subj) => handleOpenClassSubject(classId, subj)}
         />
 
         {/* Desktop Spacer for Fixed Sidebar so content flows properly next to fixed sidebar */}
         {isSidebarOpen && (
           <div
-            className="w-68 sm:w-72 shrink-0 hidden md:block pointer-events-none"
+            className="w-68 sm:w-72 shrink-0 hidden lg:block pointer-events-none"
             aria-hidden="true"
           />
         )}
 
-        {/* Mobile Backdrop Overlay when Sidebar is open */}
+        {/* Mobile & Tablet Backdrop Overlay when Sidebar is open */}
         {isSidebarOpen && (
           <div
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 top-16 bg-black/40 z-20 md:hidden backdrop-blur-xs transition-opacity cursor-pointer"
+            className="fixed inset-0 top-16 bg-black/40 z-20 lg:hidden backdrop-blur-xs transition-opacity cursor-pointer"
             aria-hidden="true"
           />
         )}
@@ -1851,11 +2206,11 @@ export default function StudentDashboardClient({
             />
           ) : classroomView === "matematika" ? (
             <RuangBelajarSubjectChaptersView
-              selectedSubject="Matematika"
+              selectedSubject={selectedSubjectClass}
               chapters={chapters}
               userProfile={userProfile}
               onBackToHome={() => setClassroomView("home")}
-              onSelectSubject={() => setClassroomView("matematika")}
+              onSelectSubject={(subj) => handleOpenClassSubject(undefined, subj)}
             />
           ) : classroomView === "profil" ? (
             <ClassroomProfileView
@@ -1875,6 +2230,7 @@ export default function StudentDashboardClient({
             />
           ) : (
             <TabBelajar
+              studentId={userProfile?.id || "student-1"}
               studentName={studentName}
               namaKelas={userProfile.nama_kelas || "Kelas 8"}
               learningProgressPercent={learningProgressPercent}
@@ -1885,13 +2241,15 @@ export default function StudentDashboardClient({
               agendasData={agendasState}
               examsData={examsData}
               lastActivity={lastActivity}
-              onNavigateToCourses={() => setClassroomView("matematika")}
+              onNavigateToCourses={() => handleOpenClassSubject(undefined, "Matematika")}
               onOpenCalendar={() => setClassroomView("calendar")}
               onOpenTodo={() => setClassroomView("todo")}
               classesData={enrolledClasses}
-              onOpenClass={(classId?: string) => {
-                setClassroomView("matematika");
+              onOpenClass={(classId?: string, subjectName?: string) => {
+                handleOpenClassSubject(classId, subjectName);
               }}
+              onLeaveClass={handleLeaveClass}
+              onCancelLeaveRequest={handleCancelLeaveRequest}
             />
           )}
         </main>

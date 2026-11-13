@@ -3,27 +3,14 @@
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import { sanitizeMathContent } from "@/lib/math-sanitizer";
+
+export { sanitizeMathContent };
 
 interface MarkdownRendererProps {
   content: string;
   className?: string;
   isCompact?: boolean;
-}
-
-// Bersihkan control characters (seperti form feed ) yang menyebabkan simbol '↑rac' atau '⬆rac'
-export function sanitizeMathContent(content: string): string {
-  if (!content) return "";
-  let text = String(content)
-    .replace(/[\x0c\u000c]rac/gi, "\\frac")
-    .replace(/[↑⬆▲]rac/gi, "\\frac")
-    .replace(/(^|[^\\])rac\{/g, "$1\\frac{");
-
-  // Jika teks memuat formula LaTeX \frac atau bilangan campuran 1\frac tanpa pembungkus $, otomatis bungkus dengan $
-  text = text.replace(/(?<!\$)(?:\b\d+\s*)?\\frac\{[^{}]+\}\{[^{}]+\}(?!\$)/g, (match) => {
-    return `$${match.trim()}$`;
-  });
-
-  return text;
 }
 
 export default function MarkdownRenderer({

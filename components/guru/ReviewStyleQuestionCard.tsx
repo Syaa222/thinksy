@@ -192,6 +192,33 @@ export default function ReviewStyleQuestionCard({
                 <option value="esai">Esai & Penalaran</option>
               </select>
             </div>
+
+            {/* Quick Math Formula Shortcuts */}
+            <div className="flex flex-wrap items-center gap-1 pt-0.5 pb-1">
+              <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Rumus Cepat:</span>
+              {[
+                { label: "a/b", snippet: "$\\frac{a}{b}$", title: "Pecahan bertingkat" },
+                { label: "x²", snippet: "$x^{2}$", title: "Pangkat" },
+                { label: "√x", snippet: "$\\sqrt{x}$", title: "Bentuk akar" },
+                { label: "×", snippet: "$\\times$", title: "Simbol kali" },
+                { label: "÷", snippet: "$\\div$", title: "Simbol bagi" },
+                { label: "π", snippet: "$\\pi$", title: "Bilangan pi" },
+                { label: "±", snippet: "$\\pm$", title: "Plus minus" },
+                { label: "°", snippet: "$^{\\circ}$", title: "Derajat sudut" },
+                { label: "Δ", snippet: "$\\Delta$", title: "Delta selisih" },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => onUpdate({ pertanyaan: `${q.pertanyaan} ${item.snippet} ` })}
+                  className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-300 hover:border-blue-400 rounded-md transition cursor-pointer"
+                  title={item.title}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
             <textarea
               rows={3}
               value={q.pertanyaan}

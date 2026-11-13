@@ -15,6 +15,8 @@ import {
   Flag,
   X,
   Palette,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { ClassBannerGraphic } from "./ClassBannerGraphics";
 import CustomizeBannerModal from "./CustomizeBannerModal";
@@ -40,6 +42,7 @@ interface GuruClassroomHomeViewProps {
   classes: ClassroomHomeClass[];
   archivedClassIds?: string[];
   onArchiveClass?: (classId: string) => void;
+  onDeleteClass?: (classId: string) => void;
   onViewArchived?: () => void;
   onOpenClass: (classId: string) => void;
   onOpenGrades?: (classId: string) => void;
@@ -51,6 +54,7 @@ export default function GuruClassroomHomeView({
   classes,
   archivedClassIds = [],
   onArchiveClass,
+  onDeleteClass,
   onViewArchived,
   onOpenClass,
   onOpenGrades,
@@ -246,23 +250,29 @@ export default function GuruClassroomHomeView({
               <div
                 key={cls.id}
                 onClick={() => onOpenClass(cls.id)}
-                className="group bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer flex flex-col justify-between relative"
+                className={`group bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between relative ${
+                  isMenuOpen ? "overflow-visible z-40" : "overflow-hidden z-0 hover:z-10"
+                }`}
               >
                 {/* Top Banner with Custom Photo or Google Classroom SVG Illustration */}
                 <div
-                  className={`bg-gradient-to-r ${cls.bgGradient || "from-blue-700 via-indigo-700 to-slate-900"} p-5 text-white relative overflow-hidden`}
+                  className="rounded-t-3xl p-5 text-white relative"
                   style={{ backgroundColor: cls.themeColor || "#1967D2" }}
                 >
-                  {/* CLASS BANNER GRAPHIC: Custom Photo or Classroom-style SVG Illustration */}
-                  <ClassBannerGraphic
-                    bannerType={cls.bannerType || (cls.bannerPhotoUrl ? "photo" : "illustration")}
-                    bannerIllustration={cls.bannerIllustration}
-                    bannerPhotoUrl={cls.bannerPhotoUrl}
-                    subjectName={cls.mapel || cls.name}
-                    isCompact={true}
-                  />
+                  {/* Background Gradient & Illustration (clipped safely to rounded-t-3xl) */}
+                  <div
+                    className={`absolute inset-0 rounded-t-3xl overflow-hidden bg-gradient-to-r ${cls.bgGradient || "from-blue-700 via-indigo-700 to-slate-900"} pointer-events-none`}
+                  >
+                    <ClassBannerGraphic
+                      bannerType={cls.bannerType || (cls.bannerPhotoUrl ? "photo" : "illustration")}
+                      bannerIllustration={cls.bannerIllustration}
+                      bannerPhotoUrl={cls.bannerPhotoUrl}
+                      subjectName={cls.mapel || cls.name}
+                      isCompact={true}
+                    />
+                  </div>
 
-                  <div className="flex items-start justify-between relative z-10">
+                  <div className={`flex items-start justify-between relative ${isMenuOpen ? "z-50" : "z-20"}`}>
                     <div className="space-y-1 min-w-0 pr-4 drop-shadow-xs">
                       <h3 className="text-lg font-bold truncate group-hover:underline font-sans">
                         {cls.name}
@@ -292,7 +302,7 @@ export default function GuruClassroomHomeView({
                       {/* POPUP DROPDOWN: Customize Banner, Move, Hide, Unenroll, Report abuse */}
                       {isMenuOpen && (
                         <div
-                          className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 text-slate-800 text-sm animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                          className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-slate-800 text-sm animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {/* 0. Customize Banner & Foto */}
@@ -366,7 +376,7 @@ export default function GuruClassroomHomeView({
                     <button
                       type="button"
                       onClick={(e) => handleCopy(e, cls.subjectCode)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-mono font-bold transition cursor-pointer shadow-xs active:scale-95 border border-white/20"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-mono font-bold transition cursor-pointer shadow-xs active:scale-95 border border-white/20"
                       title="Klik untuk menyalin token kelas ke siswa"
                     >
                       <span>Token: {cls.subjectCode.toUpperCase()}</span>
@@ -499,13 +509,19 @@ export default function GuruClassroomHomeView({
               </button>
             </div>
 
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2">
-              <p className="text-xs font-bold text-rose-900">
-                Peringatan: Melepas Pengampuan Kelas
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+              <p className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <Archive className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Pindahkan Kelas ke Arsip (Archived classes)</span>
               </p>
-              <p className="text-[11px] text-rose-700 leading-relaxed">
-                Apakah Anda yakin ingin membatalkan pengampuan kelas <strong>{selectedClassForUnenroll.name}</strong>? Data siswa, nilai, dan materi Anda akan tetap tersimpan secara aman dan dapat diakses kembali sewaktu-waktu.
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Apakah Anda yakin ingin membatalkan pengampuan (unenroll) kelas <strong>{selectedClassForUnenroll.name}</strong>?
               </p>
+              <ul className="text-[11px] text-amber-900 list-disc list-inside space-y-1 pt-1">
+                <li>Kelas akan dipindahkan ke menu <strong>Arsip Kelas</strong>.</li>
+                <li><strong>Di dashboard siswa, kelas ini seketika tidak akan ada lagi</strong>.</li>
+                <li>Untuk menghapus permanen, Anda dapat membukanya nanti di menu Arsip Kelas.</li>
+              </ul>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -521,11 +537,12 @@ export default function GuruClassroomHomeView({
                 onClick={() => {
                   handleHideClass(selectedClassForUnenroll.id);
                   setIsUnenrollModalOpen(false);
-                  showToast(`Berhasil unenroll dari ${selectedClassForUnenroll.name}. Kelas diarsipkan.`);
+                  showToast(`Kelas ${selectedClassForUnenroll.name} berhasil di-unenroll dan dipindahkan ke Arsip.`);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-[#0B57D0] hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
               >
-                Konfirmasi Unenroll
+                <UserMinus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Konfirmasi Unenroll (Masuk ke Arsip)</span>
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import StudentDashboardClient from "./StudentDashboardClient";
 import { normalizeMapel } from "@/lib/mapel";
+import { isClassDeleted, isClassArchived } from "@/lib/shared-classes";
 import { StudentDashboardProps, SekolahData, PeerStudent, ClassroomCardItem } from "./types";
 
 export default async function SiswaDashboardPage() {
@@ -661,30 +662,50 @@ export default async function SiswaDashboardPage() {
         rawDbClasses.find((k) => k.nama_kelas.toLowerCase().includes("matematika")) ||
         rawDbClasses[0];
 
-      const rawTeacher: any = mathClass?.profil;
-      const teacherObj: any = Array.isArray(rawTeacher)
-        ? rawTeacher[0]
-        : rawTeacher || (allGurus && allGurus.length > 0 ? allGurus[0] : fallbackGuru);
-      const namaGuru: string = teacherObj?.nama_lengkap || "Ibu Rani Kamayasha, S.Pd.";
-      const fotoGuru: string | null = teacherObj?.foto_url || null;
+      const isDel =
+        isClassDeleted(mathClass?.id || "") ||
+        isClassDeleted(mathClass?.nama_kelas || "") ||
+        isClassDeleted("mat-8") ||
+        isClassDeleted("matematika") ||
+        isClassArchived(mathClass?.id || "") ||
+        isClassArchived(mathClass?.nama_kelas || "") ||
+        isClassArchived("mat-8") ||
+        isClassArchived("matematika");
 
-      classesData = [
-        {
-          id: mathClass?.id || "class_matematika",
-          nama_kelas: "Matematika",
-          nama_guru: namaGuru,
-          foto_guru: fotoGuru,
-          banner_color: "#4338CA",
-          banner_pattern: "matematika" as const,
-        },
-      ];
+      if (!isDel) {
+        const rawTeacher: any = mathClass?.profil;
+        const teacherObj: any = Array.isArray(rawTeacher)
+          ? rawTeacher[0]
+          : rawTeacher || (allGurus && allGurus.length > 0 ? allGurus[0] : fallbackGuru);
+        const namaGuru: string = teacherObj?.nama_lengkap || "Ibu Rani Kamayasha, S.Pd.";
+        const fotoGuru: string | null = teacherObj?.foto_url || null;
+
+        classesData = [
+          {
+            id: mathClass?.id || "class_matematika",
+            nama_kelas: "Matematika",
+            nama_guru: namaGuru,
+            foto_guru: fotoGuru,
+            banner_color: "#4338CA",
+            banner_pattern: "matematika" as const,
+          },
+        ];
+      }
     }
   } catch (err) {
     console.error("Error fetching classes from database:", err);
   }
 
-  // Graceful fallback strictly for Matematika (1 mapel terintegrasi dengan Ruang Belajar)
-  if (classesData.length === 0) {
+  // Graceful fallback strictly for Matematika jika belum dihapus atau diarsipkan guru
+  if (
+    classesData.length === 0 &&
+    !isClassDeleted("mat-8") &&
+    !isClassDeleted("matematika") &&
+    !isClassDeleted("class_matematika") &&
+    !isClassArchived("mat-8") &&
+    !isClassArchived("matematika") &&
+    !isClassArchived("class_matematika")
+  ) {
     classesData = [
       {
         id: "class_matematika",

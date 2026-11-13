@@ -185,8 +185,66 @@ export function generateChapterQuestions(
 
   let questions: QuizQuestionData[] = [];
 
-  // Pemetaan spesifik ke 8 Bab Matematika SMP Kelas 8
-  if (lowerTitle.includes("berpangkat") || lowerTitle.includes("pangkat") || lowerTitle.includes("eksponen") || lowerTitle.includes("akar")) {
+  // Pemetaan spesifik ke 5 Bab IPA (Ilmu Pengetahuan Alam) SMP Kelas 8 Fase D
+  const isIpa = mapel.toLowerCase().includes("ipa") || mapel.toLowerCase().includes("sains");
+  if (
+    isIpa ||
+    lowerTitle.includes("sel") ||
+    lowerTitle.includes("mikroskop") ||
+    lowerTitle.includes("organisasi kehidupan") ||
+    lowerTitle.includes("sistem pencernaan") ||
+    lowerTitle.includes("peredaran darah") ||
+    lowerTitle.includes("pesawat sederhana") ||
+    lowerTitle.includes("litosfer")
+  ) {
+    if (lowerTitle.includes("sel") || lowerTitle.includes("mikroskop") || lowerTitle.includes("organisasi")) {
+      questions = getIPABab1Questions();
+    } else if (
+      lowerTitle.includes("tubuh") ||
+      lowerTitle.includes("pencernaan") ||
+      lowerTitle.includes("darah") ||
+      lowerTitle.includes("pernapasan") ||
+      lowerTitle.includes("ekskresi")
+    ) {
+      questions = getIPABab2Questions();
+    } else if (
+      lowerTitle.includes("usaha") ||
+      lowerTitle.includes("energi") ||
+      lowerTitle.includes("pesawat sederhana") ||
+      lowerTitle.includes("tuas") ||
+      lowerTitle.includes("katrol")
+    ) {
+      questions = getIPABab3Questions();
+    } else if (
+      lowerTitle.includes("getaran") ||
+      lowerTitle.includes("gelombang") ||
+      lowerTitle.includes("cahaya") ||
+      lowerTitle.includes("bunyi") ||
+      lowerTitle.includes("cermin")
+    ) {
+      questions = getIPABab4Questions();
+    } else if (
+      lowerTitle.includes("unsur") ||
+      lowerTitle.includes("senyawa") ||
+      lowerTitle.includes("campuran") ||
+      lowerTitle.includes("bumi") ||
+      lowerTitle.includes("litosfer")
+    ) {
+      questions = getIPABab5Questions();
+    } else if (cleanTitle.toLowerCase().includes("bab 1")) {
+      questions = getIPABab1Questions();
+    } else if (cleanTitle.toLowerCase().includes("bab 2")) {
+      questions = getIPABab2Questions();
+    } else if (cleanTitle.toLowerCase().includes("bab 3")) {
+      questions = getIPABab3Questions();
+    } else if (cleanTitle.toLowerCase().includes("bab 4")) {
+      questions = getIPABab4Questions();
+    } else if (cleanTitle.toLowerCase().includes("bab 5")) {
+      questions = getIPABab5Questions();
+    } else {
+      questions = getIPABab1Questions();
+    }
+  } else if (lowerTitle.includes("berpangkat") || lowerTitle.includes("pangkat") || lowerTitle.includes("eksponen") || lowerTitle.includes("akar")) {
     questions = getBilanganBerpangkat15();
   } else if (lowerTitle.includes("pola bilangan") || lowerTitle.includes("barisan")) {
     questions = getPolaBilangan15();
@@ -243,17 +301,17 @@ export function ensureExactly15Questions(
       const nextIdx = i + 1;
       result.push({
         id: `q-${nextIdx}`,
-        pertanyaan: `${nextIdx}. Dalam materi ${topicTitle} Matematika Kelas ${kelas}, manakah pernyataan analisis yang paling tepat?`,
+        pertanyaan: `${nextIdx}. Dalam materi ${topicTitle} ${mapel || "Matematika"} Kelas ${kelas}, manakah pernyataan analisis yang paling tepat?`,
         tipeSoal: "pilihan_ganda",
         opsiSoal: [
-          { id: `opt-${nextIdx}-1`, teksOpsi: `Menerapkan kaidah dan formula konsep ${topicTitle} secara terstruktur.`, benar: true },
-          { id: `opt-${nextIdx}-2`, teksOpsi: "Mengabaikan hubungan keterkaitan variabel dalam perhitungan.", benar: false },
+          { id: `opt-${nextIdx}-1`, teksOpsi: `Menerapkan kaidah dan prinsip konsep ${topicTitle} secara terstruktur.`, benar: true },
+          { id: `opt-${nextIdx}-2`, teksOpsi: "Mengabaikan hubungan keterkaitan variabel dan fakta ilmiah.", benar: false },
           { id: `opt-${nextIdx}-3`, teksOpsi: "Mengambil kesimpulan tanpa memeriksa validitas data.", benar: false },
-          { id: `opt-${nextIdx}-4`, teksOpsi: "Menggunakan asumsi yang bertentangan dengan kaidah matematika.", benar: false },
+          { id: `opt-${nextIdx}-4`, teksOpsi: "Menggunakan asumsi yang bertentangan dengan kaidah materi.", benar: false },
         ],
-        kunciJawaban: `Menerapkan kaidah dan formula konsep ${topicTitle} secara terstruktur.`,
-        pembahasan: `Pemecahan persoalan matematika memerlukan penalaran logis bertahap dan penguasaan formula dasar.`,
-        hintSokratik: `Pilihlah prosedur analisis yang mengutamakan ketelitian konsep matematis.`,
+        kunciJawaban: `Menerapkan kaidah dan prinsip konsep ${topicTitle} secara terstruktur.`,
+        pembahasan: `Pemecahan persoalan ${(mapel || "matematika").toLowerCase()} memerlukan penalaran logis bertahap dan penguasaan konsep dasar.`,
+        hintSokratik: `Pilihlah prosedur analisis yang mengutamakan ketelitian konsep materi.`,
       });
     }
   }
@@ -2018,23 +2076,963 @@ function getStatistikaPeluang15(): QuizQuestionData[] {
 }
 
 // =============================================================================
-// FALLBACK UNIVERSAL KHUSUS MATEMATIKA
+// IPA BAB 1: PENGENALAN SEL & MIKROSKOP (15 BUTIR SOAL FASE D)
+// =============================================================================
+function getIPABab1Questions(): QuizQuestionData[] {
+  return [
+    {
+      id: "ipa-1-1",
+      pertanyaan: "1. Unit struktural dan fungsional terkecil yang menyusun seluruh tubuh makhluk hidup disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-1-a", teksOpsi: "Sel", benar: true },
+        { id: "ipa-1-1-b", teksOpsi: "Jaringan", benar: false },
+        { id: "ipa-1-1-c", teksOpsi: "Organ", benar: false },
+        { id: "ipa-1-1-d", teksOpsi: "Sistem Organ", benar: false },
+      ],
+      kunciJawaban: "Sel",
+      pembahasan: "Sel adalah satuan struktural dan fungsional terkecil dari seluruh organisme hidup.",
+      hintSokratik: "Pikirkan tingkatan organisasi paling dasar sebelum membentuk jaringan.",
+    },
+    {
+      id: "ipa-1-2",
+      pertanyaan: "2. Organel sel tumbuhan yang berfungsi sebagai tempat berlangsungnya proses fotosintesis adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-2-a", teksOpsi: "Kloroplas", benar: true },
+        { id: "ipa-1-2-b", teksOpsi: "Mitokondria", benar: false },
+        { id: "ipa-1-2-c", teksOpsi: "Ribosom", benar: false },
+        { id: "ipa-1-2-d", teksOpsi: "Badan Golgi", benar: false },
+      ],
+      kunciJawaban: "Kloroplas",
+      pembahasan: "Kloroplas mengandung pigmen klorofil yang menyerap foton cahaya matahari untuk mensintesis glukosa.",
+      hintSokratik: "Organel ini memberi warna hijau pada daun dan menghasilkan makanan bagi tumbuhan.",
+    },
+    {
+      id: "ipa-1-3",
+      pertanyaan: "3. Bagian mikroskop yang berfungsi untuk mengatur perbesaran lensa secara bertahap dengan memutar lensa objektif adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-3-a", teksOpsi: "Revolver", benar: true },
+        { id: "ipa-1-3-b", teksOpsi: "Diafragma", benar: false },
+        { id: "ipa-1-3-c", teksOpsi: "Kondensor", benar: false },
+        { id: "ipa-1-3-d", teksOpsi: "Mikrometer", benar: false },
+      ],
+      kunciJawaban: "Revolver",
+      pembahasan: "Revolver adalah lempeng pemutar tempat melekatnya lensa objektif untuk memilih faktor perbesaran.",
+      hintSokratik: "Bagian pemutar bundar tepat di atas meja preparat.",
+    },
+    {
+      id: "ipa-1-4",
+      pertanyaan: "4. Struktur pelindung kaku yang hanya dimiliki oleh sel tumbuhan tetapi tidak dimiliki oleh sel hewan adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-4-a", teksOpsi: "Dinding sel dari selulosa", benar: true },
+        { id: "ipa-1-4-b", teksOpsi: "Membran sel", benar: false },
+        { id: "ipa-1-4-c", teksOpsi: "Sitoplasma", benar: false },
+        { id: "ipa-1-4-d", teksOpsi: "Nukleolus", benar: false },
+      ],
+      kunciJawaban: "Dinding sel dari selulosa",
+      pembahasan: "Sel tumbuhan dilapisi dinding sel tebal berbahan selulosa yang mempertahankan bentuk sel tetap kokoh.",
+      hintSokratik: "Lapisan paling luar yang membuat batang dan daun kaku.",
+    },
+    {
+      id: "ipa-1-5",
+      pertanyaan: "5. Jika seorang siswa mengamati preparat menggunakan lensa okuler perbesaran 10x dan lensa objektif 40x, maka perbesaran total bayangan objek adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-5-a", teksOpsi: "400 kali", benar: true },
+        { id: "ipa-1-5-b", teksOpsi: "50 kali", benar: false },
+        { id: "ipa-1-5-c", teksOpsi: "40 kali", benar: false },
+        { id: "ipa-1-5-d", teksOpsi: "4000 kali", benar: false },
+      ],
+      kunciJawaban: "400 kali",
+      pembahasan: "Perbesaran total = perbesaran okuler x perbesaran objektif = 10 x 40 = 400 kali.",
+      hintSokratik: "Kalikan nilai perbesaran kedua lensa.",
+    },
+    {
+      id: "ipa-1-6",
+      pertanyaan: "6. Organel yang berperan sebagai pusat pengendali seluruh aktivitas sel serta menyimpan materi genetik (DNA) adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-6-a", teksOpsi: "Nukleus (inti sel)", benar: true },
+        { id: "ipa-1-6-b", teksOpsi: "Vakuola", benar: false },
+        { id: "ipa-1-6-c", teksOpsi: "Lisosom", benar: false },
+        { id: "ipa-1-6-d", teksOpsi: "Sentrosom", benar: false },
+      ],
+      kunciJawaban: "Nukleus (inti sel)",
+      pembahasan: "Nukleus memuat kromosom dan mengatur sintesis enzim serta pembelahan sel.",
+      hintSokratik: "Pusat komando sel yang biasanya berada di tengah.",
+    },
+    {
+      id: "ipa-1-7",
+      pertanyaan: "7. Organel yang dijuluki 'the powerhouse of cell' karena berfungsi memproduksi energi ATP melalui respirasi seluler adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-7-a", teksOpsi: "Mitokondria", benar: true },
+        { id: "ipa-1-7-b", teksOpsi: "Retikulum Endoplasma", benar: false },
+        { id: "ipa-1-7-c", teksOpsi: "Badan Golgi", benar: false },
+        { id: "ipa-1-7-d", teksOpsi: "Peroksisom", benar: false },
+      ],
+      kunciJawaban: "Mitokondria",
+      pembahasan: "Mitokondria menguraikan glukosa bersama oksigen untuk menghasilkan molekul penyimpan energi ATP.",
+      hintSokratik: "Organel berbentuk lonjong dengan lekukan membran krista.",
+    },
+    {
+      id: "ipa-1-8",
+      pertanyaan: "8. Urutan hierarki organisasi kehidupan dari tingkat terendah hingga tertinggi yang benar adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-8-a", teksOpsi: "Sel -> Jaringan -> Organ -> Sistem Organ -> Organisme", benar: true },
+        { id: "ipa-1-8-b", teksOpsi: "Sel -> Organ -> Jaringan -> Organisme -> Sistem Organ", benar: false },
+        { id: "ipa-1-8-c", teksOpsi: "Jaringan -> Sel -> Organ -> Sistem Organ -> Organisme", benar: false },
+        { id: "ipa-1-8-d", teksOpsi: "Organisme -> Sistem Organ -> Organ -> Jaringan -> Sel", benar: false },
+      ],
+      kunciJawaban: "Sel -> Jaringan -> Organ -> Sistem Organ -> Organisme",
+      pembahasan: "Sel sejenis berkumpul membentuk jaringan; jaringan menyusun organ; beberapa organ bekerja sama menjadi sistem organ; kumpulan sistem organ membentuk organisme utuh.",
+      hintSokratik: "Mulai dari unit mikroskopis sel hingga makhluk hidup utuh.",
+    },
+    {
+      id: "ipa-1-9",
+      pertanyaan: "9. Kenop pemutar pada mikroskop yang digunakan untuk memfokuskan bayangan secara cepat dengan menaik-turunkan tabung adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-9-a", teksOpsi: "Makrometer (pemutar kasar)", benar: true },
+        { id: "ipa-1-9-b", teksOpsi: "Mikrometer (pemutar halus)", benar: false },
+        { id: "ipa-1-9-c", teksOpsi: "Kondensor", benar: false },
+        { id: "ipa-1-9-d", teksOpsi: "Diafragma", benar: false },
+      ],
+      kunciJawaban: "Makrometer (pemutar kasar)",
+      pembahasan: "Makrometer menggerakkan tabung optik secara cepat untuk menemukan bidang fokus awal.",
+      hintSokratik: "Kenop pemutar yang ukurannya lebih besar.",
+    },
+    {
+      id: "ipa-1-10",
+      pertanyaan: "10. Perbedaan vakuola antara sel tumbuhan dewasa dan sel hewan yang tepat adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-1-10-a", teksOpsi: "Tumbuhan memiliki vakuola sentral berukuran besar, sedangkan hewan vakuolanya kecil atau sementara", benar: true },
+        { id: "ipa-1-10-b", teksOpsi: "Tumbuhan tidak memiliki vakuola, sedangkan hewan memiliki vakuola raksasa", benar: false },
+        { id: "ipa-1-10-c", teksOpsi: "Vakuola tumbuhan hanya untuk ekskresi, vakuola hewan untuk fotosintesis", benar: false },
+        { id: "ipa-1-10-d", teksOpsi: "Keduanya memiliki vakuola berukuran sama persis", benar: false },
+      ],
+      kunciJawaban: "Tumbuhan memiliki vakuola sentral berukuran besar, sedangkan hewan vakuolanya kecil atau sementara",
+      pembahasan: "Vakuola sentral sel tumbuhan mendominasi ruang sel guna menampung cairan sel dan memelihara tekanan turgor.",
+      hintSokratik: "Sel tumbuhan membutuhkan kantung cairan besar untuk mempertahankan ketegaran.",
+    },
+    {
+      id: "ipa-1-11",
+      pertanyaan: "11. [Jawaban Singkat] Organel berbentuk butiran kecil tanpa membran yang menjadi tempat sintesis protein di dalam sel disebut...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Ribosom",
+      pembahasan: "Ribosom merangkai asam amino menjadi rantai polipeptida protein sesuai instruksi mRNA.",
+      hintSokratik: "Nama organel berawalan huruf R.",
+    },
+    {
+      id: "ipa-1-12",
+      pertanyaan: "12. [Jawaban Singkat] Lensa mikroskop yang posisinya paling dekat dengan mata pengamat disebut lensa...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Okuler",
+      pembahasan: "Lensa okuler berada pada ujung atas tabung mikroskop tempat pengamat meletakkan mata.",
+      hintSokratik: "Berasal dari kata latin 'oculus' yang berarti mata.",
+    },
+    {
+      id: "ipa-1-13",
+      pertanyaan: "13. [Jawaban Singkat] Lapisan tipis semipermeabel yang membatasi isi sel dengan lingkungan luar disebut membran...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Sel (atau Membran Plasma)",
+      pembahasan: "Membran sel bersifat selektif permeabel untuk mengontrol zat yang masuk dan keluar sel.",
+      hintSokratik: "Dikenal juga sebagai membran plasma.",
+    },
+    {
+      id: "ipa-1-14",
+      pertanyaan: "14. [Jawaban Panjang / Esai] Jelaskan minimal 3 perbedaan utama antara sel hewan dan sel tumbuhan dari segi organel dan bentuk fisiknya!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Sel tumbuhan memiliki dinding sel dari selulosa sehingga bentuknya kaku dan tetap, sedangkan sel hewan tidak memiliki dinding sel sehingga bentuknya fleksibel. 2. Sel tumbuhan memiliki kloroplas untuk fotosintesis, sedangkan sel hewan tidak memiliki kloroplas. 3. Sel tumbuhan memiliki vakuola sentral berukuran besar, sedangkan sel hewan vakuolanya kecil atau tidak ada. Selain itu, sel hewan memiliki sentriol untuk pembelahan sel.",
+      pembahasan: "Karakteristik khas sel tumbuhan adalah keberadaan dinding sel kaku, kloroplas fotosintetik, dan vakuola turgor besar, yang membedakannya secara mutlak dari sel hewan.",
+      hintSokratik: "Bandingkan dinding sel, kloroplas, dan ukuran vakuola.",
+    },
+    {
+      id: "ipa-1-15",
+      pertanyaan: "15. [Jawaban Panjang / Esai] Uraikan langkah-langkah yang tepat saat menggunakan mikroskop cahaya untuk mengamati preparat jaringan tumbuhan dari perbesaran rendah ke perbesaran tinggi!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Letakkan preparat di atas meja objek dan jepit. 2. Atur cermin/lampu dan diafragma untuk memperoleh pencahayaan merata. 3. Pasang lensa objektif perbesaran terendah (4x/10x) menggunakan revolver. 4. Putar makrometer perlahan hingga bayangan objek terlihat jelas. 5. Gunakan mikrometer untuk memperhalus fokus objek. 6. Putar revolver ke lensa perbesaran lebih tinggi (40x), dan pertegas ketajaman HANYA menggunakan mikrometer agar lensa tidak menyentuh preparat.",
+      pembahasan: "Standar prosedur mikroskop adalah mengawali pengamatan dengan perbesaran lemah, mencari fokus dengan makrometer, lalu beralih ke perbesaran kuat dengan fokus halus menggunakan mikrometer.",
+      hintSokratik: "Sebutkan tahap penempatan preparat, pencahayaan, perbesaran lemah, lalu perbesaran tinggi.",
+    },
+  ];
+}
+
+// =============================================================================
+// IPA BAB 2: STRUKTUR & FUNGSI TUBUH MANUSIA (15 BUTIR SOAL FASE D)
+// =============================================================================
+function getIPABab2Questions(): QuizQuestionData[] {
+  return [
+    {
+      id: "ipa-2-1",
+      pertanyaan: "1. Proses pencernaan kimiawi karbohidrat pertama kali dimulai di dalam rongga mulut oleh bantuan enzim...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-1-a", teksOpsi: "Ptialin (Amilase)", benar: true },
+        { id: "ipa-2-1-b", teksOpsi: "Pepsin", benar: false },
+        { id: "ipa-2-1-c", teksOpsi: "Lipase", benar: false },
+        { id: "ipa-2-1-d", teksOpsi: "Tripsin", benar: false },
+      ],
+      kunciJawaban: "Ptialin (Amilase)",
+      pembahasan: "Enzim ptialin (amilase ludah) memecah amilum (pati) menjadi maltosa sederhana di rongga mulut.",
+      hintSokratik: "Enzim yang dihasilkan oleh kelenjar ludah.",
+    },
+    {
+      id: "ipa-2-2",
+      pertanyaan: "2. Bagian saluran pencernaan yang permukaannya dipenuhi jonjot usus (villi) untuk memaksimalkan penyerapan sari-sari makanan adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-2-a", teksOpsi: "Usus halus (Ileum)", benar: true },
+        { id: "ipa-2-2-b", teksOpsi: "Usus besar (Kolon)", benar: false },
+        { id: "ipa-2-2-c", teksOpsi: "Lambung (Ventrikulus)", benar: false },
+        { id: "ipa-2-2-d", teksOpsi: "Kerongkongan (Esofagus)", benar: false },
+      ],
+      kunciJawaban: "Usus halus (Ileum)",
+      pembahasan: "Villi pada usus halus memperluas area penyerapan nutrisi ke dalam pembuluh darah dan limfa.",
+      hintSokratik: "Organ pencernaan terpanjang yang bertugas menyerap nutrisi.",
+    },
+    {
+      id: "ipa-2-3",
+      pertanyaan: "3. Ruang jantung yang berdinding paling tebal dan berotot kuat karena bertugas memompa darah bersih kaya oksigen ke seluruh tubuh adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-3-a", teksOpsi: "Bilik kiri (Ventrikel kiri)", benar: true },
+        { id: "ipa-2-3-b", teksOpsi: "Bilik kanan (Ventrikel kanan)", benar: false },
+        { id: "ipa-2-3-c", teksOpsi: "Serambi kiri (Atrium kiri)", benar: false },
+        { id: "ipa-2-3-d", teksOpsi: "Serambi kanan (Atrium kanan)", benar: false },
+      ],
+      kunciJawaban: "Bilik kiri (Ventrikel kiri)",
+      pembahasan: "Bilik kiri memompa darah melewati aorta menuju ke seluruh jaringan tubuh sehingga membutuhkan tekanan kontraksi terbesar.",
+      hintSokratik: "Ruang bawah sebelah kiri jantung.",
+    },
+    {
+      id: "ipa-2-4",
+      pertanyaan: "4. Pembuluh darah yang membawa darah keluar dari jantung, memiliki dinding elastis dan tebal, serta denyutnya terasa disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-4-a", teksOpsi: "Pembuluh Nadi (Arteri)", benar: true },
+        { id: "ipa-2-4-b", teksOpsi: "Pembuluh Balik (Vena)", benar: false },
+        { id: "ipa-2-4-c", teksOpsi: "Pembuluh Kapiler", benar: false },
+        { id: "ipa-2-4-d", teksOpsi: "Pembuluh Limfa", benar: false },
+      ],
+      kunciJawaban: "Pembuluh Nadi (Arteri)",
+      pembahasan: "Arteri mengalirkan darah bertekanan tinggi dari jantung ke organ-organ tubuh.",
+      hintSokratik: "Pembuluh tempat meraba denyut nadi di pergelangan tangan.",
+    },
+    {
+      id: "ipa-2-5",
+      pertanyaan: "5. Tahapan pembentukan urin yang berlangsung di glomerulus untuk menyaring zat sisa darah menjadi urin primer disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-5-a", teksOpsi: "Filtrasi (Penyaringan)", benar: true },
+        { id: "ipa-2-5-b", teksOpsi: "Reabsorpsi (Penyerapan kembali)", benar: false },
+        { id: "ipa-2-5-c", teksOpsi: "Augmentasi (Pengeluaran zat sisa)", benar: false },
+        { id: "ipa-2-5-d", teksOpsi: "Defekasi", benar: false },
+      ],
+      kunciJawaban: "Filtrasi (Penyaringan)",
+      pembahasan: "Filtrasi darah di glomerulus menghasilkan filtrat glomerulus (urin primer) bebas sel darah dan protein besar.",
+      hintSokratik: "Tahap awal pemisahan cairan darah dari partikel besar.",
+    },
+    {
+      id: "ipa-2-6",
+      pertanyaan: "6. Tempat terjadinya pertukaran gas oksigen ($O_2$) dan karbon dioksida ($CO_2$) secara difusi di dalam paru-paru adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-6-a", teksOpsi: "Alveolus", benar: true },
+        { id: "ipa-2-6-b", teksOpsi: "Bronkus", benar: false },
+        { id: "ipa-2-6-c", teksOpsi: "Trakea", benar: false },
+        { id: "ipa-2-6-d", teksOpsi: "Laring", benar: false },
+      ],
+      kunciJawaban: "Alveolus",
+      pembahasan: "Alveolus merupakan kantung udara berdinding tipis yang dikelilingi anyaman kapiler darah untuk difusi gas.",
+      hintSokratik: "Kantung-kantung kecil seperti gerombolan anggur di ujung bronkiolus.",
+    },
+    {
+      id: "ipa-2-7",
+      pertanyaan: "7. Protein pembawa pada eritrosit yang bertugas mengikat molekul oksigen dan memberi warna merah pada darah adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-7-a", teksOpsi: "Hemoglobin", benar: true },
+        { id: "ipa-2-7-b", teksOpsi: "Fibrinogen", benar: false },
+        { id: "ipa-2-7-c", teksOpsi: "Albumin", benar: false },
+        { id: "ipa-2-7-d", teksOpsi: "Globulin", benar: false },
+      ],
+      kunciJawaban: "Hemoglobin",
+      pembahasan: "Hemoglobin berikatan dengan oksigen membentuk oksihemoglobin untuk didistribusikan ke seluruh sel tubuh.",
+      hintSokratik: "Kadar pigmen darah yang sering diukur saat tes anemia (Hb).",
+    },
+    {
+      id: "ipa-2-8",
+      pertanyaan: "8. Enzim pada getah lambung yang berfungsi menguraikan protein menjadi molekul pepton adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-8-a", teksOpsi: "Pepsin", benar: true },
+        { id: "ipa-2-8-b", teksOpsi: "Lipase", benar: false },
+        { id: "ipa-2-8-c", teksOpsi: "Amilase", benar: false },
+        { id: "ipa-2-8-d", teksOpsi: "Tripsin", benar: false },
+      ],
+      kunciJawaban: "Pepsin",
+      pembahasan: "Pepsinogen diaktifkan oleh asam klorida (HCl) lambung menjadi pepsin aktif pencerna protein.",
+      hintSokratik: "Nama enzim diawali huruf P yang bekerja di lingkungan asam lambung.",
+    },
+    {
+      id: "ipa-2-9",
+      pertanyaan: "9. Organ ekskresi terbesar yang melindungi tubuh, mengeluarkan keringat, serta membantu regulasi suhu tubuh adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-9-a", teksOpsi: "Kulit", benar: true },
+        { id: "ipa-2-9-b", teksOpsi: "Hati", benar: false },
+        { id: "ipa-2-9-c", teksOpsi: "Ginjal", benar: false },
+        { id: "ipa-2-9-d", teksOpsi: "Paru-paru", benar: false },
+      ],
+      kunciJawaban: "Kulit",
+      pembahasan: "Kulit melalui kelenjar keringat (glandula sudorifera) menyekresikan sisa air, garam mineral, dan urea.",
+      hintSokratik: "Lapisan pembungkus seluruh permukaan luar tubuh.",
+    },
+    {
+      id: "ipa-2-10",
+      pertanyaan: "10. Kelainan darah herediter di mana darah sukar membeku saat terjadi luka akibat kekurangan faktor pembeku darah disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-2-10-a", teksOpsi: "Hemofilia", benar: true },
+        { id: "ipa-2-10-b", teksOpsi: "Anemia", benar: false },
+        { id: "ipa-2-10-c", teksOpsi: "Leukemia", benar: false },
+        { id: "ipa-2-10-d", teksOpsi: "Talasemia", benar: false },
+      ],
+      kunciJawaban: "Hemofilia",
+      pembahasan: "Hemofilia adalah penyakit keturunan yang menyebabkan gangguan proses pembekuan darah.",
+      hintSokratik: "Penyakit darah sukar membeku.",
+    },
+    {
+      id: "ipa-2-11",
+      pertanyaan: "11. [Jawaban Singkat] Pembuluh darah vena yang mengangkut darah kaya oksigen dari paru-paru kembali ke serambi kiri jantung adalah vena...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Pulmonalis",
+      pembahasan: "Vena pulmonalis adalah satu-satunya pembuluh balik yang membawa darah kaya oksigen.",
+      hintSokratik: "Kata latin untuk paru-paru adalah pulmo.",
+    },
+    {
+      id: "ipa-2-12",
+      pertanyaan: "12. [Jawaban Singkat] Organ pencernaan yang memproduksi empedu untuk mengemulsikan lemak makanan adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Hati (Hepar)",
+      pembahasan: "Hati menghasilkan cairan empedu yang disimpan di kantung empedu untuk mencerna lemak.",
+      hintSokratik: "Kelenjar terbesar di rongga perut kanan atas.",
+    },
+    {
+      id: "ipa-2-13",
+      pertanyaan: "13. [Jawaban Singkat] Organ ekskresi utama manusia berbentuk seperti kacang merah yang menyaring limbah urea dari darah adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Ginjal",
+      pembahasan: "Ginjal berfungsi menyaring darah dan memproduksi urin.",
+      hintSokratik: "Berjumlah sepasang di punggung bagian bawah.",
+    },
+    {
+      id: "ipa-2-14",
+      pertanyaan: "14. [Jawaban Panjang / Esai] Jelaskan perbedaan rute peredaran darah besar dan peredaran darah kecil pada tubuh manusia secara berurutan!",
+      tipeSoal: "esai",
+      kunciJawaban: "Peredaran darah besar (Sistemik): Bilik Kiri Jantung (darah kaya O2) -> Aorta -> Pembuluh Arteri -> Seluruh Tubuh -> Pembuluh Vena (darah kaya CO2) -> Serambi Kanan Jantung. Peredaran darah kecil (Pulmonal): Bilik Kanan Jantung (darah kaya CO2) -> Arteri Pulmonalis -> Paru-paru (pertukaran gas di alveolus) -> Vena Pulmonalis (darah kaya O2) -> Serambi Kiri Jantung.",
+      pembahasan: "Peredaran darah ganda manusia terdiri atas sirkuit sistemik (jantung - seluruh tubuh - jantung) dan sirkuit pulmonal (jantung - paru-paru - jantung).",
+      hintSokratik: "Sebutkan ruang jantung awal, organ tujuan, dan ruang jantung akhir untuk kedua jalur.",
+    },
+    {
+      id: "ipa-2-15",
+      pertanyaan: "15. [Jawaban Panjang / Esai] Uraikan proses pencernaan sebutir nasi (karbohidrat) mulai dari rongga mulut hingga nutrisinya diserap ke dalam pembuluh darah!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Di mulut: Nasi dikunyah secara mekanik oleh gigi dan dicerna kimiawi oleh enzim ptialin (amilase) menjadi maltosa. 2. Di kerongkongan: Bolus nasi didorong oleh gerak peristaltik menuju lambung. 3. Di usus halus: Amilase pankreas melanjutkan pemecahan amilum, lalu enzim maltase di usus halus mengubah maltosa menjadi glukosa. 4. Penyerapan: Glukosa diserap oleh vili (jonjot usus) masuk ke pembuluh darah kapiler untuk dialirkan ke seluruh sel tubuh.",
+      pembahasan: "Pencernaan karbohidrat berlangsung secara mekanik dan kimiawi berjenjang hingga menjadi molekul monomer glukosa yang siap diserap tubuh.",
+      hintSokratik: "Jelaskan peran mulut (ptialin), kerongkongan, usus halus (enzim maltase & amilase pankreas), dan vili.",
+    },
+  ];
+}
+
+// =============================================================================
+// IPA BAB 3: USAHA, ENERGI, DAN PESAWAT SEDERHANA (15 BUTIR SOAL FASE D)
+// =============================================================================
+function getIPABab3Questions(): QuizQuestionData[] {
+  return [
+    {
+      id: "ipa-3-1",
+      pertanyaan: "1. Sebuah balok ditarik dengan gaya tetap sebesar 40 N sehingga bergeser sejauh 5 meter searah dengan gaya. Besar usaha fisika yang dilakukan adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-1-a", teksOpsi: "200 Joule", benar: true },
+        { id: "ipa-3-1-b", teksOpsi: "8 Joule", benar: false },
+        { id: "ipa-3-1-c", teksOpsi: "45 Joule", benar: false },
+        { id: "ipa-3-1-d", teksOpsi: "200 Watt", benar: false },
+      ],
+      kunciJawaban: "200 Joule",
+      pembahasan: "Usaha W = F x s = 40 N x 5 m = 200 Joule.",
+      hintSokratik: "Gunakan rumus W = F x s.",
+    },
+    {
+      id: "ipa-3-2",
+      pertanyaan: "2. Energi yang tersimpan pada suatu benda karena kedudukan atau ketinggiannya terhadap permukaan tanah disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-2-a", teksOpsi: "Energi Potensial Gravitasi", benar: true },
+        { id: "ipa-3-2-b", teksOpsi: "Energi Kinetik", benar: false },
+        { id: "ipa-3-2-c", teksOpsi: "Energi Kalor", benar: false },
+        { id: "ipa-3-2-d", teksOpsi: "Energi Kimia", benar: false },
+      ],
+      kunciJawaban: "Energi Potensial Gravitasi",
+      pembahasan: "Energi potensial gravitasi dirumuskan Ep = m x g x h, berbanding lurus dengan massa dan ketinggian benda.",
+      hintSokratik: "Energi benda yang berada di tempat tinggi.",
+    },
+    {
+      id: "ipa-3-3",
+      pertanyaan: "3. Pada tuas jenis pertama, posisi susunan titik tumpu, beban, dan kuasa yang benar adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-3-a", teksOpsi: "Titik tumpu berada di antara beban dan kuasa", benar: true },
+        { id: "ipa-3-3-b", teksOpsi: "Beban berada di antara titik tumpu dan kuasa", benar: false },
+        { id: "ipa-3-3-c", teksOpsi: "Kuasa berada di antara titik tumpu dan beban", benar: false },
+        { id: "ipa-3-3-d", teksOpsi: "Titik tumpu berada di ujung beban", benar: false },
+      ],
+      kunciJawaban: "Titik tumpu berada di antara beban dan kuasa",
+      pembahasan: "Tuas jenis pertama memiliki titik tumpu di tengah (contoh: gunting, tang, jungkat-jungkit).",
+      hintSokratik: "Seperti susunan gunting atau jungkat-jungkit.",
+    },
+    {
+      id: "ipa-3-4",
+      pertanyaan: "4. Sebuah bidang miring memiliki panjang lintasan s = 6 meter dan ketinggian puncak h = 1,5 meter. Keuntungan mekanis (KM) bidang miring tersebut adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-4-a", teksOpsi: "4", benar: true },
+        { id: "ipa-3-4-b", teksOpsi: "9", benar: false },
+        { id: "ipa-3-4-c", teksOpsi: "7,5", benar: false },
+        { id: "ipa-3-4-d", teksOpsi: "0,25", benar: false },
+      ],
+      kunciJawaban: "4",
+      pembahasan: "Keuntungan mekanis bidang miring KM = s / h = 6 / 1,5 = 4.",
+      hintSokratik: "Bagi panjang lintasan miring dengan tingginya.",
+    },
+    {
+      id: "ipa-3-5",
+      pertanyaan: "5. Keuntungan mekanis dari penggunaan katrol tetap tunggal untuk menimba air sumur adalah 1, karena katrol tetap berfungsi untuk...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-5-a", teksOpsi: "Mengubah arah gaya kuasa agar searah gravitasi", benar: true },
+        { id: "ipa-3-5-b", teksOpsi: "Mengurangi berat beban menjadi setengahnya", benar: false },
+        { id: "ipa-3-5-c", teksOpsi: "Mempercepat benda tanpa gaya", benar: false },
+        { id: "ipa-3-5-d", teksOpsi: "Menghilangkan gaya gesek sama sekali", benar: false },
+      ],
+      kunciJawaban: "Mengubah arah gaya kuasa agar searah gravitasi",
+      pembahasan: "Katrol tetap memiliki KM = 1; besar gaya kuasa sama dengan berat beban, keuntungannya terletak pada kemudahan arah tarikan.",
+      hintSokratik: "Katrol tetap tidak melipatgandakan gaya, melainkan mempermudah arah tarikan.",
+    },
+    {
+      id: "ipa-3-6",
+      pertanyaan: "6. Sebuah mobil bermassa 800 kg melaju dengan kelajuan 10 m/s. Besar energi kinetik mobil tersebut adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-6-a", teksOpsi: "40.000 Joule", benar: true },
+        { id: "ipa-3-6-b", teksOpsi: "80.000 Joule", benar: false },
+        { id: "ipa-3-6-c", teksOpsi: "8.000 Joule", benar: false },
+        { id: "ipa-3-6-d", teksOpsi: "4.000 Joule", benar: false },
+      ],
+      kunciJawaban: "40.000 Joule",
+      pembahasan: "Ek = 1/2 x m x v^2 = 1/2 x 800 x (10^2) = 400 x 100 = 40.000 Joule.",
+      hintSokratik: "Gunakan rumus Ek = 1/2 m v^2.",
+    },
+    {
+      id: "ipa-3-7",
+      pertanyaan: "7. Alat-alat di bawah ini yang prinsip kerjanya menerapkan bidang miring adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-7-a", teksOpsi: "Kapak, sekrup, dan pisau", benar: true },
+        { id: "ipa-3-7-b", teksOpsi: "Gunting, linggis, dan tang", benar: false },
+        { id: "ipa-3-7-c", teksOpsi: "Gerobak roda satu dan pembuka botol", benar: false },
+        { id: "ipa-3-7-d", teksOpsi: "Pinset dan sumpit", benar: false },
+      ],
+      kunciJawaban: "Kapak, sekrup, dan pisau",
+      pembahasan: "Kapak, mata pisau (baji), dan ulir sekrup merupakan modifikasi dari bidang miring.",
+      hintSokratik: "Benda dengan penampang miring tajam atau berulir.",
+    },
+    {
+      id: "ipa-3-8",
+      pertanyaan: "8. Gerobak dorong roda satu dan pemotong kertas tuas termasuk kelompok tuas jenis ke...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-8-a", teksOpsi: "Kedua (beban di tengah)", benar: true },
+        { id: "ipa-3-8-b", teksOpsi: "Pertama (titik tumpu di tengah)", benar: false },
+        { id: "ipa-3-8-c", teksOpsi: "Ketiga (kuasa di tengah)", benar: false },
+        { id: "ipa-3-8-d", teksOpsi: "Keempat", benar: false },
+      ],
+      kunciJawaban: "Kedua (beban di tengah)",
+      pembahasan: "Pada tuas jenis 2, titik beban terletak di antara titik tumpu (roda depan) dan kuasa (gagang pendorong).",
+      hintSokratik: "Beban berada di bak tengah antara roda dan tangan pengangkat.",
+    },
+    {
+      id: "ipa-3-9",
+      pertanyaan: "9. Laju dilakukannya usaha atau besarnya usaha per satuan waktu disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-9-a", teksOpsi: "Daya (Power)", benar: true },
+        { id: "ipa-3-9-b", teksOpsi: "Gaya (Force)", benar: false },
+        { id: "ipa-3-9-c", teksOpsi: "Tekanan (Pressure)", benar: false },
+        { id: "ipa-3-9-d", teksOpsi: "Momentum", benar: false },
+      ],
+      kunciJawaban: "Daya (Power)",
+      pembahasan: "Daya P = W / t dengan satuan Watt (Joule/detik).",
+      hintSokratik: "Diukur dalam satuan Watt.",
+    },
+    {
+      id: "ipa-3-10",
+      pertanyaan: "10. Seorang atlet mendorong dinding gedung dengan gaya 500 N selama 2 menit hingga berkeringat, namun dinding tidak bergeser sama sekali. Besar usaha fisika yang dilakukan adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-3-10-a", teksOpsi: "0 Joule", benar: true },
+        { id: "ipa-3-10-b", teksOpsi: "1000 Joule", benar: false },
+        { id: "ipa-3-10-c", teksOpsi: "60.000 Joule", benar: false },
+        { id: "ipa-3-10-d", teksOpsi: "500 Joule", benar: false },
+      ],
+      kunciJawaban: "0 Joule",
+      pembahasan: "Dalam fisika, usaha bernilai nol jika perpindahan benda s = 0 (W = F x 0 = 0 Joule).",
+      hintSokratik: "Syarat adanya usaha fisika adalah benda harus mengalami perpindahan.",
+    },
+    {
+      id: "ipa-3-11",
+      pertanyaan: "11. [Jawaban Singkat] Satuan internasional (SI) untuk besaran Usaha dan Energi adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Joule (J)",
+      pembahasan: "1 Joule setara dengan 1 Newton meter (N.m).",
+      hintSokratik: "Nama ilmuwan penemu hukum kekekalan energi berawalan J.",
+    },
+    {
+      id: "ipa-3-12",
+      pertanyaan: "12. [Jawaban Singkat] Rumus energi kinetik benda bermassa m yang bergerak dengan kecepatan v adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "1/2 m v^2",
+      pembahasan: "Energi kinetik Ek = 1/2 x m x v^2.",
+      hintSokratik: "Setengah dikali massa dikali kuadrat kecepatan.",
+    },
+    {
+      id: "ipa-3-13",
+      pertanyaan: "13. [Jawaban Singkat] Pesawat sederhana yang berupa roda beralur dengan tali pengikat disebut...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Katrol",
+      pembahasan: "Katrol digunakan untuk mengangkat benda dengan mengubah arah tarikan atau memperkecil gaya kuasa.",
+      hintSokratik: "Sering dipakai menimba air sumur atau tiang bendera.",
+    },
+    {
+      id: "ipa-3-14",
+      pertanyaan: "14. [Jawaban Panjang / Esai] Sebuah batu seberat 600 N hendak diangkat menggunakan tuas sepanjang 2 meter. Titik tumpu diletakkan 0,5 meter dari batu (lengan beban = 0,5 m). Hitunglah gaya kuasa minimum yang diperlukan dan keuntungan mekanis tuas tersebut!",
+      tipeSoal: "esai",
+      kunciJawaban: "Diketahui: w = 600 N, lb = 0,5 m, panjang tuas = 2 m -> lk = 2 - 0,5 = 1,5 m. Syarat kesetimbangan: w x lb = F x lk -> 600 x 0,5 = F x 1,5 -> 300 = 1,5 F -> F = 200 N. Keuntungan mekanis: KM = w / F = 600 / 200 = 3 (atau KM = lk / lb = 1,5 / 0,5 = 3). Gaya kuasa minimum adalah 200 N dengan KM = 3.",
+      pembahasan: "Prinsip tuas menyatakan w x lb = F x lk. Semakin panjang lengan kuasa, semakin kecil gaya kuasa yang dibutuhkan.",
+      hintSokratik: "Cari panjang lengan kuasa dahulu (2 - 0,5 = 1,5 m), lalu gunakan rumus w x lb = F x lk.",
+    },
+    {
+      id: "ipa-3-15",
+      pertanyaan: "15. [Jawaban Panjang / Esai] Uraikan hukum kekekalan energi mekanik yang terjadi pada buah kelapa yang jatuh bebas dari atas pohon setinggi 10 meter hingga menyentuh tanah!",
+      tipeSoal: "esai",
+      kunciJawaban: "Hukum Kekekalan Energi Mekanik menyatakan Em = Ep + Ek = konstan. 1. Di puncak pohon (ketinggian maksimum h): Buah kelapa diam (v = 0), sehingga Energi Potensial maksimum (Ep = mgh) dan Energi Kinetik nol (Ek = 0). 2. Saat sedang jatuh melayang: Ketinggian berkurang dan kecepatan bertambah, sehingga Energi Potensial berangsur berubah menjadi Energi Kinetik. 3. Sesaat sebelum menyentuh tanah (h = 0): Seluruh Energi Potensial telah berubah sempurna menjadi Energi Kinetik maksimum (Ek = 1/2 mv^2), sedangkan Ep = 0. Total energi mekanik tetap sama di setiap titik.",
+      pembahasan: "Pada gerak jatuh bebas tanpa hambatan udara, energi potensial terkonversi secara kontinu menjadi energi kinetik dengan jumlah total yang selalu kekal.",
+      hintSokratik: "Jelaskan kondisi energi di posisi atas pohon, saat melayang di udara, dan sesaat sebelum membentur tanah.",
+    },
+  ];
+}
+
+// =============================================================================
+// IPA BAB 4: GETARAN, GELOMBANG, DAN CAHAYA (15 BUTIR SOAL FASE D)
+// =============================================================================
+function getIPABab4Questions(): QuizQuestionData[] {
+  return [
+    {
+      id: "ipa-4-1",
+      pertanyaan: "1. Waktu yang diperlukan suatu benda untuk melakukan satu kali getaran penuh secara berulang disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-1-a", teksOpsi: "Periode getaran (T)", benar: true },
+        { id: "ipa-4-1-b", teksOpsi: "Frekuensi getaran (f)", benar: false },
+        { id: "ipa-4-1-c", teksOpsi: "Amplitudo (A)", benar: false },
+        { id: "ipa-4-1-d", teksOpsi: "Cepat rambat", benar: false },
+      ],
+      kunciJawaban: "Periode getaran (T)",
+      pembahasan: "Periode adalah waktu (detik) per satu getaran (T = t / n).",
+      hintSokratik: "Kata kuncinya adalah waktu untuk satu getaran.",
+    },
+    {
+      id: "ipa-4-2",
+      pertanyaan: "2. Banyaknya getaran yang terjadi dalam kurun waktu satu detik disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-2-a", teksOpsi: "Frekuensi (f)", benar: true },
+        { id: "ipa-4-2-b", teksOpsi: "Periode (T)", benar: false },
+        { id: "ipa-4-2-c", teksOpsi: "Panjang gelombang", benar: false },
+        { id: "ipa-4-2-d", teksOpsi: "Sudut deviasi", benar: false },
+      ],
+      kunciJawaban: "Frekuensi (f)",
+      pembahasan: "Frekuensi f = n / t diukur dalam satuan Hertz (Hz). Hubungannya dengan periode adalah f = 1/T.",
+      hintSokratik: "Jumlah getaran tiap satu detik.",
+    },
+    {
+      id: "ipa-4-3",
+      pertanyaan: "3. Gelombang yang arah rambatnya tegak lurus dengan arah getarnya (memiliki bukit dan lembah) disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-3-a", teksOpsi: "Gelombang Transversal", benar: true },
+        { id: "ipa-4-3-b", teksOpsi: "Gelombang Longitudinal", benar: false },
+        { id: "ipa-4-3-c", teksOpsi: "Gelombang Stasioner", benar: false },
+        { id: "ipa-4-3-d", teksOpsi: "Gelombang Bunyi", benar: false },
+      ],
+      kunciJawaban: "Gelombang Transversal",
+      pembahasan: "Gelombang transversal memiliki arah getar tegak lurus arah rambat (contoh: gelombang tali, gelombang cahaya).",
+      hintSokratik: "Seperti gelombang air atau tali yang berayun naik-turun.",
+    },
+    {
+      id: "ipa-4-4",
+      pertanyaan: "4. Sebuah gelombang merambat dengan frekuensi 50 Hz dan panjang gelombang 3 meter. Cepat rambat gelombang tersebut adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-4-a", teksOpsi: "150 m/s", benar: true },
+        { id: "ipa-4-4-b", teksOpsi: "53 m/s", benar: false },
+        { id: "ipa-4-4-c", teksOpsi: "16,7 m/s", benar: false },
+        { id: "ipa-4-4-d", teksOpsi: "75 m/s", benar: false },
+      ],
+      kunciJawaban: "150 m/s",
+      pembahasan: "Cepat rambat v = lambda x f = 3 m x 50 Hz = 150 m/s.",
+      hintSokratik: "Kalikan panjang gelombang dengan frekuensinya.",
+    },
+    {
+      id: "ipa-4-5",
+      pertanyaan: "5. Rentang frekuensi gelombang bunyi yang dapat didengar secara wajar oleh telinga manusia (bunyi audiosonik) adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-5-a", teksOpsi: "20 Hz hingga 20.000 Hz", benar: true },
+        { id: "ipa-4-5-b", teksOpsi: "Kurang dari 20 Hz", benar: false },
+        { id: "ipa-4-5-c", teksOpsi: "Lebih dari 20.000 Hz", benar: false },
+        { id: "ipa-4-5-d", teksOpsi: "1.000 Hz hingga 5.000 Hz saja", benar: false },
+      ],
+      kunciJawaban: "20 Hz hingga 20.000 Hz",
+      pembahasan: "Audiosonik berada pada frekuensi 20 - 20.000 Hz. Di bawah 20 Hz adalah infrasonik dan di atas 20.000 Hz adalah ultrasonik.",
+      hintSokratik: "Batas pendengaran normal manusia berkisar dari 20 hingga 20 ribu.",
+    },
+    {
+      id: "ipa-4-6",
+      pertanyaan: "6. Sifat bayangan yang selalu dibentuk oleh cermin datar adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-6-a", teksOpsi: "Maya, tegak, dan sama besar", benar: true },
+        { id: "ipa-4-6-b", teksOpsi: "Nyata, terbalik, dan diperbesar", benar: false },
+        { id: "ipa-4-6-c", teksOpsi: "Nyata, tegak, dan diperkecil", benar: false },
+        { id: "ipa-4-6-d", teksOpsi: "Maya, terbalik, dan sama besar", benar: false },
+      ],
+      kunciJawaban: "Maya, tegak, dan sama besar",
+      pembahasan: "Cermin datar membentuk bayangan maya (di belakang cermin), orientasi tegak, jarak bayangan sama dengan jarak benda, dan ukuran bayangan sama besar.",
+      hintSokratik: "Bayangan saat Anda bercermin di cermin rias sehari-hari.",
+    },
+    {
+      id: "ipa-4-7",
+      pertanyaan: "7. Peristiwa pembelokan arah berkas sinar cahaya ketika merambat melalui dua medium optik yang memiliki kerapatan berbeda disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-7-a", teksOpsi: "Pembiasan (Refraksi)", benar: true },
+        { id: "ipa-4-7-b", teksOpsi: "Pemantulan (Refleksi)", benar: false },
+        { id: "ipa-4-7-c", teksOpsi: "Pelenturan (Difraksi)", benar: false },
+        { id: "ipa-4-7-d", teksOpsi: "Penguraian (Dispersi)", benar: false },
+      ],
+      kunciJawaban: "Pembiasan (Refraksi)",
+      pembahasan: "Refraksi terjadi karena kelajuan cahaya berubah saat berpindah medium (misal dari udara ke air sehingga pensil tampak patah).",
+      hintSokratik: "Penyebab pensil terlihat patah saat dimasukkan ke gelas berisi air.",
+    },
+    {
+      id: "ipa-4-8",
+      pertanyaan: "8. Cermin cembung banyak dimanfaatkan sebagai kaca spion kendaraan bermotor karena memiliki sifat bayangan...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-8-a", teksOpsi: "Maya, tegak, diperkecil sehingga bidang pandang menjadi lebih luas", benar: true },
+        { id: "ipa-4-8-b", teksOpsi: "Nyata, terbalik, diperbesar", benar: false },
+        { id: "ipa-4-8-c", teksOpsi: "Maya, terbalik, sama besar", benar: false },
+        { id: "ipa-4-8-d", teksOpsi: "Nyata, tegak, diperbesar", benar: false },
+      ],
+      kunciJawaban: "Maya, tegak, diperkecil sehingga bidang pandang menjadi lebih luas",
+      pembahasan: "Cermin cembung selalu menghasilkan bayangan maya, tegak, dan diperkecil yang memungkinkan pengemudi melihat area jalan lebih lapang.",
+      hintSokratik: "Spion harus menghasilkan bayangan tegak dan menangkap banyak kendaraan di belakang.",
+    },
+    {
+      id: "ipa-4-9",
+      pertanyaan: "9. Bagian mata yang berfungsi mengatur banyak sedikitnya intensitas cahaya yang masuk ke mata melalui pupil adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-9-a", teksOpsi: "Iris (selaput pelangi)", benar: true },
+        { id: "ipa-4-9-b", teksOpsi: "Retina (selaput jala)", benar: false },
+        { id: "ipa-4-9-c", teksOpsi: "Kornea", benar: false },
+        { id: "ipa-4-9-d", teksOpsi: "Lensa kristalin", benar: false },
+      ],
+      kunciJawaban: "Iris (selaput pelangi)",
+      pembahasan: "Iris mengandung otot pengatur diameter pupil sekaligus pigmen pemberi warna bola mata.",
+      hintSokratik: "Bagian berwarna yang dapat melebar atau menyempitkan pupil.",
+    },
+    {
+      id: "ipa-4-10",
+      pertanyaan: "10. Upaya peredaman gaung atau pantulan bunyi yang mengganggu di dalam bioskop dilakukan dengan...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-4-10-a", teksOpsi: "Melapisi dinding dan lantai dengan karpet, spons, atau busa peredam bunyi", benar: true },
+        { id: "ipa-4-10-b", teksOpsi: "Membuat dinding dari marmer kaca yang licin dan keras", benar: false },
+        { id: "ipa-4-10-c", teksOpsi: "Membuka seluruh ventilasi udara lebar-lebar", benar: false },
+        { id: "ipa-4-10-d", teksOpsi: "Mengecat dinding dengan cat kedap air", benar: false },
+      ],
+      kunciJawaban: "Melapisi dinding dan lantai dengan karpet, spons, atau busa peredam bunyi",
+      pembahasan: "Material lunak berpori menyerap gelombang bunyi dan mencegah pemantulan berulang yang menyebabkan gaung.",
+      hintSokratik: "Gunakan bahan lunak berpori untuk menyerap gelombang bunyi.",
+    },
+    {
+      id: "ipa-4-11",
+      pertanyaan: "11. [Jawaban Singkat] Satuan internasional (SI) untuk besaran frekuensi getaran atau gelombang adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Hertz (Hz)",
+      pembahasan: "1 Hz berarti 1 getaran per sekon.",
+      hintSokratik: "Singkatannya Hz.",
+    },
+    {
+      id: "ipa-4-12",
+      pertanyaan: "12. [Jawaban Singkat] Gelombang longitudinal dicirikan oleh adanya pola rapatan dan pola...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Renggangan",
+      pembahasan: "Gelombang longitudinal mentransmisikan energi melalui osilasi rapatan dan renggangan partikel medium searah rambatnya.",
+      hintSokratik: "Lawan dari rapatan.",
+    },
+    {
+      id: "ipa-4-13",
+      pertanyaan: "13. [Jawaban Singkat] Jarak yang ditempuh oleh gelombang dalam waktu satu periode penuh disebut panjang...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Gelombang (Lambda / λ)",
+      pembahasan: "Panjang gelombang (lambda) adalah jarak antara dua puncak berurutan pada gelombang transversal atau dua rapatan berurutan pada gelombang longitudinal.",
+      hintSokratik: "Panjang satu gelombang dilambangkan huruf Yunani lambda.",
+    },
+    {
+      id: "ipa-4-14",
+      pertanyaan: "14. [Jawaban Panjang / Esai] Sebuah bandul sederhana berayun bolak-balik menempuh 120 getaran penuh dalam waktu 30 detik. Hitunglah: (a) Frekuensi getaran bandul, dan (b) Periode ayunan bandul tersebut!",
+      tipeSoal: "esai",
+      kunciJawaban: "(a) Frekuensi f = n / t = 120 / 30 = 4 Hz. (b) Periode T = t / n = 30 / 120 = 0,25 detik (atau T = 1 / f = 1 / 4 = 0,25 detik). Frekuensinya adalah 4 Hz dan periodenya adalah 0,25 detik.",
+      pembahasan: "Frekuensi menyatakan banyaknya getaran per detik (f = n/t), sedangkan periode menyatakan waktu untuk satu getaran (T = t/n).",
+      hintSokratik: "Bagi jumlah getaran dengan waktu untuk frekuensi, dan sebaliknya untuk periode.",
+    },
+    {
+      id: "ipa-4-15",
+      pertanyaan: "15. [Jawaban Panjang / Esai] Jelaskan perbedaan sifat pemantulan pada cermin cekung dan cermin cembung, serta sebutkan masing-masing 2 contoh pemanfaatannya dalam kehidupan sehari-hari!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Cermin Cekung: Bersifat konvergen (mengumpulkan berkas sinar), bayangan dapat bersifat nyata terbalik atau maya diperbesar tergantung posisi benda terhadap titik fokus. Contoh pemanfaatan: Reflektor lampu senter/mobil dan cermin periksa dokter gigi. 2. Cermin Cembung: Bersifat divergen (menyebarkan berkas sinar), selalu menghasilkan bayangan maya, tegak, dan diperkecil dengan bidang pandang luas. Contoh pemanfaatan: Kaca spion kendaraan bermotor dan cermin pengawas tikungan jalan (safety mirror).",
+      pembahasan: "Cermin cekung mengumpulkan cahaya menuju titik fokus nyata, sedangkan cermin cembung menyebarkan cahaya dari titik fokus maya.",
+      hintSokratik: "Bandingkan sifat pengumpul (konvergen) vs penyebar (divergen) sinar dan aplikasinya.",
+    },
+  ];
+}
+
+// =============================================================================
+// IPA BAB 5: UNSUR, SENYAWA, DAN STRUKTUR BUMI (15 BUTIR SOAL FASE D)
+// =============================================================================
+function getIPABab5Questions(): QuizQuestionData[] {
+  return [
+    {
+      id: "ipa-5-1",
+      pertanyaan: "1. Zat tunggal yang paling sederhana dan tidak dapat diuraikan lagi menjadi zat lain melalui reaksi kimia biasa disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-1-a", teksOpsi: "Unsur", benar: true },
+        { id: "ipa-5-1-b", teksOpsi: "Senyawa", benar: false },
+        { id: "ipa-5-1-c", teksOpsi: "Campuran", benar: false },
+        { id: "ipa-5-1-d", teksOpsi: "Larutan", benar: false },
+      ],
+      kunciJawaban: "Unsur",
+      pembahasan: "Unsur adalah zat murni primer yang hanya tersusun atas atom-atom sejenis (contoh: emas, oksigen, besi).",
+      hintSokratik: "Tercantum dalam tabel periodik.",
+    },
+    {
+      id: "ipa-5-2",
+      pertanyaan: "2. Zat murni yang terbentuk dari gabungan dua unsur atau lebih dengan perbandingan massa tetap melalui ikatan kimia disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-2-a", teksOpsi: "Senyawa", benar: true },
+        { id: "ipa-5-2-b", teksOpsi: "Unsur", benar: false },
+        { id: "ipa-5-2-c", teksOpsi: "Koloid", benar: false },
+        { id: "ipa-5-2-d", teksOpsi: "Campuran heterogen", benar: false },
+      ],
+      kunciJawaban: "Senyawa",
+      pembahasan: "Senyawa (seperti H2O, NaCl, CO2) memiliki sifat kimia yang berbeda dari unsur-unsur penyusun asalnya.",
+      hintSokratik: "Air (H2O) dan garam dapur (NaCl) adalah contohnya.",
+    },
+    {
+      id: "ipa-5-3",
+      pertanyaan: "3. Metode pemisahan campuran zat cair yang didasarkan pada perbedaan titik didih komponen zat penyusunnya disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-3-a", teksOpsi: "Destilasi (Penyulingan)", benar: true },
+        { id: "ipa-5-3-b", teksOpsi: "Filtrasi (Penyaringan)", benar: false },
+        { id: "ipa-5-3-c", teksOpsi: "Sublimasi", benar: false },
+        { id: "ipa-5-3-d", teksOpsi: "Kromatografi", benar: false },
+      ],
+      kunciJawaban: "Destilasi (Penyulingan)",
+      pembahasan: "Destilasi memanaskan campuran hingga zat bertitik didih rendah menguap terlebih dahulu lalu diembunkan kembali.",
+      hintSokratik: "Teknik yang dipakai untuk memisahkan minyak bumi atau menyuling air murni.",
+    },
+    {
+      id: "ipa-5-4",
+      pertanyaan: "4. Lapisan batuan padat terluar bumi yang menjadi tempat berpijak dan beraktivitasnya seluruh makhluk hidup disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-4-a", teksOpsi: "Litosfer (Kerak bumi)", benar: true },
+        { id: "ipa-5-4-b", teksOpsi: "Astenosfer", benar: false },
+        { id: "ipa-5-4-c", teksOpsi: "Barisfer (Inti bumi)", benar: false },
+        { id: "ipa-5-4-d", teksOpsi: "Mesosfer", benar: false },
+      ],
+      kunciJawaban: "Litosfer (Kerak bumi)",
+      pembahasan: "Litosfer berasal dari kata 'lithos' (batuan) dan 'sphaira' (lapisan), mencakup kerak benua dan kerak samudra.",
+      hintSokratik: "Lapisan batuan kerak bumi.",
+    },
+    {
+      id: "ipa-5-5",
+      pertanyaan: "5. Lapisan atmosfer bumi yang mengandung konsentrasi gas ozon (O3) untuk menyaring sinar ultraviolet berbahaya dari radiasi matahari adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-5-a", teksOpsi: "Stratosfer", benar: true },
+        { id: "ipa-5-5-b", teksOpsi: "Troposfer", benar: false },
+        { id: "ipa-5-5-c", teksOpsi: "Mesosfer", benar: false },
+        { id: "ipa-5-5-d", teksOpsi: "Termosfer", benar: false },
+      ],
+      kunciJawaban: "Stratosfer",
+      pembahasan: "Lapisan ozon berada pada stratosfer (ketinggian sekitar 15 - 50 km) untuk menyerap radiasi ultraviolet B matahari.",
+      hintSokratik: "Lapisan kedua atmosfer tepat di atas troposfer.",
+    },
+    {
+      id: "ipa-5-6",
+      pertanyaan: "6. Peristiwa bergetarnya lapisan kerak bumi akibat pelepasan energi secara mendadak akibat pergeseran lempeng tektonik disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-6-a", teksOpsi: "Gempa bumi tektonik", benar: true },
+        { id: "ipa-5-6-b", teksOpsi: "Erupsi vulkanik", benar: false },
+        { id: "ipa-5-6-c", teksOpsi: "Tanah longsor", benar: false },
+        { id: "ipa-5-6-d", teksOpsi: "Tsunami", benar: false },
+      ],
+      kunciJawaban: "Gempa bumi tektonik",
+      pembahasan: "Pergerakan batas lempeng konvergen, divergen, atau sesar transform melepaskan gelombang seismik.",
+      hintSokratik: "Peristiwa getaran yang dicatat seismograf.",
+    },
+    {
+      id: "ipa-5-7",
+      pertanyaan: "7. Pemisahan campuran air keruh dan pasir menggunakan corong dan kertas saring merupakan contoh metode...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-7-a", teksOpsi: "Filtrasi (Penyaringan)", benar: true },
+        { id: "ipa-5-7-b", teksOpsi: "Kristalisasi", benar: false },
+        { id: "ipa-5-7-c", teksOpsi: "Evaporasi", benar: false },
+        { id: "ipa-5-7-d", teksOpsi: "Kromatografi kertas", benar: false },
+      ],
+      kunciJawaban: "Filtrasi (Penyaringan)",
+      pembahasan: "Filtrasi memisahkan padatan yang tidak larut dari cairan berdasarkan perbedaan ukuran partikel.",
+      hintSokratik: "Menggunakan kertas saring di laboratorium.",
+    },
+    {
+      id: "ipa-5-8",
+      pertanyaan: "8. Lambang kimia baku menurut IUPAC untuk unsur Besi, Tembaga, dan Emas berturut-turut adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-8-a", teksOpsi: "Fe, Cu, dan Au", benar: true },
+        { id: "ipa-5-8-b", teksOpsi: "Be, Te, dan Em", benar: false },
+        { id: "ipa-5-8-c", teksOpsi: "Fe, Tm, dan Ag", benar: false },
+        { id: "ipa-5-8-d", teksOpsi: "F, Co, dan Al", benar: false },
+      ],
+      kunciJawaban: "Fe, Cu, dan Au",
+      pembahasan: "Besi berasal dari Ferrum (Fe), Tembaga dari Cuprum (Cu), dan Emas dari Aurum (Au).",
+      hintSokratik: "Berasal dari nama ilmiah latin Ferrum, Cuprum, dan Aurum.",
+    },
+    {
+      id: "ipa-5-9",
+      pertanyaan: "9. Lapisan atmosfer tempat terjadinya seluruh fenomena cuaca seperti awan, hujan, petir, dan angin adalah...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-9-a", teksOpsi: "Troposfer", benar: true },
+        { id: "ipa-5-9-b", teksOpsi: "Stratosfer", benar: false },
+        { id: "ipa-5-9-c", teksOpsi: "Eksosfer", benar: false },
+        { id: "ipa-5-9-d", teksOpsi: "Ionosfer", benar: false },
+      ],
+      kunciJawaban: "Troposfer",
+      pembahasan: "Troposfer merupakan lapisan terbawah atmosfer (0 - 12 km) yang menampung 80% massa udara bumi.",
+      hintSokratik: "Lapisan atmosfer paling dekat dengan permukaan bumi.",
+    },
+    {
+      id: "ipa-5-10",
+      pertanyaan: "10. Gelombang air laut dahsyat yang terhempas ke daratan akibat pergeseran dasar laut vertikal pasca gempa bawah laut disebut...",
+      tipeSoal: "pilihan_ganda",
+      opsiSoal: [
+        { id: "ipa-5-10-a", teksOpsi: "Tsunami", benar: true },
+        { id: "ipa-5-10-b", teksOpsi: "Pasang purnama", benar: false },
+        { id: "ipa-5-10-c", teksOpsi: "Arus rip current", benar: false },
+        { id: "ipa-5-10-d", teksOpsi: "Puting beliung laut", benar: false },
+      ],
+      kunciJawaban: "Tsunami",
+      pembahasan: "Dislokasi patahan lempeng samudera secara vertikal memindahkan kolom air laut raksasa menghasilkan tsunami.",
+      hintSokratik: "Berasal dari bahasa Jepang yang berarti gelombang pelabuhan.",
+    },
+    {
+      id: "ipa-5-11",
+      pertanyaan: "11. [Jawaban Singkat] Rumus kimia dari molekul air yang terdiri atas dua atom hidrogen dan satu atom oksigen adalah...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "H2O",
+      pembahasan: "Senyawa air tersusun dari dua atom H dan satu atom O terikat kovalen.",
+      hintSokratik: "Dua H dan satu O.",
+    },
+    {
+      id: "ipa-5-12",
+      pertanyaan: "12. [Jawaban Singkat] Campuran homogen antara zat terlarut dan zat pelarut yang partikelnya tersebar merata dan tidak dapat disaring lagi disebut...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Larutan",
+      pembahasan: "Larutan (seperti air garam atau sirup) adalah campuran homogen satu fase.",
+      hintSokratik: "Contohnya larutan gula atau garam.",
+    },
+    {
+      id: "ipa-5-13",
+      pertanyaan: "13. [Jawaban Singkat] Lapisan perairan yang menutupi sekitar 71% permukaan bumi (lautan, danau, sungai, es) disebut...",
+      tipeSoal: "isian_singkat",
+      kunciJawaban: "Hidrosfer",
+      pembahasan: "Hidrosfer mencakup seluruh badan air di permukaan bumi dan siklus hidrologi.",
+      hintSokratik: "Kata 'hidro' berarti air.",
+    },
+    {
+      id: "ipa-5-14",
+      pertanyaan: "14. [Jawaban Panjang / Esai] Jelaskan perbedaan mendasar antara Unsur, Senyawa, dan Campuran, serta berikan masing-masing 2 contoh zatnya dalam kehidupan sehari-hari!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Unsur: Zat tunggal paling sederhana yang tidak dapat diuraikan lagi secara kimia. Contoh: Besi (Fe) dan Emas (Au). 2. Senyawa: Zat murni dari gabungan 2 unsur atau lebih dengan perbandingan massa tetap melalui reaksi kimia dan sifatnya berbeda dari unsur penyusunnya. Contoh: Air murni (H2O) dan Garam dapur (NaCl). 3. Campuran: Gabungan 2 zat atau lebih tanpa perbandingan tetap melalui percampuran fisik sehingga sifat zat asalnya masih bertahan. Contoh: Udara dan Larutan gula.",
+      pembahasan: "Unsur tersusun dari satu jenis atom; senyawa adalah molekul terikat kimia berproporsi tetap; campuran adalah perpaduan fisik tanpa reaksi kimia.",
+      hintSokratik: "Uraikan definisi dan berikan 2 contoh untuk masing-masing kategori zat.",
+    },
+    {
+      id: "ipa-5-15",
+      pertanyaan: "15. [Jawaban Panjang / Esai] Uraikan 3 lapisan utama struktur interior bumi (Kerak bumi, Mantel bumi, dan Inti bumi) beserta karakteristik fisik dan suhunya!",
+      tipeSoal: "esai",
+      kunciJawaban: "1. Kerak Bumi (Crust / Litosfer): Lapisan terluar yang padat dan tipis (ketebalan 5-70 km), terdiri atas kerak benua (granit) dan kerak samudra (basalt), tempat hidup manusia. 2. Mantel Bumi (Mantle): Lapisan tebal di bawah kerak (ketebalan sekitar 2.900 km), bersuhu 1.000°C - 3.700°C, tersusun atas silikat besi dan magnesium semi-cair (astenosfer) yang menghasilkan arus konveksi pemicu gempa. 3. Inti Bumi (Core): Lapisan terdalam (ketebalan sekitar 3.500 km), tersusun dari besi dan nikel (Nife), terbagi menjadi Inti Luar yang cair (suhu ~4.500°C pemicu medan magnet bumi) dan Inti Dalam yang padat bertekanan sangat tinggi (suhu ~6.000°C).",
+      pembahasan: "Bumi tersusun konsentris dari kerak padat, mantel konvektif tebal, hingga inti besi-nikel bersuhu tinggi.",
+      hintSokratik: "Sebutkan nama lapisan, perkiraan ketebalan atau material penyusunnya, serta perannya.",
+    },
+  ];
+}
+
+// =============================================================================
+// FALLBACK UNIVERSAL KHUSUS MATEMATIKA / MAPEL LAIN
 // =============================================================================
 function getCustomMath15(title: string, kelas: number): QuizQuestionData[] {
   return [
     {
       id: "q-1",
-      pertanyaan: `1. Dalam mempelajari konsep "${title}" pada pembelajaran Matematika Kelas ${kelas}, langkah pertama yang paling tepat adalah...`,
+      pertanyaan: `1. Dalam mempelajari konsep "${title}" pada pembelajaran Kelas ${kelas}, langkah pertama yang paling tepat adalah...`,
       tipeSoal: "pilihan_ganda",
       opsiSoal: [
-        { id: "opt-1-1", teksOpsi: `Mengidentifikasi variabel dan relasi matematis yang diketahui pada masalah.`, benar: true },
-        { id: "opt-1-2", teksOpsi: "Langsung menebak hasil akhir tanpa melakukan perhitungan.", benar: false },
-        { id: "opt-1-3", teksOpsi: "Mengabaikan rumus pokok dan kaidah aljabar.", benar: false },
-        { id: "opt-1-4", teksOpsi: "Menghafal jawaban soal tanpa memahami konsep.", benar: false },
+        { id: "opt-1-1", teksOpsi: `Mengidentifikasi konsep dasar dan hubungan keterkaitan fakta pada masalah.`, benar: true },
+        { id: "opt-1-2", teksOpsi: "Langsung menebak hasil akhir tanpa melakukan penalaran logis.", benar: false },
+        { id: "opt-1-3", teksOpsi: "Mengabaikan rumus pokok dan kaidah materi.", benar: false },
+        { id: "opt-1-4", teksOpsi: "Menghafal jawaban soal tanpa memahami esensi konsep.", benar: false },
       ],
-      kunciJawaban: `Mengidentifikasi variabel dan relasi matematis yang diketahui pada masalah.`,
-      pembahasan: `Pemecahan masalah matematika diawali dengan memahami data yang diketahui dan ditanyakan.`,
-      hintSokratik: `Pilihlah langkah analitis awal yang logis.`,
+      kunciJawaban: `Mengidentifikasi konsep dasar dan hubungan keterkaitan fakta pada masalah.`,
+      pembahasan: `Pemecahan masalah diawali dengan memahami data dan konsep yang diketahui secara terstruktur.`,
+      hintSokratik: `Pilihlah langkah analitis awal yang logis dan terstruktur.`,
     },
   ];
 }

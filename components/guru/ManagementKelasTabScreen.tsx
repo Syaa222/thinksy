@@ -227,6 +227,77 @@ const CLASSROOM_SUBJECTS: ClassroomSubject[] = [
   },
 ];
 
+const IPA_BABS = [
+  {
+    id: "ipa-bab-1",
+    nomor: 1,
+    judul: "Bab 1: Pengenalan Sel & Mikroskop",
+    deskripsi: "Struktur sel hewan dan tumbuhan, penggunaan mikroskop cahaya, dan hierarki organisasi kehidupan.",
+    materiCount: 3,
+    kuisCount: 1,
+    tugasCount: 1,
+    isOpen: true,
+    materials: [
+      { id: "m-ipa-1", title: "Modul: Struktur & Organel Sel Hewan vs Tumbuhan", type: "material" as const, postedDate: "Kemarin" },
+      { id: "m-ipa-2", title: "Praktikum Virtual Penggunaan Mikroskop Cahaya", type: "assignment" as const, postedDate: "Kemarin", dueDate: "Besok, 12:00", points: 100 },
+      { id: "m-ipa-3", title: "Kuis Formatif Bab 1 Organisasi Kehidupan", type: "quiz" as const, postedDate: "Kemarin", points: 100 },
+    ],
+  },
+  {
+    id: "ipa-bab-2",
+    nomor: 2,
+    judul: "Bab 2: Struktur dan Fungsi Tubuh Manusia",
+    deskripsi: "Sistem pencernaan, peredaran darah, pernapasan, dan ekskresi pada manusia serta nutrisi seimbang.",
+    materiCount: 3,
+    kuisCount: 1,
+    tugasCount: 1,
+    isOpen: true,
+    materials: [
+      { id: "m-ipa-4", title: "Rangkuman Sistem Pencernaan & Enzim", type: "material" as const, postedDate: "6 Okt" },
+      { id: "m-ipa-5", title: "Latihan Analisis Golongan Darah & Sistem Sirkulasi", type: "assignment" as const, postedDate: "6 Okt", dueDate: "10 Okt", points: 100 },
+    ],
+  },
+  {
+    id: "ipa-bab-3",
+    nomor: 3,
+    judul: "Bab 3: Usaha, Energi, dan Pesawat Sederhana",
+    deskripsi: "Konsep usaha fisik, transformasi energi mekanik, kinetik, potensial, serta tuas dan katrol.",
+    materiCount: 3,
+    kuisCount: 1,
+    tugasCount: 1,
+    isOpen: true,
+    materials: [
+      { id: "m-ipa-6", title: "Lembar Kerja Siswa: Perhitungan Usaha & Tuas", type: "assignment" as const, postedDate: "2 Okt", points: 100 },
+    ],
+  },
+  {
+    id: "ipa-bab-4",
+    nomor: 4,
+    judul: "Bab 4: Getaran, Gelombang, dan Cahaya",
+    deskripsi: "Konsep frekuensi, periode getaran, perambatan gelombang bunyi, serta sifat-sifat pembiasan cahaya.",
+    materiCount: 3,
+    kuisCount: 1,
+    tugasCount: 1,
+    isOpen: true,
+    materials: [
+      { id: "m-ipa-7", title: "Konsep Resonansi Bunyi dan Cermin Optik", type: "material" as const, postedDate: "28 Sep" },
+    ],
+  },
+  {
+    id: "ipa-bab-5",
+    nomor: 5,
+    judul: "Bab 5: Unsur, Senyawa, dan Struktur Bumi",
+    deskripsi: "Klasifikasi materi, tabel periodik, pemisahan campuran, serta lapisan litosfer dan tata surya.",
+    materiCount: 3,
+    kuisCount: 1,
+    tugasCount: 1,
+    isOpen: true,
+    materials: [
+      { id: "m-ipa-8", title: "Modul Pemisahan Campuran Filtrasi & Kristalisasi", type: "material" as const, postedDate: "20 Sep" },
+    ],
+  },
+];
+
 // Supabase UUID Mapping untuk 6 Bab Matematika Kelas 8
 export const SUPABASE_BAB_MAP: Record<string, string> = {
   "mat-bab-1": "5f649043-e4b7-4d11-a353-991b07a77d5c",
@@ -271,25 +342,28 @@ export default function ManagementKelasTabScreen({
   // Merge default subjects with custom created classes
   const allSubjects = useMemo(() => {
     if (!customClasses || customClasses.length === 0) return CLASSROOM_SUBJECTS;
-    const mapped: ClassroomSubject[] = customClasses.map((c) => ({
-      id: c.id,
-      name: c.name,
-      section: c.section || "Kelas 8 • Fase D Kurikulum Merdeka",
-      room: c.room || "Ruang 8-A",
-      subjectCode: c.subjectCode,
-      themeColor: c.themeColor || "#1967D2",
-      bgGradient: c.bgGradient || "from-blue-700 via-indigo-700 to-slate-900",
-      bannerType: c.bannerType || (c.bannerPhotoUrl ? "photo" : "illustration"),
-      bannerIllustration: c.bannerIllustration || "math",
-      bannerPhotoUrl: c.bannerPhotoUrl,
-      teacher: {
-        name: "Ibu Siti Rahmawati, M.Pd.",
-        avatarText: c.name.charAt(0).toUpperCase() || "S",
-        avatarColor: "bg-blue-600",
-        role: "Guru Pengampu",
-      },
-      babs: CLASSROOM_SUBJECTS[0]?.babs || [],
-    }));
+    const mapped: ClassroomSubject[] = customClasses.map((c) => {
+      const isIpa = (c.name || "").toLowerCase().includes("ipa") || (c.mapel || "").toLowerCase().includes("ipa");
+      return {
+        id: c.id,
+        name: c.name,
+        section: c.section || (isIpa ? "Kelas 8 • Laboratorium Sains" : "Kelas 8 • Fase D Kurikulum Merdeka"),
+        room: c.room || (isIpa ? "Lab IPA" : "Ruang 8-A"),
+        subjectCode: c.subjectCode,
+        themeColor: c.themeColor || (isIpa ? "#0F9D58" : "#1967D2"),
+        bgGradient: c.bgGradient || (isIpa ? "from-emerald-600 via-teal-700 to-slate-950" : "from-blue-700 via-indigo-700 to-slate-900"),
+        bannerType: c.bannerType || (c.bannerPhotoUrl ? "photo" : "illustration"),
+        bannerIllustration: c.bannerIllustration || (isIpa ? "science" : "math"),
+        bannerPhotoUrl: c.bannerPhotoUrl,
+        teacher: {
+          name: "Ibu Siti Rahmawati, M.Pd.",
+          avatarText: c.name.charAt(0).toUpperCase() || (isIpa ? "I" : "S"),
+          avatarColor: isIpa ? "bg-emerald-600" : "bg-blue-600",
+          role: "Guru Pengampu",
+        },
+        babs: isIpa ? IPA_BABS : (CLASSROOM_SUBJECTS[0]?.babs || []),
+      };
+    });
     const map = new Map<string, ClassroomSubject>();
     CLASSROOM_SUBJECTS.forEach((s) => map.set(s.id, s));
     mapped.forEach((s) => map.set(s.id, s));
@@ -1906,39 +1980,13 @@ export default function ManagementKelasTabScreen({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* View Mode Toggle: Topics vs Screenshot 2 Empty Mode */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setClassworkViewMode("topics")}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    classworkViewMode === "topics"
-                      ? "bg-white text-[#1967D2] shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Daftar Topik & Bab
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClassworkViewMode("empty_sample")}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    classworkViewMode === "empty_sample"
-                      ? "bg-white text-[#1967D2] shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Tampilan Gambar 2
-                </button>
-              </div>
-
               <span className="text-xs text-slate-500 font-medium hidden md:inline">
                 Mata Pelajaran: <strong className="text-slate-800">{currentSubject.name}</strong>
               </span>
             </div>
           </div>
 
-          {classworkViewMode === "empty_sample" ? (
+          {currentSubject.babs.length === 0 ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-2xs">
               <ClassworkEmptyGraphic />
             </div>
@@ -2123,31 +2171,6 @@ export default function ManagementKelasTabScreen({
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setPeopleViewMode("students_list")}
-                    className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                      peopleViewMode === "students_list"
-                        ? "bg-white text-[#1967D2] shadow-2xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    Daftar Siswa
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPeopleViewMode("empty_sample")}
-                    className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                      peopleViewMode === "empty_sample"
-                        ? "bg-white text-[#1967D2] shadow-2xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    Tampilan Gambar 3
-                  </button>
-                </div>
-
                 <button
                   type="button"
                   onClick={() => showToast("Dialog undang siswa via email/kode kelas.")}
@@ -2159,7 +2182,7 @@ export default function ManagementKelasTabScreen({
               </div>
             </div>
 
-            {peopleViewMode === "empty_sample" ? (
+            {studentsList.length === 0 ? (
               <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-2xs">
                 <PeopleEmptyGraphic onInvite={() => showToast("Dialog undang siswa via email atau kode kelas dibuka.")} />
               </div>
@@ -2219,39 +2242,13 @@ export default function ManagementKelasTabScreen({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* View Switcher: Matrix vs Screenshot 4 Empty Mode */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setGradesViewMode("matrix")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                    gradesViewMode === "matrix"
-                      ? "bg-white text-[#1967D2] shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Buku Nilai
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGradesViewMode("empty_sample")}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                    gradesViewMode === "empty_sample"
-                      ? "bg-white text-[#1967D2] shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Tampilan Gambar 4
-                </button>
-              </div>
-
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-[#1967D2] border border-blue-200">
                 Passing Grade (KKM): 75
               </span>
             </div>
           </div>
 
-          {gradesViewMode === "empty_sample" ? (
+          {studentsList.length === 0 ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-2xs">
               <GradesEmptyGraphic onInvite={() => showToast("Dialog undang siswa via email atau kode kelas dibuka.")} />
             </div>

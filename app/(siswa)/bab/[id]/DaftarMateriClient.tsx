@@ -1052,12 +1052,13 @@ export default function DaftarMateriClient({
                         )}
                       </div>
 
-                      <a
-                        href="#subbab-1"
-                        className="hover:text-blue-600 transition flex items-center gap-1 font-medium text-slate-500"
+                      <button
+                        type="button"
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="hover:text-blue-600 transition flex items-center gap-1 font-medium text-slate-500 cursor-pointer"
                       >
                         <span>Kembali ke Atas ↑</span>
-                      </a>
+                      </button>
                     </div>
                   </article>
                 ))}

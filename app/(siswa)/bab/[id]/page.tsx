@@ -16,44 +16,93 @@ export default async function DetailBabPage({
   const supabase = await createClient();
   const adminSupabase = createAdminClient();
 
-  // 1. Ambil data bab dari Supabase
-  const { data: babData } = await supabase
-    .from("bab")
-    .select(
-      `
-      id,
-      judul,
-      deskripsi,
-      urutan,
-      mapel,
-      kelas,
-      materi (
+  const IPA_BABS: Record<string, any> = {
+    "ipa-bab-1": {
+      id: "ipa-bab-1",
+      judul: "Bab 1: Pengenalan Sel & Mikroskop",
+      deskripsi: "Struktur sel hewan dan tumbuhan, penggunaan mikroskop cahaya, dan hierarki organisasi kehidupan.",
+      urutan: 1,
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-2": {
+      id: "ipa-bab-2",
+      judul: "Bab 2: Struktur dan Fungsi Tubuh Manusia",
+      deskripsi: "Sistem pencernaan, sistem peredaran darah, pernapasan, dan ekskresi pada manusia serta nutrisi seimbang.",
+      urutan: 2,
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-3": {
+      id: "ipa-bab-3",
+      judul: "Bab 3: Usaha, Energi, dan Pesawat Sederhana",
+      deskripsi: "Konsep usaha fisik, transformasi energi mekanik, kinetik, potensial, serta tuas, bidang miring, dan katrol.",
+      urutan: 3,
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-4": {
+      id: "ipa-bab-4",
+      judul: "Bab 4: Getaran, Gelombang, dan Cahaya",
+      deskripsi: "Konsep frekuensi, periode getaran, perambatan gelombang bunyi, serta sifat-sifat pembiasan dan cermin optik.",
+      urutan: 4,
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-5": {
+      id: "ipa-bab-5",
+      judul: "Bab 5: Unsur, Senyawa, dan Struktur Bumi",
+      deskripsi: "Klasifikasi materi, tabel periodik, pemisahan campuran, serta lapisan litosfer, hidrosfer, dan tata surya.",
+      urutan: 5,
+      mapel: "IPA",
+      kelas: 8,
+    },
+  };
+
+  const isIpaTarget = id.startsWith("ipa-") || Boolean(IPA_BABS[id]);
+
+  // 1. Ambil data bab dari Supabase jika bukan IPA virtual bab
+  let babData: any = null;
+  if (!isIpaTarget) {
+    const { data } = await supabase
+      .from("bab")
+      .select(
+        `
         id,
         judul,
-        konten_markdown,
-        urutan
+        deskripsi,
+        urutan,
+        mapel,
+        kelas,
+        materi (
+          id,
+          judul,
+          konten_markdown,
+          urutan
+        )
+      `
       )
-    `
-    )
-    .eq("id", id)
-    .maybeSingle();
+      .eq("id", id)
+      .maybeSingle();
+    babData = data;
+  }
 
-  // Jika bab yang diakses bukan Matematika (misal data sisa mapel lain),
+  // Jika bab yang diakses adalah materi sisa kurikulum lama non-fase D,
   // otomatis redirect ke Bab 1 Matematika Kelas 8 resmi
   const mapelLower = (babData?.mapel || "").toLowerCase();
   const judulLower = (babData?.judul || "").toLowerCase();
   const isOtherSubject =
-    mapelLower.includes("indonesia") ||
-    mapelLower.includes("inggris") ||
-    mapelLower.includes("ipa") ||
-    mapelLower.includes("ips") ||
-    mapelLower.includes("seni") ||
-    mapelLower.includes("pjok") ||
-    judulLower.includes("observasi") ||
-    judulLower.includes("puisi") ||
-    judulLower.includes("surat") ||
-    judulLower.includes("pidato") ||
-    judulLower.includes("iklan");
+    !isIpaTarget &&
+    (mapelLower.includes("indonesia") ||
+      mapelLower.includes("inggris") ||
+      mapelLower.includes("ips") ||
+      mapelLower.includes("seni") ||
+      mapelLower.includes("pjok") ||
+      judulLower.includes("observasi") ||
+      judulLower.includes("puisi") ||
+      judulLower.includes("surat") ||
+      judulLower.includes("pidato") ||
+      judulLower.includes("iklan"));
 
   if (isOtherSubject) {
     const { data: mathBab } = await supabase
@@ -69,8 +118,14 @@ export default async function DetailBabPage({
     }
   }
 
-  // Jika bab tidak ditemukan di database, cari bab matematika pertama sebagai fallback aman agar navigasi tidak 404
-  let resolvedBab = babData;
+  // Selesaikan data bab
+  let resolvedBab: any = null;
+  if (isIpaTarget) {
+    resolvedBab = IPA_BABS[id] || IPA_BABS["ipa-bab-1"];
+  } else {
+    resolvedBab = babData;
+  }
+
   if (!resolvedBab) {
     const { data: fallbackBab } = await supabase
       .from("bab")
@@ -102,8 +157,10 @@ export default async function DetailBabPage({
     }
   }
 
-  // Paksa canonical mapel ke Matematika sesuai Modul Kerja
-  resolvedBab.mapel = "Matematika";
+  // Tetapkan mapel
+  if (!resolvedBab.mapel) {
+    resolvedBab.mapel = isIpaTarget ? "IPA" : "Matematika";
+  }
 
   let listMateri =
     resolvedBab.materi?.sort((a: any, b: any) => a.urutan - b.urutan) || [];

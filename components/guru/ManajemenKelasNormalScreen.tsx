@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import KelasSoalConfigModal from "@/components/guru/KelasSoalConfigModal";
+import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 import {
   GraduationCap,
   Users,
@@ -679,11 +680,12 @@ export default function ManajemenKelasNormalScreen({
                           className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3"
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <span className="font-bold text-xs text-slate-800">
-                              Nomor {q.nomor}. {q.pertanyaan}
-                            </span>
+                            <div className="font-bold text-xs text-slate-800 flex-1">
+                              <span className="font-black mr-1.5 text-blue-600">Nomor {q.nomor}.</span>
+                              <MarkdownRenderer content={q.pertanyaan} isCompact className="inline-block" />
+                            </div>
                             <span
-                              className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ${
                                 q.is_benar
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-rose-100 text-rose-800"
@@ -713,8 +715,9 @@ export default function ManajemenKelasNormalScreen({
                           </div>
 
                           {q.pembahasan && (
-                            <div className="p-3 rounded-xl bg-blue-50/70 text-blue-900 text-xs font-medium">
-                              <strong>Pembahasan:</strong> {q.pembahasan}
+                            <div className="p-3 rounded-xl bg-blue-50/70 text-blue-900 text-xs font-medium space-y-1">
+                              <strong className="block font-bold text-blue-950">Pembahasan:</strong>
+                              <MarkdownRenderer content={q.pembahasan} isCompact />
                             </div>
                           )}
                         </div>

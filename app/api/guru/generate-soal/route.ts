@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeMathContent } from "@/lib/math-sanitizer";
 
 export async function POST(req: Request) {
   try {
@@ -225,13 +226,13 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
     if (is15Pack && Array.isArray(draftData.daftarSoal) && draftData.daftarSoal.length === 15) {
       finalSoalList = draftData.daftarSoal.map((s: any, idx: number) => ({
         id: `ai-${Date.now()}-${idx + 1}`,
-        pertanyaan: s.pertanyaan,
+        pertanyaan: sanitizeMathContent(s.pertanyaan),
         tipeSoal: s.tipeSoal || (idx < 10 ? "pilihan_ganda" : idx < 13 ? "isian_singkat" : "esai"),
-        kunciJawaban: s.kunciJawaban || "",
-        pembahasan: s.pembahasan || "",
+        kunciJawaban: sanitizeMathContent(s.kunciJawaban || ""),
+        pembahasan: sanitizeMathContent(s.pembahasan || ""),
         poin: 10,
         opsi: (s.opsiSoal || []).map((o: any) => ({
-          teks: o.teksOpsi || o.teks || "",
+          teks: sanitizeMathContent(o.teksOpsi || o.teks || ""),
           benar: Boolean(o.benar),
           alasanSalah: o.alasanSalah || o.alasan_salah || (o.benar ? "" : "Konsep dasar materi pada opsi ini perlu diperiksa kembali."),
         })),
@@ -241,13 +242,13 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
       const fallbackList = generateChapterQuestions(topik || "Bab Kurikulum", mapel || "Matematika", 8);
       finalSoalList = fallbackList.map((q) => ({
         id: q.id,
-        pertanyaan: q.pertanyaan,
+        pertanyaan: sanitizeMathContent(q.pertanyaan),
         tipeSoal: q.tipeSoal,
-        kunciJawaban: q.kunciJawaban,
-        pembahasan: q.pembahasan,
+        kunciJawaban: sanitizeMathContent(q.kunciJawaban),
+        pembahasan: sanitizeMathContent(q.pembahasan),
         poin: 10,
         opsi: (q.opsiSoal || []).map((o) => ({
-          teks: o.teksOpsi,
+          teks: sanitizeMathContent(o.teksOpsi),
           benar: Boolean(o.benar),
           alasanSalah: o.benar ? "" : "Konsep dasar materi pada opsi ini perlu diperiksa kembali.",
         })),
@@ -256,13 +257,13 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
       const correctOpt = Array.isArray(draftData.opsiSoal) ? draftData.opsiSoal.find((o: any) => o.benar) : null;
       const singleQ = {
         id: `ai-${Date.now()}-1`,
-        pertanyaan: draftData.pertanyaan || "Pertanyaan matematika...",
+        pertanyaan: sanitizeMathContent(draftData.pertanyaan || "Pertanyaan matematika..."),
         tipeSoal: (draftData.tipeSoal || tipeSoal) as "pilihan_ganda" | "isian_singkat" | "esai",
-        kunciJawaban: draftData.kunciJawaban || (tipeSoal === "pilihan_ganda" ? (correctOpt?.teksOpsi || correctOpt?.teks || "") : ""),
-        pembahasan: draftData.pembahasan || "",
+        kunciJawaban: sanitizeMathContent(draftData.kunciJawaban || (tipeSoal === "pilihan_ganda" ? (correctOpt?.teksOpsi || correctOpt?.teks || "") : "")),
+        pembahasan: sanitizeMathContent(draftData.pembahasan || ""),
         poin: 10,
         opsi: (draftData.opsiSoal || []).map((o: any) => ({
-          teks: o.teksOpsi || o.teks || "",
+          teks: sanitizeMathContent(o.teksOpsi || o.teks || ""),
           benar: Boolean(o.benar),
           alasanSalah: o.alasanSalah || o.alasan_salah || (o.benar ? "" : "Konsep dasar materi pada opsi ini perlu diperiksa kembali."),
         })),
@@ -273,17 +274,17 @@ Catatan: Jika tipeSoal adalah 'esai' atau 'isian_singkat', buat opsiSoal sebagai
     return NextResponse.json({
       success: true,
       modelUsed: "Gemini 3.1 Flash Lite",
-      materiLengkap: draftData.materiLengkap || null,
+      materiLengkap: draftData.materiLengkap ? sanitizeMathContent(draftData.materiLengkap) : null,
       soal: finalSoalList,
       draft: {
         babId,
         topik,
         tingkatSoal,
         tipeSoal,
-        pertanyaan: draftData.pertanyaan || finalSoalList[0]?.pertanyaan,
-        kunciJawaban: draftData.kunciJawaban || finalSoalList[0]?.kunciJawaban,
-        pembahasan: draftData.pembahasan || finalSoalList[0]?.pembahasan,
-        opsiSoal: draftData.opsiSoal || finalSoalList[0]?.opsi || [],
+        pertanyaan: finalSoalList[0]?.pertanyaan,
+        kunciJawaban: finalSoalList[0]?.kunciJawaban,
+        pembahasan: finalSoalList[0]?.pembahasan,
+        opsiSoal: finalSoalList[0]?.opsi || [],
       },
     });
   } catch (error: any) {

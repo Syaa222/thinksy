@@ -41,7 +41,7 @@ const DEFAULT_GURU_CLASSES = [
 ];
 
 export default function GuruDashboardPage() {
-  // State Kelas yang diampu oleh Guru (tersimpan di localStorage, hanya kelas asli yang diampu)
+  // State Kelas yang diampu oleh Guru (tersimpan di localStorage & disinkronkan ke server)
   const [classes, setClasses] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -49,11 +49,7 @@ export default function GuruDashboardPage() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Hapus kelas ipa-8 dan bin-8 yang sempat tertambah otomatis
-            const filtered = parsed.filter(
-              (c: any) => c.id !== "ipa-8" && c.id !== "bin-8"
-            );
-            if (filtered.length > 0) return filtered;
+            return parsed;
           }
         }
       } catch {}
@@ -61,23 +57,60 @@ export default function GuruDashboardPage() {
     return DEFAULT_GURU_CLASSES;
   });
 
-  // Bersihkan data lama ipa-8 dan bin-8 di localStorage browser
+  // Sinkronkan data kelas dari server saat pertama kali dimuat
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("thinksy_guru_classes");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter(
-            (c: any) => c.id !== "ipa-8" && c.id !== "bin-8"
+    async function syncClassesFromServer() {
+      try {
+        const res = await fetch("/api/classroom/classes");
+        if (res.ok) {
+          const data = await res.json();
+          const deletedIds = new Set(
+            (data.deletedClassIds || []).map((d: string) => d.toLowerCase())
           );
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem("thinksy_guru_classes", JSON.stringify(cleaned));
-            setClasses(cleaned);
+          const serverArchived: string[] = data.archivedClassIds || [];
+
+          if (serverArchived.length > 0) {
+            setArchivedClassIds((prev) => {
+              const merged = Array.from(new Set([...prev, ...serverArchived]));
+              try {
+                localStorage.setItem("thinksy_archived_classes", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+
+          if (data.classes && Array.isArray(data.classes)) {
+            setClasses((prev) => {
+              // Filter out any classes that have been deleted
+              const nonDeletedPrev = prev.filter(
+                (c: any) =>
+                  !deletedIds.has((c.id || "").toLowerCase()) &&
+                  !deletedIds.has((c.subjectCode || "").toLowerCase()) &&
+                  !deletedIds.has((c.kode_kelas || "").toLowerCase())
+              );
+              const prevMap = new Map(nonDeletedPrev.map((c: any) => [c.id, c]));
+              data.classes.forEach((sc: any) => {
+                if (
+                  !deletedIds.has((sc.id || "").toLowerCase()) &&
+                  !deletedIds.has((sc.subjectCode || "").toLowerCase()) &&
+                  !prevMap.has(sc.id)
+                ) {
+                  prevMap.set(sc.id, sc);
+                }
+              });
+              const merged = Array.from(prevMap.values());
+              try {
+                localStorage.setItem("thinksy_guru_classes", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
         }
+      } catch (err) {
+        console.warn("[GURU SYNC CLASSES ERROR]", err);
       }
-    } catch {}
+    }
+    syncClassesFromServer();
   }, []);
 
   const [activeClassId, setActiveClassId] = useState<string>("mat-8");
@@ -95,7 +128,10 @@ export default function GuruDashboardPage() {
     return [];
   });
 
-  const handleArchiveClass = (classId: string) => {
+  const handleArchiveClass = async (classId: string) => {
+    const cleanId = (classId || "").toLowerCase();
+
+    // 1. Pindahkan ke state arsip guru (masuk ke menu Arsip Kelas)
     setArchivedClassIds((prev) => {
       const updated = Array.from(new Set([...prev, classId]));
       try {
@@ -103,11 +139,57 @@ export default function GuruDashboardPage() {
       } catch {}
       return updated;
     });
-    setSuccessToast("Kelas berhasil dipindahkan ke Arsip Kelas (Archived classes).");
+
+    // 2. Kirim update ke server API agar dicatat di archived_classes.json
+    try {
+      await fetch("/api/classroom/classes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "archive", classId }),
+      });
+    } catch (err) {
+      console.warn("[GURU ARCHIVE CLASS ERROR]", err);
+    }
+
+    // 3. DI DASHBOARD SISWA: Cabut kelas ini seketika dari display siswa
+    try {
+      const joinedStr = localStorage.getItem("thinksy_joined_classes");
+      if (joinedStr) {
+        const joined = JSON.parse(joinedStr);
+        if (Array.isArray(joined)) {
+          const filtered = joined.filter(
+            (c: any) =>
+              c.id?.toLowerCase() !== cleanId &&
+              c.kode_kelas?.toLowerCase() !== cleanId &&
+              c.subjectCode?.toLowerCase() !== cleanId &&
+              !c.nama_kelas?.toLowerCase().includes(cleanId)
+          );
+          localStorage.setItem("thinksy_joined_classes", JSON.stringify(filtered));
+          localStorage.setItem("thinksy_permanent_classes", JSON.stringify(filtered));
+        }
+      }
+      // Broadcast storage event untuk tab siswa lain di browser yang sama
+      localStorage.setItem(
+        "thinksy_class_archived_event",
+        JSON.stringify({ classId, timestamp: Date.now() })
+      );
+    } catch {}
+
+    // 4. Dispatch custom window event
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("thinksy_class_archived", { detail: { classId } })
+      );
+      window.dispatchEvent(
+        new CustomEvent("thinksy_class_left", { detail: { classId } })
+      );
+    }
+
+    setSuccessToast("Kelas berhasil di-unenroll dan dipindahkan ke Arsip Kelas. Kelas otomatis dicabut dari dashboard siswa.");
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
-  const handleRestoreClass = (classId: string) => {
+  const handleRestoreClass = async (classId: string) => {
     setArchivedClassIds((prev) => {
       const updated = prev.filter((id) => id !== classId);
       try {
@@ -115,26 +197,99 @@ export default function GuruDashboardPage() {
       } catch {}
       return updated;
     });
+
+    try {
+      await fetch("/api/classroom/classes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore", classId }),
+      });
+    } catch (err) {
+      console.warn("[GURU RESTORE CLASS ERROR]", err);
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("thinksy_class_restored", { detail: { classId } })
+      );
+      try {
+        localStorage.setItem(
+          "thinksy_class_restored_event",
+          JSON.stringify({ classId, timestamp: Date.now() })
+        );
+      } catch {}
+    }
+
     setSuccessToast("Kelas berhasil dipulihkan ke daftar Teaching aktif.");
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
-  const handleDeleteClass = (classId: string) => {
-    const updatedClasses = classes.filter((c) => c.id !== classId);
+  const handleDeleteClass = async (classId: string) => {
+    const cleanId = (classId || "").toLowerCase();
+    const updatedClasses = classes.filter(
+      (c) =>
+        c.id?.toLowerCase() !== cleanId &&
+        c.kode_kelas?.toLowerCase() !== cleanId &&
+        c.subjectCode?.toLowerCase() !== cleanId
+    );
     setClasses(updatedClasses);
     try {
       localStorage.setItem("thinksy_guru_classes", JSON.stringify(updatedClasses));
     } catch {}
 
     setArchivedClassIds((prev) => {
-      const updated = prev.filter((id) => id !== classId);
+      const updated = prev.filter(
+        (id) =>
+          id?.toLowerCase() !== cleanId &&
+          !cleanId.includes(id?.toLowerCase())
+      );
       try {
         localStorage.setItem("thinksy_archived_classes", JSON.stringify(updated));
       } catch {}
       return updated;
     });
 
-    setSuccessToast("Kelas berhasil dihapus secara permanen.");
+    // 2. Kirim request DELETE ke server API agar dihapus dari classes_registry.json & dicatat di deleted_classes.json
+    try {
+      await fetch(`/api/classroom/classes?id=${encodeURIComponent(classId)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("[GURU DELETE CLASS ERROR]", err);
+    }
+
+    // 3. Bersihkan cache siswa jika di browser yang sama
+    try {
+      const joinedStr = localStorage.getItem("thinksy_joined_classes");
+      if (joinedStr) {
+        const joined = JSON.parse(joinedStr);
+        if (Array.isArray(joined)) {
+          const filtered = joined.filter(
+            (c: any) =>
+              c.id?.toLowerCase() !== cleanId &&
+              c.kode_kelas?.toLowerCase() !== cleanId &&
+              c.subjectCode?.toLowerCase() !== cleanId &&
+              !c.nama_kelas?.toLowerCase().includes(cleanId)
+          );
+          localStorage.setItem("thinksy_joined_classes", JSON.stringify(filtered));
+          localStorage.setItem("thinksy_permanent_classes", JSON.stringify(filtered));
+        }
+      }
+      // Broadcast storage event untuk tab siswa lain di browser yang sama
+      localStorage.setItem(
+        "thinksy_class_deleted_event",
+        JSON.stringify({ classId, timestamp: Date.now() })
+      );
+    } catch {}
+
+    // 4. Dispatch custom window event
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("thinksy_class_deleted", { detail: { classId } })
+      );
+    }
+
+    setSuccessToast("Kelas berhasil dihapus secara permanen dari server dan dashboard siswa.");
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
@@ -188,8 +343,15 @@ export default function GuruDashboardPage() {
     return "home";
   });
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState<number>(2);
+
+  // Set initial sidebar state based on viewport width (open on desktop >= 1024px, closed on mobile/tablet)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
+    }
+  }, []);
 
   // Sync tab from URL query if present (e.g. ?tab=home or ?view=presensi or ?class=...)
   useEffect(() => {
@@ -267,8 +429,8 @@ export default function GuruDashboardPage() {
     };
   }, [router]);
 
-  // Simpan kelas ke localStorage saat ada perubahan
-  const handleCreateClass = (newClass: NewClassData) => {
+  // Simpan kelas ke localStorage dan server saat ada kelas baru
+  const handleCreateClass = async (newClass: NewClassData) => {
     const updated = [newClass, ...classes];
     setClasses(updated);
     setActiveClassId(newClass.id);
@@ -277,7 +439,14 @@ export default function GuruDashboardPage() {
       localStorage.setItem("thinksy_guru_classes", JSON.stringify(updated));
       notifyClassUpdated();
 
-      // Registrasikan token ke shared storage agar siswa langsung bisa bergabung
+      // Sinkronkan ke server registry sehingga siswa bisa langsung bergabung dengan token
+      fetch("/api/classroom/classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClass),
+      }).catch((err) => console.warn("[SYNC CREATED CLASS TO SERVER]", err));
+
+      // Registrasikan token ke shared storage lokal agar siswa langsung bisa bergabung
       const existingTokens = JSON.parse(
         localStorage.getItem("thinksy_registered_class_codes") || "{}"
       );
@@ -289,7 +458,9 @@ export default function GuruDashboardPage() {
         ruang: newClass.room,
         kode_kelas: newClass.subjectCode.toLowerCase(),
         banner_color: newClass.themeColor,
-        banner_pattern: "matematika",
+        banner_pattern: newClass.bannerIllustration || "science",
+        bannerPhotoUrl: newClass.bannerPhotoUrl || "",
+        bgGradient: newClass.bgGradient,
       };
       localStorage.setItem(
         "thinksy_registered_class_codes",
@@ -320,6 +491,10 @@ export default function GuruDashboardPage() {
     if (view === "ujian") {
       router.push("/guru/ujian");
       return;
+    }
+
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
     }
 
     setActiveView(view);
@@ -381,21 +556,22 @@ export default function GuruDashboardPage() {
           pendingReviewCount={pendingReviewCount}
           classes={classes.filter((c) => !archivedClassIds.includes(c.id))}
           onCreateClassClick={() => setIsCreateClassModalOpen(true)}
+          onCloseMobile={() => setIsSidebarOpen(false)}
         />
 
-        {/* Desktop Spacer for Fixed Sidebar */}
+        {/* Desktop Spacer for Fixed Sidebar (Laptop & Desktop >= 1024px) */}
         {isSidebarOpen && (
           <div
-            className="w-68 sm:w-72 shrink-0 hidden md:block pointer-events-none"
+            className="w-68 sm:w-72 shrink-0 hidden lg:block pointer-events-none"
             aria-hidden="true"
           />
         )}
 
-        {/* Mobile Backdrop Overlay when Sidebar is open */}
+        {/* Mobile & Tablet Backdrop Overlay (< 1024px: HP & iPad portrait) */}
         {isSidebarOpen && (
           <div
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 top-16 bg-black/40 z-20 md:hidden backdrop-blur-xs transition-opacity cursor-pointer"
+            className="fixed inset-0 top-16 bg-black/40 z-20 lg:hidden backdrop-blur-xs transition-opacity cursor-pointer"
             aria-hidden="true"
           />
         )}
@@ -407,6 +583,7 @@ export default function GuruDashboardPage() {
               classes={classes}
               archivedClassIds={archivedClassIds}
               onArchiveClass={handleArchiveClass}
+              onDeleteClass={handleDeleteClass}
               onViewArchived={() => handleSelectView("archived")}
               onOpenClass={(classId) => {
                 setActiveClassId(classId);

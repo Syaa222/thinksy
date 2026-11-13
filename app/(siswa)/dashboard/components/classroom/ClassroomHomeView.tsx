@@ -49,6 +49,7 @@ export default function ClassroomHomeView({
   onOpenClass,
   onOpenTodo,
 }: ClassroomHomeViewProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showDueDetails, setShowDueDetails] = useState(false);
   const mathTheme = useActiveClassTheme("Matematika");
   const upcomingExams = examsData.filter(
@@ -361,7 +362,7 @@ export default function ClassroomHomeView({
             {/* Header Banner (Sinkron dengan Tema Kelas Guru) */}
             <div
               style={{ backgroundColor: mathTheme.themeColor || "#1967D2" }}
-              className="h-36 sm:h-38 relative select-none"
+              className="h-36 sm:h-38 relative select-none overflow-visible z-10"
             >
               {/* Clipped Background Gradient & Graphic */}
               <div className={`absolute inset-0 bg-gradient-to-r ${mathTheme.bgGradient || "from-blue-700 via-indigo-700 to-slate-900"} p-4 flex flex-col justify-between overflow-hidden rounded-t-2xl`}>
@@ -391,7 +392,7 @@ export default function ClassroomHomeView({
                 </div>
               </div>
 
-              {/* Circular Teacher Photo Overlapping Bottom Right (Tampil utuh di luar tepian kotak putih) */}
+              {/* Circular Teacher Photo Overlapping Bottom Right (Tampil utuh di depan card) */}
               <div className="absolute -bottom-8 right-4 w-18 h-18 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 z-30 flex items-center justify-center text-white font-bold text-xl select-none">
                 {(mathTheme.teacherName || "S").trim().charAt(0).toUpperCase()}
               </div>
@@ -400,7 +401,7 @@ export default function ClassroomHomeView({
             {/* Card Body - Ruang Belajar Integration */}
             <div
               onClick={() => onOpenClass("matematika")}
-              className="pt-9 pb-4 px-4 min-h-[95px] flex flex-col justify-between cursor-pointer hover:bg-slate-50/50 transition"
+              className="pt-9 pb-4 px-4 min-h-[95px] flex flex-col justify-between cursor-pointer hover:bg-slate-50/50 transition relative z-0"
             >
               <div className="space-y-1">
                 <div className="text-xs font-semibold text-slate-700">
@@ -450,8 +451,8 @@ export default function ClassroomHomeView({
             {/* Card Footer with Google Classroom Icons */}
             <div className="border-t border-slate-100 py-2.5 px-4 flex items-center justify-end gap-3 text-slate-500 bg-white">
               <button
-                onClick={() => onOpenClass("matematika")}
-                title="Buka Ruang Belajar"
+                onClick={onOpenTodo}
+                title="Buka Tugas & Pekerjaan Anda (To-do)"
                 className="p-1.5 rounded-full hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
               >
                 <ClipboardList className="w-5 h-5" />
@@ -463,13 +464,46 @@ export default function ClassroomHomeView({
               >
                 <Folder className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => alert("Opsi Kelas: Matematika (Pengajar: Ibu Rani Kamayasha, S.Pd.)")}
-                title="Opsi Lainnya"
-                className="p-1.5 rounded-full hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
-              >
-                <MoreVertical className="w-5 h-5" />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(!isMenuOpen);
+                  }}
+                  title="Opsi Kelas"
+                  className="p-1.5 rounded-full hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+                {isMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 bottom-10 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-medium text-slate-700 animate-in fade-in zoom-in-95">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onOpenClass("matematika");
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-slate-50 text-indigo-600 font-semibold cursor-pointer block"
+                      >
+                        Buka Ruang Belajar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onOpenClass("matematika");
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-600 cursor-pointer block"
+                      >
+                        Lihat Bab & Materi
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -786,9 +786,9 @@ export default function KelasSoalConfigModal({
                                     <span className="text-zinc-900 font-bold ml-auto">[TERPASANG]</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-zinc-900 font-medium line-clamp-2">
-                                  {b.pertanyaan}
-                                </p>
+                                <div className="text-xs text-zinc-900 font-medium line-clamp-2">
+                                  <MarkdownRenderer content={b.pertanyaan} isCompact />
+                                </div>
                               </div>
                             </div>
                           );
@@ -801,17 +801,51 @@ export default function KelasSoalConfigModal({
                   {addMode === "manual" && (
                     <form onSubmit={handleSaveManualQuestion} className="space-y-3">
                       <div>
-                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                          Teks Pertanyaan
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-mono uppercase text-zinc-500">
+                            Teks Pertanyaan
+                          </label>
+                          <span className="text-[10px] text-zinc-400 font-mono">Format KaTeX ($...$)</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 mb-1.5">
+                          <span className="text-[9px] text-zinc-400 font-mono font-bold mr-1">RUMUS CEPAT:</span>
+                          {[
+                            { label: "a/b", snippet: "$\\frac{a}{b}$", title: "Pecahan bertingkat" },
+                            { label: "x²", snippet: "$x^{2}$", title: "Pangkat" },
+                            { label: "√x", snippet: "$\\sqrt{x}$", title: "Bentuk akar" },
+                            { label: "×", snippet: "$\\times$", title: "Simbol kali" },
+                            { label: "÷", snippet: "$\\div$", title: "Simbol bagi" },
+                            { label: "π", snippet: "$\\pi$", title: "Bilangan pi" },
+                            { label: "±", snippet: "$\\pm$", title: "Plus minus" },
+                            { label: "°", snippet: "$^{\\circ}$", title: "Derajat" },
+                          ].map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => setManualQuestion((prev) => `${prev} ${item.snippet} `)}
+                              className="px-2 py-0.5 text-[9px] font-mono font-bold bg-zinc-100 hover:bg-blue-50 text-zinc-700 hover:text-blue-700 border border-zinc-200 hover:border-blue-400 rounded transition cursor-pointer"
+                              title={item.title}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
                         <textarea
                           rows={3}
                           value={manualQuestion}
                           onChange={(e) => setManualQuestion(e.target.value)}
                           required
-                          placeholder="Masukkan teks soal (LaTeX / plain text)..."
+                          placeholder="Masukkan teks soal (contoh: Hitung $\sqrt{144} + \frac{1}{2}$)..."
                           className="w-full px-3 py-2 text-xs font-mono border border-zinc-300 focus:outline-none focus:border-zinc-900"
                         />
+                        {manualQuestion && (
+                          <div className="mt-2 p-2.5 bg-zinc-50 border border-zinc-200 rounded text-xs space-y-1">
+                            <span className="text-[10px] font-mono font-bold text-zinc-400 block uppercase">
+                              Live Preview Formula KaTeX:
+                            </span>
+                            <MarkdownRenderer content={manualQuestion} isCompact />
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

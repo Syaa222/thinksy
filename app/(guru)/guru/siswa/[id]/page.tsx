@@ -579,7 +579,7 @@ export default function GuruDetailSiswaPage({
                           <span>Jawaban Siswa ({studentData.name}):</span>
                         </div>
                         <div className="font-bold text-xs leading-relaxed">
-                          {item.jawaban_siswa}
+                          <MarkdownRenderer content={item.jawaban_siswa} isCompact />
                         </div>
                       </div>
 
@@ -588,7 +588,7 @@ export default function GuruDetailSiswaPage({
                           Kunci Jawaban Resmi:
                         </div>
                         <div className="font-bold text-xs text-slate-900 leading-relaxed">
-                          {item.kunci_jawaban}
+                          <MarkdownRenderer content={item.kunci_jawaban} isCompact />
                         </div>
                       </div>
                     </div>
@@ -601,7 +601,7 @@ export default function GuruDetailSiswaPage({
                           <span>Pembahasan & Panduan Remedial Guru:</span>
                         </div>
                         <div className="leading-relaxed font-medium text-slate-700">
-                          {item.pembahasan}
+                          <MarkdownRenderer content={item.pembahasan} />
                         </div>
                       </div>
                     )}

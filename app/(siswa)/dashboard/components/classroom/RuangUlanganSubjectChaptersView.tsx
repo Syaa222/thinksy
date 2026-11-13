@@ -72,7 +72,7 @@ export default function RuangUlanganSubjectChaptersView({
   // Filter by semester
   const semesterChapters = useMemo(() => {
     const filtered = subjectChapters.filter((c) => {
-      const sem = c.semester || (c.urutan <= 3 ? 1 : 2);
+      const sem = c.semester || (c.urutan <= 4 ? 1 : 2);
       return sem === selectedSemester;
     });
     return filtered.length > 0 ? filtered : subjectChapters;
@@ -265,7 +265,7 @@ export default function RuangUlanganSubjectChaptersView({
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
                   Komponen Asesmen & Soal Bab (3 Bagian)
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   <Link
                     href={`/quiz/${chap.id}`}
                     className="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-200 transition flex items-center justify-between gap-2 group/m cursor-pointer"

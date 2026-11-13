@@ -3,7 +3,7 @@
 import { useActionState, useState, Suspense, useEffect } from "react";
 import { loginAction } from "../actions";
 import { createClient } from "@/lib/supabase/client";
-import { Mail, Lock, AlertCircle, Loader2, CheckCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, AlertCircle, Loader2, CheckCircle, ArrowRight, Eye, EyeOff, X, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -19,6 +19,7 @@ function LoginForm() {
   const oauthCode = searchParams.get("code");
   const [emailInput, setEmailInput] = useState(defaultEmail);
   const [isExchangingCode, setIsExchangingCode] = useState(() => Boolean(oauthCode));
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // Supabase mengirim ?code= ke /masuk alih-alih ke /api/auth/callback.
   // Exchange code harus dilakukan di browser yang sama karena PKCE verifier
@@ -203,12 +204,13 @@ function LoginForm() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Kata Sandi
             </label>
-            <Link
-              href="#"
-              className="text-xs font-semibold text-[#0B1A2E] hover:underline"
+            <button
+              type="button"
+              onClick={() => setShowForgotPasswordModal(true)}
+              className="text-xs font-semibold text-[#0B1A2E] hover:underline cursor-pointer"
             >
               Lupa kata sandi?
-            </Link>
+            </button>
           </div>
           <div className="relative flex items-center">
             <Lock className="w-5 h-5 text-slate-400 absolute left-4" />
@@ -329,6 +331,66 @@ function LoginForm() {
           <span>GitHub</span>
         </button>
       </div>
+
+      {/* Modal Bantuan Lupa Kata Sandi */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-100 relative space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-800 font-bold text-sm sm:text-base">
+                <HelpCircle className="w-5 h-5 text-blue-600" />
+                <span>Bantuan Lupa Kata Sandi</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              <p>
+                Akun pembelajaran Thinksy Anda terintegrasi langsung dengan database sekolah. Untuk alasan keamanan, pemulihan akun dilakukan secara terpusat:
+              </p>
+
+              <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-100 space-y-2 text-slate-700">
+                <div className="font-semibold text-blue-900 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <span>Untuk Akun Siswa:</span>
+                </div>
+                <p className="text-[11px] text-slate-600 pl-3">
+                  Silakan hubungi <strong>Wali Kelas</strong> atau <strong>Guru Pengampu</strong> Anda untuk melakukan reset kata sandi atau penerbitan PIN sementara.
+                </p>
+
+                <div className="font-semibold text-blue-900 flex items-center gap-1.5 pt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <span>Untuk Akun Pendidik (Guru):</span>
+                </div>
+                <p className="text-[11px] text-slate-600 pl-3">
+                  Hubungi <strong>Administrator Sistem / Tim IT Sekolah</strong> untuk mereset kredensial akun Anda.
+                </p>
+              </div>
+
+              <p className="text-[11px] text-slate-400 italic text-center">
+                Atau email bantuan: admin@sekolah.sch.id
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowForgotPasswordModal(false)}
+              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs"
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

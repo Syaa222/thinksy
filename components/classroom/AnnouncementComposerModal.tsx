@@ -59,6 +59,7 @@ export default function AnnouncementComposerModal({
   const [attachmentModalType, setAttachmentModalType] = useState<"link" | "youtube" | "drive" | null>(null);
   const [attachmentUrlInput, setAttachmentUrlInput] = useState("");
   const [attachmentTitleInput, setAttachmentTitleInput] = useState("");
+  const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -448,7 +449,7 @@ export default function AnnouncementComposerModal({
               </button>
 
               {/* Post Button with Dropdown Arrow */}
-              <div className="inline-flex rounded-full shadow-xs">
+              <div className="relative inline-flex rounded-full shadow-xs">
                 <button
                   type="submit"
                   disabled={!text.trim()}
@@ -459,11 +460,50 @@ export default function AnnouncementComposerModal({
                 <button
                   type="button"
                   disabled={!text.trim()}
-                  onClick={() => {}}
+                  onClick={() => setIsPostMenuOpen(!isPostMenuOpen)}
                   className="px-2.5 py-2 rounded-r-full bg-[#1557b0] hover:bg-blue-800 disabled:bg-slate-300 disabled:text-slate-400 text-white transition cursor-pointer border-l border-white/20"
+                  title="Opsi Publikasi"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
+
+                {isPostMenuOpen && (
+                  <div
+                    className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-semibold text-slate-700 animate-in fade-in zoom-in-95 duration-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="submit"
+                      onClick={() => setIsPostMenuOpen(false)}
+                      className="w-full px-4 py-2 text-left hover:bg-blue-50 text-blue-600 flex items-center justify-between transition cursor-pointer"
+                    >
+                      <span>Posting Sekarang</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Langsung</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        setIsPostMenuOpen(false);
+                        handleSubmit(e as any);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-slate-50 text-slate-700 flex items-center justify-between transition cursor-pointer"
+                    >
+                      <span>Jadwalkan</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Jadwal</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        setIsPostMenuOpen(false);
+                        handleSubmit(e as any);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-slate-50 text-slate-700 flex items-center justify-between transition cursor-pointer"
+                    >
+                      <span>Simpan Draf</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Draf</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -694,7 +694,7 @@ export default function AIQuestionGeneratorPage() {
                       Kunci Jawaban:
                     </span>
                     <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
-                      {draft.kunciJawaban}
+                      <MarkdownRenderer content={draft.kunciJawaban} isCompact />
                     </div>
                   </div>
 

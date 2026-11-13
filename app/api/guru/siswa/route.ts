@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getQuestionsForAssessmentReview } from "@/lib/exam-questions-store";
 
 // Canonical Grade 8 Mathematics Curriculum Definitions
 const CANONICAL_BABS = [
@@ -660,36 +661,7 @@ export async function GET() {
         }
 
         if (questionReviews.length === 0 && isDone && finalScore !== null) {
-          questionReviews = [
-            {
-              id: `qu-mock-1-${u.id}`,
-              pertanyaan: uIdx === 0
-                ? "Sederhanakan bentuk aljabar 5(x - 2) + 3(2x + 4)!"
-                : "Tentukan panjang hipotenusa segitiga siku-siku dengan sisi 9 cm dan 12 cm!",
-              tipeSoal: "pilihan_ganda",
-              jawabanSiswa: uIdx === 0 ? "11x + 2" : "15 cm",
-              kunciJawaban: uIdx === 0 ? "11x + 2" : "15 cm",
-              pembahasan: "Sesuai rumus baku perhitungan matematika fase D.",
-              isBenar: true,
-              nilai: 10,
-              miskonsepsi: null,
-              umpanBalik: "Langkah penyelesaian terstruktur rapi.",
-            },
-            {
-              id: `qu-mock-2-${u.id}`,
-              pertanyaan: uIdx === 0
-                ? "Tentukan penyelesaian dari 2x + 5 = 17!"
-                : "Hitung luas permukaan kubus jika panjang sisinya 7 cm!",
-              tipeSoal: "pilihan_ganda",
-              jawabanSiswa: uIdx === 0 ? "x = 6" : "294 cm²",
-              kunciJawaban: uIdx === 0 ? "x = 6" : "294 cm²",
-              pembahasan: "Perhitungan aljabar dan geometri tepat.",
-              isBenar: true,
-              nilai: 10,
-              miskonsepsi: null,
-              umpanBalik: "Hasil akhir sesuai kunci jawaban.",
-            },
-          ];
+          questionReviews = getQuestionsForAssessmentReview(u.id, "ulangan", finalScore);
         }
 
         if (isDone && finalScore !== null) {
@@ -775,32 +747,7 @@ export async function GET() {
         }
 
         if (questionReviews.length === 0 && isDone && finalScore !== null) {
-          questionReviews = [
-            {
-              id: `quj-mock-1-${u.id}`,
-              pertanyaan: "Sistem persamaan x + y = 10 dan 2x - y = 5. Nilai dari 2x + 3y adalah...",
-              tipeSoal: "pilihan_ganda",
-              jawabanSiswa: "23",
-              kunciJawaban: "23",
-              pembahasan: "Eliminasi diperoleh x = 5, y = 5. Nilai 2(5) + 3(5) = 10 + 15 = 25 (atau hitungan terverifikasi CBT).",
-              isBenar: true,
-              nilai: 10,
-              miskonsepsi: null,
-              umpanBalik: "Penalaran kalkulasi tepat.",
-            },
-            {
-              id: `quj-mock-2-${u.id}`,
-              pertanyaan: "Sebuah dadu dan sekeping uang logam dilempar bersamaan. Peluang muncul mata dadu ganjil dan angka pada uang logam adalah...",
-              tipeSoal: "pilihan_ganda",
-              jawabanSiswa: "1/4",
-              kunciJawaban: "1/4",
-              pembahasan: "P(ganjil) = 3/6 = 1/2. P(angka) = 1/2. Peluang gabungan = 1/2 × 1/2 = 1/4.",
-              isBenar: true,
-              nilai: 10,
-              miskonsepsi: null,
-              umpanBalik: "Rumus kaidah peluang independen diaplikasikan dengan benar.",
-            },
-          ];
+          questionReviews = getQuestionsForAssessmentReview(u.id, "ujian", finalScore);
         }
 
         if (isDone && finalScore !== null) {

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ExamRoomClient from "./ExamRoomClient";
 import { shuffleOptionsForStudent } from "@/lib/curriculum-quiz-engine";
+import { getExamQuestions, ExamQuestion, ExamQuestionOption } from "@/lib/exam-questions-store";
 
 export default async function DetailUjianPage({
   params,
@@ -239,55 +240,75 @@ export default async function DetailUjianPage({
       };
     });
   } else {
-    // Fallback dari tabel soal
-    let query = adminSupabase
-      .from("soal")
-      .select(`
-        id,
-        pertanyaan,
-        tipe_soal,
-        pembahasan,
-        kunci_jawaban,
-        opsi_soal (
+    // 1. Cek Central Store Ujian Guru terlebih dahulu (ujian_store.json)
+    const storeQuestions = getExamQuestions(effectiveUjianId);
+    if (storeQuestions && storeQuestions.length > 0) {
+      formattedQuestions = storeQuestions.map((q: ExamQuestion, idx: number) => ({
+        id: q.id,
+        urutan: idx + 1,
+        pertanyaan: q.pertanyaan,
+        tipe_soal: q.tipeSoal,
+        poin_bobot: q.poin || (q.tipeSoal === "pilihan_ganda" ? 5 : 10),
+        pembahasan: q.pembahasan || null,
+        kunci_jawaban: q.kunciJawaban || null,
+        opsi: (q.opsi || []).map((o: ExamQuestionOption, oIdx: number) => ({
+          id: o.id || `${q.id}-opt-${oIdx}`,
+          teks_opsi: o.teks,
+          urutan: oIdx + 1,
+          benar: Boolean(o.benar),
+        })),
+      }));
+    } else {
+      // 2. Fallback dari tabel soal Supabase
+      let query = adminSupabase
+        .from("soal")
+        .select(`
           id,
-          teks_opsi,
-          benar,
-          urutan
-        )
-      `);
+          pertanyaan,
+          tipe_soal,
+          pembahasan,
+          kunci_jawaban,
+          opsi_soal (
+            id,
+            teks_opsi,
+            benar,
+            urutan
+          )
+        `);
 
-    if (ujian.bab_id) {
-      query = query.eq("bab_id", ujian.bab_id);
-    }
+      if (ujian.bab_id) {
+        query = query.eq("bab_id", ujian.bab_id);
+      }
 
-    const { data: fallbackQuestions } = await query.order("urutan", { ascending: true }).limit(20);
+      const { data: fallbackQuestions } = await query.order("urutan", { ascending: true }).limit(20);
 
-    if (fallbackQuestions && fallbackQuestions.length > 0) {
-      formattedQuestions = fallbackQuestions.map((q: any, idx: number) => {
-        const rawOpsi = Array.isArray(q.opsi_soal) ? q.opsi_soal : [];
-        const sortedOpsi = rawOpsi.sort((a: any, b: any) => (a.urutan || 0) - (b.urutan || 0));
-        const hasBenar = sortedOpsi.some((o: any) => o.benar);
+      if (fallbackQuestions && fallbackQuestions.length > 0) {
+        formattedQuestions = fallbackQuestions.map((q: any, idx: number) => {
+          const rawOpsi = Array.isArray(q.opsi_soal) ? q.opsi_soal : [];
+          const sortedOpsi = rawOpsi.sort((a: any, b: any) => (a.urutan || 0) - (b.urutan || 0));
+          const hasBenar = sortedOpsi.some((o: any) => o.benar);
 
-        return {
-          id: q.id,
-          urutan: idx + 1,
-          pertanyaan: q.pertanyaan,
-          tipe_soal: q.tipe_soal || "pilihan_ganda",
-          poin_bobot: 5,
-          pembahasan: q.pembahasan || null,
-          kunci_jawaban: q.kunci_jawaban || null,
-          opsi: sortedOpsi.map((o: any) => ({
-            id: o.id,
-            teks_opsi: o.teks_opsi,
-            urutan: o.urutan,
-            benar:
-              o.benar === true ||
-              (!hasBenar &&
-                Boolean(q.kunci_jawaban) &&
-                o.teks_opsi?.trim().toLowerCase() === q.kunci_jawaban?.trim().toLowerCase()),
-          })),
-        };
-      });
+          return {
+            id: q.id,
+            urutan: idx + 1,
+            pertanyaan: q.pertanyaan,
+            tipe_soal: q.tipe_soal || "pilihan_ganda",
+            poin_bobot: 5,
+            pembahasan: q.pembahasan || null,
+            kunci_jawaban: q.kunci_jawaban || null,
+            opsi: sortedOpsi.map((o: any) => ({
+              id: o.id,
+              teks_opsi: o.teks_opsi,
+              urutan: o.urutan,
+              benar:
+                o.benar === true ||
+                (!hasBenar &&
+                  Boolean(q.kunci_jawaban) &&
+                  o.teks_opsi?.trim().toLowerCase() === q.kunci_jawaban?.trim().toLowerCase()),
+            })),
+          };
+        });
+      }
     }
   }
 

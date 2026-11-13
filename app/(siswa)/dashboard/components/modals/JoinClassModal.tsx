@@ -41,27 +41,47 @@ export default function JoinClassModal({
 
       const data = await res.json().catch(() => ({}));
 
-      if (data && data.class) {
+      if (res.ok && data && data.class) {
         setIsLoading(false);
         setClassCode("");
         onJoinSuccess(data.class);
         onClose();
         return;
       }
+
+      // Jika server mengembalikan error (misal kelas sudah di-unenroll atau dihapus)
+      if (!res.ok || data.error) {
+        setIsLoading(false);
+        setErrorMessage(data.error || "Token kelas tidak valid atau kelas tidak aktif.");
+        return;
+      }
     } catch (netErr) {
-      console.warn("[JOIN CLASS FALLBACK]", netErr);
+      console.warn("[JOIN CLASS NETWORK ERROR]", netErr);
     }
 
-    // Fallback otomatis permanen jika koneksi lokal ada kendala
-    const fallbackClass = {
-      id: "class_matematika_8",
-      nama_kelas: "Matematika (Kelas 8)",
+    // Cek shared localStorage jika token didaftarkan oleh guru di browser yang sama
+    let registeredClass: any = null;
+    try {
+      const storedTokens = JSON.parse(
+        localStorage.getItem("thinksy_registered_class_codes") || "{}"
+      );
+      const clean = token.toLowerCase();
+      if (storedTokens[clean]) {
+        registeredClass = storedTokens[clean];
+      }
+    } catch {}
+
+    const isIpa = token.toLowerCase().startsWith("ipa") || token.toLowerCase().includes("ipa");
+    const fallbackClass = registeredClass || {
+      id: isIpa ? "ipa-8" : "class_matematika_8",
+      nama_kelas: isIpa ? "IPA (Ilmu Pengetahuan Alam)" : "Matematika (Kelas 8)",
       nama_guru: "Ibu Siti Rahmawati, M.Pd.",
-      mata_pelajaran: "Matematika",
-      ruang: "Ruang 8-A",
-      kode_kelas: token || "mtk8xpk",
-      banner_color: "#1967D2",
-      banner_pattern: "matematika",
+      mata_pelajaran: isIpa ? "IPA" : "Matematika",
+      ruang: isIpa ? "Lab IPA" : "Ruang 8-A",
+      kode_kelas: token || (isIpa ? "ipa8xpk" : "mtk8xpk"),
+      banner_color: isIpa ? "#0F9D58" : "#1967D2",
+      banner_pattern: isIpa ? "science" : "matematika",
+      bgGradient: isIpa ? "from-emerald-600 via-teal-600 to-slate-950" : "from-blue-700 via-indigo-700 to-slate-900",
     };
 
     setIsLoading(false);
@@ -121,7 +141,7 @@ export default function JoinClassModal({
             />
 
             {/* Quick helper pills */}
-            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500">
               <span>Contoh kode:</span>
               <button
                 type="button"
@@ -132,6 +152,17 @@ export default function JoinClassModal({
                 className="font-mono font-semibold text-[#0B57D0] hover:underline cursor-pointer"
               >
                 mtk8xpk
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setClassCode("ipa8xpk");
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                className="font-mono font-semibold text-emerald-600 hover:underline cursor-pointer"
+              >
+                ipa8xpk
               </button>
               <span>•</span>
               <button

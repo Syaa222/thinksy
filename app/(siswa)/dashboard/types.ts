@@ -178,7 +178,16 @@ export interface ClassroomCardItem {
   foto_guru?: string | null;
   email_guru?: string | null;
   banner_color?: string;
-  banner_pattern?: "ai" | "science" | "orientasi" | "matematika" | "indonesia" | "inggris" | "generic";
+  banner_pattern?: "ai" | "science" | "orientasi" | "matematika" | "indonesia" | "inggris" | "generic" | string;
+  mata_pelajaran?: string;
+  kode_kelas?: string;
+  subjectCode?: string;
+  themeColor?: string;
+  bgGradient?: string;
+  bannerType?: "illustration" | "photo";
+  bannerIllustration?: string;
+  bannerPhotoUrl?: string;
+  description?: string;
 }
 
 export interface StudentDashboardProps {

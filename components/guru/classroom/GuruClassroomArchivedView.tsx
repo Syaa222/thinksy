@@ -107,18 +107,20 @@ export default function GuruClassroomArchivedView({
             return (
               <div
                 key={cls.id}
-                className="bg-white rounded-3xl border border-slate-300/90 shadow-2xs overflow-hidden flex flex-col justify-between relative opacity-95 hover:opacity-100 transition-opacity"
+                className={`bg-white rounded-3xl border border-slate-300/90 shadow-2xs flex flex-col justify-between relative opacity-95 hover:opacity-100 transition-opacity ${
+                  isMenuOpen ? "overflow-visible z-40" : "overflow-hidden z-0 hover:z-10"
+                }`}
               >
                 {/* Top Banner (Diagonal stripes + muted gradient for authentic archive look) */}
                 <div
-                  className="p-5 text-white relative overflow-hidden"
+                  className="p-5 text-white relative rounded-t-3xl"
                   style={{
                     backgroundColor: "#475569",
                     backgroundImage:
                       "repeating-linear-gradient(45deg, rgba(255,255,255,0.06), rgba(255,255,255,0.06) 10px, transparent 10px, transparent 20deg)",
                   }}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className={`flex items-start justify-between relative ${isMenuOpen ? "z-50" : "z-20"}`}>
                     <div className="space-y-1 min-w-0 pr-4">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-bold truncate font-sans text-white">
@@ -149,7 +151,7 @@ export default function GuruClassroomArchivedView({
 
                       {isMenuOpen && (
                         <div
-                          className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 text-slate-800 text-sm animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                          className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-slate-800 text-sm animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button

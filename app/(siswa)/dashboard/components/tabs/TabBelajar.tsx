@@ -32,6 +32,7 @@ import {
   MoreVertical,
   Plus,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import {
   SekolahData,
@@ -58,6 +59,7 @@ import {
 } from "@/lib/announcement-format";
 
 interface TabBelajarProps {
+  studentId?: string;
   studentName: string;
   currentUserRank?: number;
   namaKelas?: string;
@@ -75,13 +77,16 @@ interface TabBelajarProps {
   examsData?: UjianItem[];
   lastActivity?: LastActivityItem | null;
   onNavigateToCourses: () => void;
-  onOpenClass?: (classId: string) => void;
+  onOpenClass?: (classId: string, subjectName?: string) => void;
   onOpenCalendar?: () => void;
   onOpenTodo?: () => void;
   classesData?: ClassroomCardItem[];
+  onLeaveClass?: (classId: string, className: string) => void;
+  onCancelLeaveRequest?: (classId: string) => void;
 }
 
 export default function TabBelajar({
+  studentId = "student-1",
   studentName,
   currentUserRank,
   namaKelas = "Kelas 8",
@@ -103,11 +108,137 @@ export default function TabBelajar({
   onOpenCalendar,
   onOpenTodo,
   classesData = [],
+  onLeaveClass,
+  onCancelLeaveRequest,
 }: TabBelajarProps) {
   const { t, language } = useLanguage();
   const mathTheme = useActiveClassTheme("Matematika");
   // Classes Card Menu State
   const [openCardMenu, setOpenCardMenu] = useState<string | null>(null);
+  const [leavingClass, setLeavingClass] = useState<{ id: string; name: string } | null>(null);
+
+  // Pending unenroll requests tracking
+  const [pendingUnenrollClassIds, setPendingUnenrollClassIds] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("thinksy_pending_unenroll_classes");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    async function loadPendingRequests() {
+      try {
+        const res = await fetch("/api/classroom/unenroll-request");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.requests)) {
+            const pendingList = data.requests
+              .filter((r: any) => r.status === "pending")
+              .map((r: any) => r.classId);
+            setPendingUnenrollClassIds(pendingList);
+            try {
+              localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(pendingList));
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+    loadPendingRequests();
+
+    const handleUnenrollReq = (e: any) => {
+      const classId = e.detail?.classId;
+      if (classId) {
+        setPendingUnenrollClassIds((prev) => (prev.includes(classId) ? prev : [...prev, classId]));
+      }
+    };
+
+    const handleUnenrollDone = (e: any) => {
+      const classId = e.detail?.classId;
+      if (classId) {
+        setPendingUnenrollClassIds((prev) => prev.filter((id) => id !== classId));
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "thinksy_pending_unenroll_classes" && e.newValue) {
+        try {
+          setPendingUnenrollClassIds(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+
+    window.addEventListener("thinksy_unenroll_requested", handleUnenrollReq);
+    window.addEventListener("thinksy_unenroll_canceled", handleUnenrollDone);
+    window.addEventListener("thinksy_unenroll_approved", handleUnenrollDone);
+    window.addEventListener("thinksy_unenroll_rejected", handleUnenrollDone);
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("thinksy_unenroll_requested", handleUnenrollReq);
+      window.removeEventListener("thinksy_unenroll_canceled", handleUnenrollDone);
+      window.removeEventListener("thinksy_unenroll_approved", handleUnenrollDone);
+      window.removeEventListener("thinksy_unenroll_rejected", handleUnenrollDone);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  const handleCancelLeave = (classId: string) => {
+    if (onCancelLeaveRequest) {
+      onCancelLeaveRequest(classId);
+    } else {
+      try {
+        const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+        const filtered = pending.filter((id: string) => id !== classId);
+        localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(filtered));
+      } catch {}
+      fetch("/api/classroom/unenroll-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: studentId || "student-1", classId, action: "cancel" }),
+      }).catch(() => {});
+      window.dispatchEvent(new CustomEvent("thinksy_unenroll_canceled", { detail: { classId } }));
+    }
+    setPendingUnenrollClassIds((prev) => prev.filter((id) => id !== classId));
+  };
+
+  const handleConfirmLeaveClass = () => {
+    if (!leavingClass) return;
+    const target = leavingClass;
+    setLeavingClass(null);
+
+    setPendingUnenrollClassIds((prev) => (prev.includes(target.id) ? prev : [...prev, target.id]));
+
+    if (onLeaveClass) {
+      onLeaveClass(target.id, target.name);
+    } else {
+      try {
+        const pending = JSON.parse(localStorage.getItem("thinksy_pending_unenroll_classes") || "[]");
+        if (!pending.includes(target.id)) {
+          pending.push(target.id);
+          localStorage.setItem("thinksy_pending_unenroll_classes", JSON.stringify(pending));
+        }
+      } catch {}
+
+      fetch("/api/classroom/unenroll-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: studentId || "student-1",
+          studentName: studentName || "Siswa Thinksy",
+          classId: target.id,
+          className: target.name,
+        }),
+      }).catch(() => {});
+
+      window.dispatchEvent(
+        new CustomEvent("thinksy_unenroll_requested", {
+          detail: { classId: target.id, className: target.name },
+        })
+      );
+    }
+  };
 
   // Announcements State for Matematika Class Card
   const [announcements, setAnnouncements] = useState<StreamAnnouncement[]>(() => {
@@ -1081,52 +1212,80 @@ export default function TabBelajar({
           </div>
         </div>
 
-        {/* Classes Grid (Terintegrasi Ruang Belajar: Khusus Matematika Kelas 8) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(
-            (classesData && classesData.length > 0
-              ? classesData.filter((c) => c.nama_kelas.toLowerCase().includes("matematika"))
-              : []
-            ).length > 0
-              ? classesData.filter((c) => c.nama_kelas.toLowerCase().includes("matematika"))
+        {/* Classes Grid (Terintegrasi Penuh: Matematika, IPA, dan Kelas Guru Lainnya) */}
+        {classesData && classesData.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center flex flex-col items-center justify-center space-y-4 shadow-2xs">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+              <Folder className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-800">
+                Belum ada kelas yang diikuti
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm">
+                Kelas Anda telah selesai atau di-unenroll oleh pengampu. Anda dapat bergabung kembali ke kelas baru menggunakan token kelas dari guru.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(classesData && classesData.length > 0
+              ? classesData
               : [
                   {
                     id: "class_matematika",
-                    nama_kelas: "Matematika",
-                    nama_guru: "Ibu Rani Kamayasha, S.Pd.",
-                    foto_guru: null,
-                    banner_color: "#4338CA",
+                    nama_kelas: "Matematika (Kelas 8)",
+                    nama_guru: "Ibu Siti Rahmawati, M.Pd.",
+                    foto_guru: "/images/foto-guru.jpg",
+                    banner_color: "#1967D2",
                     banner_pattern: "matematika" as const,
                   },
                 ]
-          ).map((cls, idx) => {
+            ).map((cls, idx) => {
             const isMenuOpen = openCardMenu === cls.id;
-            const nameParts = (cls.nama_guru || "Guru").trim().split(" ");
+            const isIpa = (cls.nama_kelas || "").toLowerCase().includes("ipa") || (cls.mata_pelajaran || "").toLowerCase().includes("ipa");
+            const isMath = (cls.nama_kelas || "").toLowerCase().includes("mat") || (!isIpa && !cls.mata_pelajaran);
+
+            const cardColor = cls.banner_color || (cls as any).themeColor || (isIpa ? "#0F9D58" : mathTheme.themeColor || "#1967D2");
+            const cardGradient = (cls as any).bgGradient || (isIpa ? "from-emerald-600 via-teal-700 to-slate-950" : mathTheme.bgGradient || "from-blue-700 via-indigo-700 to-slate-900");
+            const cardBannerType = (cls as any).bannerPhotoUrl ? "photo" : ((cls as any).bannerType || (isIpa ? "illustration" : mathTheme.bannerType || "illustration"));
+            const cardIllustration = cls.banner_pattern || (cls as any).bannerIllustration || (isIpa ? "science" : mathTheme.bannerIllustration || "math");
+            const cardPhotoUrl = (cls as any).bannerPhotoUrl || (!isIpa ? mathTheme.bannerPhotoUrl : "");
+            const cardTitle = cls.nama_kelas || (isIpa ? "IPA (Ilmu Pengetahuan Alam)" : mathTheme.name);
+            const cardTeacher = cls.nama_guru || (isMath ? (mathTheme.teacherName || "Ibu Siti Rahmawati, M.Pd.") : "Ibu Siti Rahmawati, M.Pd.");
+            const subjectKey = isIpa ? "IPA" : "Matematika";
+
+            const nameParts = cardTeacher.trim().split(" ");
             const initials =
               nameParts.length >= 2
                 ? (nameParts[0][0] + nameParts[1][0]).toUpperCase()
                 : (nameParts[0][0] || "G").toUpperCase();
 
-            const avatarBg = "bg-indigo-600";
+            const avatarBg = isIpa ? "bg-emerald-600" : "bg-indigo-600";
+            const isPendingUnenroll =
+              pendingUnenrollClassIds.includes(cls.id) ||
+              (cls.kode_kelas ? pendingUnenrollClassIds.includes(cls.kode_kelas) : false);
 
             return (
               <div
                 key={cls.id || idx}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden relative group"
+                className={`bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between relative group ${
+                  isMenuOpen ? "overflow-visible z-30" : "overflow-hidden z-0"
+                }`}
               >
                 {/* Header Banner (Sinkron 100% dengan Dashboard Guru) */}
-                <div
-                  style={{ backgroundColor: mathTheme.themeColor || cls.banner_color || "#1967D2" }}
-                  className="h-34 sm:h-36 relative select-none"
-                >
+                <div className="h-34 sm:h-36 relative select-none rounded-t-2xl overflow-visible z-10">
                   {/* Clipped Background Gradient & Graphic */}
-                  <div className={`absolute inset-0 bg-gradient-to-r ${mathTheme.bgGradient || "from-blue-700 via-indigo-700 to-slate-900"} p-4 flex flex-col justify-between overflow-hidden rounded-t-2xl`}>
+                  <div
+                    style={{ backgroundColor: cardColor }}
+                    className={`absolute inset-0 bg-gradient-to-r ${cardGradient} p-4 flex flex-col justify-between overflow-hidden rounded-t-2xl`}
+                  >
                     {/* Class Banner Graphic: Foto Kustom Guru atau Ilustrasi SVG Google Classroom */}
                     <ClassBannerGraphic
-                      bannerType={mathTheme.bannerType}
-                      bannerIllustration={mathTheme.bannerIllustration}
-                      bannerPhotoUrl={mathTheme.bannerPhotoUrl}
-                      subjectName={cls.nama_kelas || mathTheme.name}
+                      bannerType={cardBannerType as any}
+                      bannerIllustration={cardIllustration}
+                      bannerPhotoUrl={cardPhotoUrl}
+                      subjectName={cardTitle}
                       isCompact={true}
                     />
 
@@ -1135,25 +1294,25 @@ export default function TabBelajar({
                       <button
                         type="button"
                         onClick={() => {
-                          if (onOpenClass) onOpenClass(cls.id);
+                          if (onOpenClass) onOpenClass(cls.id, subjectKey);
                           else onNavigateToCourses();
                         }}
                         className="text-left font-semibold text-lg sm:text-xl text-white group-hover:underline tracking-tight line-clamp-1 block cursor-pointer drop-shadow-sm"
                       >
-                        {cls.nama_kelas || mathTheme.name}
+                        {cardTitle}
                       </button>
-                      <p className="text-xs text-white/90 font-normal truncate" title={mathTheme.teacherName || cls.nama_guru}>
-                        {mathTheme.teacherName || cls.nama_guru}
+                      <p className="text-xs text-white/90 font-normal truncate" title={cardTeacher}>
+                        {cardTeacher}
                       </p>
                     </div>
                   </div>
 
-                  {/* Circular Teacher Photo from Database (Tampil utuh di luar tepian kotak putih) */}
+                  {/* Circular Teacher Photo from Database (Tampil utuh di depan card dan di atas tepian putih) */}
                   <div className="absolute -bottom-8 right-4 w-18 h-18 rounded-full border-2 border-white shadow-md overflow-hidden bg-slate-200 z-30 flex items-center justify-center">
                     {cls.foto_guru ? (
                       <img
                         src={cls.foto_guru}
-                        alt={cls.nama_guru}
+                        alt={cardTeacher}
                         className="w-full h-full object-cover object-top"
                       />
                     ) : (
@@ -1167,23 +1326,27 @@ export default function TabBelajar({
                 {/* Card Body - Terintegrasi dengan Ruang Belajar */}
                 <div
                   onClick={() => {
-                    if (onOpenClass) onOpenClass(cls.id);
+                    if (onOpenClass) onOpenClass(cls.id, subjectKey);
                     else onNavigateToCourses();
                   }}
-                  className="pt-9 pb-4 px-4 min-h-[95px] flex flex-col justify-between bg-white cursor-pointer hover:bg-slate-50/50 transition"
+                  className="pt-9 pb-4 px-4 min-h-[95px] flex flex-col justify-between bg-white cursor-pointer hover:bg-slate-50/50 transition relative z-0"
                 >
                   <div className="space-y-1">
                     <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                       <span>Progres Ruang Belajar</span>
-                      <span className="text-indigo-600 font-bold">{Math.round(learningProgressPercent)}%</span>
+                      <span className={`${isIpa ? "text-emerald-600" : "text-indigo-600"} font-bold`}>
+                        {isIpa ? "40%" : `${Math.round(learningProgressPercent)}%`}
+                      </span>
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      {allChapters.length || 5} Bab Matematika Kelas 8 • Tersedia Materi, Latihan Sokratik & Kuis
+                      {isIpa
+                        ? "5 Bab IPA Kelas 8 • Tersedia Materi, Latihan Sokratik & Sains Eksperimen"
+                        : `${allChapters.length || 5} Bab Matematika Kelas 8 • Tersedia Materi, Latihan Sokratik & Kuis`}
                     </div>
                   </div>
 
-                  {/* Preview Pengumuman Guru di Card Matematika Siswa */}
-                  {latestMathAnnouncement && (
+                  {/* Preview Pengumuman Guru di Card Siswa */}
+                  {isMath && latestMathAnnouncement && (
                     <div className="mt-2.5 p-2.5 rounded-xl bg-blue-50/90 border border-blue-200/80 hover:bg-blue-100/70 transition-all flex items-start gap-2 text-left">
                       <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 shrink-0 animate-pulse" />
                       <div className="flex-1 min-w-0">
@@ -1215,10 +1378,32 @@ export default function TabBelajar({
                   {/* Progress Bar */}
                   <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-3">
                     <div
-                      className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-                      style={{ width: `${Math.max(5, Math.min(100, learningProgressPercent))}%` }}
+                      className={`${isIpa ? "bg-emerald-600" : "bg-indigo-600"} h-full rounded-full transition-all duration-300`}
+                      style={{ width: `${isIpa ? "40%" : Math.max(5, Math.min(100, learningProgressPercent))}%` }}
                     />
                   </div>
+
+                  {/* Status Pending Konfirmasi Guru Keluar Kelas */}
+                  {isPendingUnenroll && (
+                    <div className="mt-2.5 p-2 px-2.5 rounded-xl bg-amber-50/95 border border-amber-200/90 text-amber-900 flex items-center justify-between text-xs animate-in fade-in duration-150">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                        <span className="font-semibold text-[11px] truncate">
+                          {t.leaveClassPendingBadge || "Menunggu Persetujuan Guru"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelLeave(cls.id);
+                        }}
+                        className="text-[10px] font-bold text-amber-700 hover:text-amber-950 underline shrink-0 cursor-pointer transition ml-2"
+                      >
+                        {t.leaveClassCancelBtn || "Batalkan"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Footer with Google Classroom Action Icons */}
@@ -1226,10 +1411,11 @@ export default function TabBelajar({
                   <button
                     type="button"
                     onClick={() => {
-                      if (onOpenClass) onOpenClass(cls.id);
+                      if (onOpenTodo) onOpenTodo();
+                      else if (onOpenClass) onOpenClass(cls.id, subjectKey);
                       else onNavigateToCourses();
                     }}
-                    title="Buka Ruang Belajar Matematika"
+                    title={`Buka Tugas & Pekerjaan Anda (${cardTitle})`}
                     className="p-1.5 rounded-full hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1241,7 +1427,7 @@ export default function TabBelajar({
                   <button
                     type="button"
                     onClick={() => {
-                      if (onOpenClass) onOpenClass(cls.id);
+                      if (onOpenClass) onOpenClass(cls.id, subjectKey);
                       else onNavigateToCourses();
                     }}
                     title="Buka Bab & Materi Ruang Belajar"
@@ -1268,29 +1454,63 @@ export default function TabBelajar({
                         className="fixed inset-0 z-20"
                         onClick={() => setOpenCardMenu(null)}
                       />
-                      <div className="absolute right-3 bottom-11 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-medium text-slate-700 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute right-3 bottom-11 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-medium text-slate-700 animate-in fade-in zoom-in-95 duration-100">
                         <button
                           type="button"
                           onClick={() => {
                             setOpenCardMenu(null);
-                            if (onOpenClass) onOpenClass(cls.id);
+                            if (onOpenClass) onOpenClass(cls.id, subjectKey);
                             else onNavigateToCourses();
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-slate-50 transition cursor-pointer block font-semibold text-indigo-600"
+                          className={`w-full text-left px-4 py-2 hover:bg-slate-50 transition cursor-pointer block font-semibold ${isIpa ? "text-emerald-600" : "text-indigo-600"}`}
                         >
-                          Buka Ruang Belajar
+                          {t.openStudyRoom || "Buka Ruang Belajar"}
                         </button>
                         <button
                           type="button"
                           onClick={() => {
                             setOpenCardMenu(null);
-                            if (onOpenClass) onOpenClass(cls.id);
+                            if (onOpenClass) onOpenClass(cls.id, subjectKey);
                             else onNavigateToCourses();
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-slate-50 transition cursor-pointer block text-slate-600"
                         >
-                          Lihat Bab & Materi
+                          {t.viewChaptersAndMaterials || "Lihat Bab & Materi"}
                         </button>
+                        <div className="border-t border-slate-100 my-1" />
+                        {isPendingUnenroll ? (
+                          <>
+                            <div className="px-4 py-2 bg-amber-50 text-amber-800 text-[11px] flex items-center gap-1.5 font-semibold">
+                              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span className="truncate">
+                                {t.leaveClassWaitingTeacher || "Menunggu Konfirmasi"}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenCardMenu(null);
+                                handleCancelLeave(cls.id);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-slate-100 transition cursor-pointer text-slate-600 text-xs font-medium flex items-center justify-between"
+                            >
+                              <span>{t.leaveClassCancelBtn || "Batalkan Permintaan"}</span>
+                              <X className="w-3.5 h-3.5 text-slate-400" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenCardMenu(null);
+                              setLeavingClass({ id: cls.id, name: cardTitle });
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer text-slate-600 font-medium flex items-center justify-between group/leave"
+                          >
+                            <span>{t.leaveClass || (language === "en" ? "Unenroll class" : "Keluar kelas")}</span>
+                            <LogOut className="w-3.5 h-3.5 text-slate-400 group-hover/leave:text-rose-600" />
+                          </button>
+                        )}
                       </div>
                     </>
                   )}
@@ -1299,7 +1519,59 @@ export default function TabBelajar({
             );
           })}
         </div>
+      )}
       </section>
+
+      {/* Confirmation Modal: Keluar Kelas / Unenroll Class */}
+      {leavingClass && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setLeavingClass(null)}
+        >
+          <div
+            className="relative w-full max-w-[440px] bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden text-[#1F1F1F] animate-in zoom-in-95 duration-150 p-6 sm:p-7 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                <LogOut className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                  {t.leaveClassConfirmTitle}
+                </h3>
+                <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                  {leavingClass.name}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed pt-1">
+              {language === "en"
+                ? "Your unenroll request will be sent to the class teacher for confirmation. While waiting for approval, you can still access this class."
+                : "Permintaan keluar kelas akan dikirimkan ke guru pengampu untuk dikonfirmasi. Selama menunggu persetujuan guru, Anda tetap dapat mengakses kelas ini."}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setLeavingClass(null)}
+                className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLeaveClass}
+                className="px-5 py-2 rounded-full text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{t.leaveClassAction}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

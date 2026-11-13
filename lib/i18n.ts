@@ -34,6 +34,26 @@ export interface TranslationDictionary {
   active: string;
   offline: string;
 
+  // Class card actions
+  openStudyRoom: string;
+  viewChaptersAndMaterials: string;
+  leaveClass: string;
+  leaveClassConfirmTitle: string;
+  leaveClassConfirmMsg: string;
+  leaveClassAction: string;
+  leaveClassSuccess: string;
+  leaveClassPendingBadge: string;
+  leaveClassPendingToast: string;
+  leaveClassCancelBtn: string;
+  leaveClassWaitingTeacher: string;
+  teacherNotifTitle: string;
+  unenrollRequestsHeading: string;
+  noUnenrollRequests: string;
+  approve: string;
+  reject: string;
+  approvedSuccess: string;
+  rejectedSuccess: string;
+
   // Attendance
   checkInNow: string;
   checkedIn: string;
@@ -130,6 +150,25 @@ export const translations: Record<SettingsLanguage, TranslationDictionary> = {
     active: "Aktif",
     offline: "Offline",
 
+    openStudyRoom: "Buka Ruang Belajar",
+    viewChaptersAndMaterials: "Lihat Bab & Materi",
+    leaveClass: "Keluar kelas",
+    leaveClassConfirmTitle: "Keluar dari kelas ini?",
+    leaveClassConfirmMsg: "Anda tidak akan lagi melihat tugas, pengumuman, atau materi kelas ini di dashboard Anda. Seluruh riwayat belajar Anda tetap aman tersimpan.",
+    leaveClassAction: "Kirim Permintaan Keluar",
+    leaveClassSuccess: "Berhasil keluar dari kelas.",
+    leaveClassPendingBadge: "Menunggu Persetujuan Guru",
+    leaveClassPendingToast: "Permintaan keluar kelas telah dikirim. Menunggu konfirmasi dari guru pengampu.",
+    leaveClassCancelBtn: "Batalkan Permintaan",
+    leaveClassWaitingTeacher: "Menunggu Konfirmasi Guru",
+    teacherNotifTitle: "Notifikasi Guru",
+    unenrollRequestsHeading: "Permintaan Keluar Kelas",
+    noUnenrollRequests: "Tidak ada permintaan keluar kelas yang pending.",
+    approve: "Setujui",
+    reject: "Tolak",
+    approvedSuccess: "Permintaan keluar kelas berhasil disetujui.",
+    rejectedSuccess: "Permintaan keluar kelas ditolak.",
+
     checkInNow: "Absen Sekarang",
     checkedIn: "Sudah Absen",
     verified: "Terverifikasi",
@@ -220,6 +259,25 @@ export const translations: Record<SettingsLanguage, TranslationDictionary> = {
     missing: "Missing / Overdue",
     active: "Active",
     offline: "Offline",
+
+    openStudyRoom: "Open Study Room",
+    viewChaptersAndMaterials: "View Chapters & Materials",
+    leaveClass: "Unenroll class",
+    leaveClassConfirmTitle: "Unenroll from this class?",
+    leaveClassConfirmMsg: "You will no longer see assignments, announcements, or materials for this class on your dashboard. Your learning history remains securely saved.",
+    leaveClassAction: "Submit Request",
+    leaveClassSuccess: "Successfully unenrolled from class.",
+    leaveClassPendingBadge: "Pending Teacher Approval",
+    leaveClassPendingToast: "Unenroll request submitted. Waiting for teacher's confirmation.",
+    leaveClassCancelBtn: "Cancel Request",
+    leaveClassWaitingTeacher: "Pending Confirmation",
+    teacherNotifTitle: "Teacher Notifications",
+    unenrollRequestsHeading: "Unenroll Requests",
+    noUnenrollRequests: "No pending unenroll requests.",
+    approve: "Approve",
+    reject: "Reject",
+    approvedSuccess: "Unenroll request successfully approved.",
+    rejectedSuccess: "Unenroll request rejected.",
 
     checkInNow: "Check-in Now",
     checkedIn: "Checked In",

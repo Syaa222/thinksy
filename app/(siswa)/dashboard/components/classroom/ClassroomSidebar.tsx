@@ -34,6 +34,9 @@ interface ClassroomSidebarProps {
   schoolName?: string;
   studentPhoto?: string | null;
   isActive?: boolean;
+  enrolledClasses?: any[];
+  selectedSubject?: string;
+  onSelectSubjectClass?: (classId: string, subjectName: string) => void;
 }
 
 export default function ClassroomSidebar({
@@ -48,6 +51,9 @@ export default function ClassroomSidebar({
   schoolName = "SMK Muhammadiyah 1",
   studentPhoto,
   isActive = true,
+  enrolledClasses = [],
+  selectedSubject = "Matematika",
+  onSelectSubjectClass,
 }: ClassroomSidebarProps) {
   const [isStudyRoomOpen, setIsStudyRoomOpen] = useState(true);
   const [isStudentActive, setIsStudentActive] = useState<boolean>(isActive);
@@ -171,39 +177,82 @@ export default function ClassroomSidebar({
                 )}
               </button>
 
-              {/* Mata Pelajaran: Matematika (Kelas 8) */}
-              <button
-                onClick={() => onSelectView("matematika")}
-                className={`w-full py-2 px-3 flex items-center justify-between text-xs rounded-xl transition-all cursor-pointer ${
-                  activeView === "matematika"
-                    ? "bg-[#4C75F2] text-white shadow-xs font-semibold"
-                    : "text-slate-600 hover:bg-slate-100 font-medium"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className={`w-4 h-4 rounded text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                      activeView === "matematika"
-                        ? "bg-white text-[#4C75F2]"
-                        : "bg-blue-600 text-white"
-                    }`}
-                  >
-                    M
-                  </div>
-                  <span className="truncate text-xs">
-                    {t.mathGrade8}
-                  </span>
-                </div>
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${
-                    activeView === "matematika"
+              {/* Dynamic Enrolled Classes List (Matematika, IPA, dll.) */}
+              {(() => {
+                const displayList = Array.isArray(enrolledClasses) ? enrolledClasses : [];
+                if (displayList.length === 0) {
+                  return (
+                    <div className="px-3 py-2 text-[11px] text-slate-400 italic">
+                      Belum ada kelas aktif
+                    </div>
+                  );
+                }
+
+                return displayList.map((cls: any, idx: number) => {
+                  const isIpa =
+                    (cls.nama_kelas || "").toLowerCase().includes("ipa") ||
+                    (cls.mata_pelajaran || "").toLowerCase().includes("ipa");
+                  const subjectKey = isIpa ? "IPA" : "Matematika";
+                  const isSelected =
+                    activeView === "matematika" &&
+                    (isIpa ? selectedSubject === "IPA" : selectedSubject !== "IPA");
+
+                  const badgeLetter = isIpa ? "I" : "M";
+                  const badgeBg = isIpa
+                    ? isSelected
+                      ? "bg-white text-emerald-600"
+                      : "bg-emerald-600 text-white"
+                    : isSelected
+                    ? "bg-white text-[#4C75F2]"
+                    : "bg-blue-600 text-white";
+
+                  const tagBg = isIpa
+                    ? isSelected
                       ? "bg-white/20 text-white"
-                      : "bg-blue-100 text-blue-700"
-                  }`}
-                >
-                  Fase D
-                </span>
-              </button>
+                      : "bg-emerald-100 text-emerald-700"
+                    : isSelected
+                    ? "bg-white/20 text-white"
+                    : "bg-blue-100 text-blue-700";
+
+                  const title = cls.nama_kelas || (isIpa ? "IPA (Ilmu Pengetahuan Alam)" : t.mathGrade8);
+
+                  return (
+                    <button
+                      key={cls.id || idx}
+                      onClick={() => {
+                        if (onSelectSubjectClass) {
+                          onSelectSubjectClass(cls.id, subjectKey);
+                        } else {
+                          onSelectView("matematika");
+                        }
+                      }}
+                      className={`w-full py-2 px-3 flex items-center justify-between text-xs rounded-xl transition-all cursor-pointer ${
+                        isSelected
+                          ? isIpa
+                            ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                            : "bg-[#4C75F2] text-white shadow-xs font-semibold"
+                          : "text-slate-600 hover:bg-slate-100 font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded text-[10px] font-bold flex items-center justify-center shrink-0 ${badgeBg}`}
+                        >
+                          {badgeLetter}
+                        </div>
+                        <span className="truncate text-xs">
+                          {title}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${tagBg}`}
+                      >
+                        {isIpa ? "Lab Sains" : "Fase D"}
+                      </span>
+                    </button>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>

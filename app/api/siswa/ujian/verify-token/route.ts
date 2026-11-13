@@ -48,6 +48,29 @@ export async function POST(req: Request) {
       }
     }
 
+    // 3. Fallback jika belum di-seed di Supabase, ambil dari central store
+    if (!ujian) {
+      try {
+        const { getExamPackage } = await import("@/lib/exam-questions-store");
+        const pkg = getExamPackage(targetUjianId);
+        if (pkg) {
+          ujian = {
+            id: pkg.id,
+            judul: pkg.judul,
+            deskripsi: pkg.deskripsi,
+            mapel: pkg.mapel,
+            tipe: pkg.tipe,
+            durasi_menit: pkg.durasi_menit,
+            passing_grade: pkg.passing_grade,
+            status: pkg.status,
+            token: pkg.token || "12345",
+            waktu_berakhir: null,
+            bab_id: pkg.bab_id,
+          };
+        }
+      } catch {}
+    }
+
     if (!ujian) {
       return NextResponse.json(
         { error: "Ujian atau ulangan belum dibuat atau dipublikasikan oleh guru." },
@@ -81,8 +104,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // SEMUA PASSWORD SEMENTARA RESMI: "12345"
-    const expectedToken = (ujian.token || "12345").trim().toUpperCase();
+    // Periksa token dari database atau central store
+    let expectedToken = (ujian.token || "").trim().toUpperCase();
+    if (!expectedToken) {
+      try {
+        const { getExamPackage } = await import("@/lib/exam-questions-store");
+        const pkg = getExamPackage(targetUjianId);
+        if (pkg?.token) expectedToken = pkg.token.trim().toUpperCase();
+      } catch {}
+    }
+    if (!expectedToken) expectedToken = "12345";
     const isCustomTokenValid = Boolean(expectedToken && inputToken === expectedToken);
 
     if (!isUniversalTokenValid && !isCustomTokenValid) {

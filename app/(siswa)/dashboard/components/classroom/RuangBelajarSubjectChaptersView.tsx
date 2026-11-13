@@ -26,6 +26,7 @@ import {
   DEFAULT_ANNOUNCEMENTS,
   AnnouncementComment,
 } from "@/lib/announcement-format";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface RuangBelajarSubjectChaptersViewProps {
   selectedSubject?: string;
@@ -39,7 +40,7 @@ interface RuangBelajarSubjectChaptersViewProps {
   onSelectSubject?: (subject: string) => void;
 }
 
-const SUBJECT_DETAILS = {
+const SUBJECT_DETAILS: Record<string, any> = {
   Matematika: {
     name: "Matematika",
     code: "MTK-8",
@@ -49,7 +50,40 @@ const SUBJECT_DETAILS = {
     desc: "Aljabar, Teorema Pythagoras, Persamaan Linear, Statistika, Peluang & Penalaran Matematika.",
     icon: BookOpen,
   },
+  IPA: {
+    name: "IPA (Ilmu Pengetahuan Alam)",
+    code: "IPA-8",
+    color: "emerald",
+    bgBadge: "bg-emerald-600/20 text-emerald-300 border-emerald-500/30",
+    headerBg: "bg-slate-900 border border-slate-800",
+    desc: "Sistem Organisasi Kehidupan, Gerak dan Gaya, Usaha dan Energi, Struktur Bumi & Tata Surya.",
+    icon: Sparkles,
+  },
+  "Ilmu Pengetahuan Alam": {
+    name: "IPA (Ilmu Pengetahuan Alam)",
+    code: "IPA-8",
+    color: "emerald",
+    bgBadge: "bg-emerald-600/20 text-emerald-300 border-emerald-500/30",
+    headerBg: "bg-slate-900 border border-slate-800",
+    desc: "Sistem Organisasi Kehidupan, Gerak dan Gaya, Usaha dan Energi, Struktur Bumi & Tata Surya.",
+    icon: Sparkles,
+  },
 };
+
+function getSubjectMeta(subject: string) {
+  if (SUBJECT_DETAILS[subject]) return SUBJECT_DETAILS[subject];
+  const isIpa = subject.toLowerCase().includes("ipa");
+  if (isIpa) return SUBJECT_DETAILS["IPA"];
+  return {
+    name: subject,
+    code: subject.slice(0, 3).toUpperCase() + "-8",
+    color: "indigo",
+    bgBadge: "bg-indigo-600/20 text-indigo-300 border-indigo-500/30",
+    headerBg: "bg-slate-900 border border-slate-800",
+    desc: `Materi pembelajaran aktif kurikulum merdeka untuk ${subject}.`,
+    icon: BookOpen,
+  };
+}
 
 export default function RuangBelajarSubjectChaptersView({
   selectedSubject = "Matematika",
@@ -58,9 +92,10 @@ export default function RuangBelajarSubjectChaptersView({
   onBackToHome,
   onSelectSubject,
 }: RuangBelajarSubjectChaptersViewProps) {
+  const { t, language } = useLanguage();
   const [selectedSemester, setSelectedSemester] = useState<number>(1);
   const classTheme = useActiveClassTheme(selectedSubject);
-  const meta = SUBJECT_DETAILS["Matematika"];
+  const meta = getSubjectMeta(selectedSubject);
   const SubjectIcon = meta.icon;
 
   // Sync custom babs from localStorage (thinksy_custom_babs)
@@ -271,8 +306,91 @@ export default function RuangBelajarSubjectChaptersView({
     }
   };
 
-  // Filter chapters by subject (Matematika Kelas 8) & sync overrides
+  // Filter chapters by subject (Matematika & IPA Kelas 8) & sync overrides
   const subjectChapters = useMemo(() => {
+    const isIpa = selectedSubject.toLowerCase().includes("ipa");
+
+    if (isIpa) {
+      const ipaList = chapters.filter((c) => (c.mapel || "").toLowerCase().includes("ipa"));
+      if (ipaList.length > 0) {
+        return ipaList;
+      }
+      // Bab IPA Kurikulum Merdeka Fase D Kelas 8 default terstruktur
+      const ipaBabs: ChapterItem[] = [
+        {
+          id: "ipa-bab-1",
+          urutan: 1,
+          judul: "Bab 1: Pengenalan Sel & Mikroskop",
+          deskripsi: "Struktur sel hewan dan tumbuhan, penggunaan mikroskop cahaya, dan hierarki organisasi kehidupan.",
+          semester: 1,
+          mapel: "IPA",
+          progress: 0,
+          materi: [
+            { id: "m-2011", judul: "Pengenalan Sel & Teori Sel", urutan: 1 },
+            { id: "m-2012", judul: "Struktur Sel Hewan & Tumbuhan", urutan: 2 },
+            { id: "m-2013", judul: "Penggunaan Mikroskop Laboratorium", urutan: 3 },
+          ],
+        },
+        {
+          id: "ipa-bab-2",
+          urutan: 2,
+          judul: "Bab 2: Struktur dan Fungsi Tubuh Manusia",
+          deskripsi: "Sistem pencernaan, sistem peredaran darah, pernapasan, dan ekskresi pada manusia serta nutrisi seimbang.",
+          semester: 1,
+          mapel: "IPA",
+          progress: 0,
+          materi: [
+            { id: "m-2021", judul: "Nutrisi dan Sistem Pencernaan", urutan: 1 },
+            { id: "m-2022", judul: "Sistem Peredaran Darah Manusia", urutan: 2 },
+            { id: "m-2023", judul: "Sistem Pernapasan & Ekskresi", urutan: 3 },
+          ],
+        },
+        {
+          id: "ipa-bab-3",
+          urutan: 3,
+          judul: "Bab 3: Usaha, Energi, dan Pesawat Sederhana",
+          deskripsi: "Konsep usaha fisik, transformasi energi mekanik, kinetik, potensial, serta tuas, bidang miring, dan katrol.",
+          semester: 1,
+          mapel: "IPA",
+          progress: 0,
+          materi: [
+            { id: "m-2031", judul: "Konsep Usaha dan Daya", urutan: 1 },
+            { id: "m-2032", judul: "Bentuk & Transformasi Energi", urutan: 2 },
+            { id: "m-2033", judul: "Pesawat Sederhana di Sekitar Kita", urutan: 3 },
+          ],
+        },
+        {
+          id: "ipa-bab-4",
+          urutan: 4,
+          judul: "Bab 4: Getaran, Gelombang, dan Cahaya",
+          deskripsi: "Konsep frekuensi, periode getaran, perambatan gelombang bunyi, serta sifat-sifat pembiasan dan cermin optik.",
+          semester: 2,
+          mapel: "IPA",
+          progress: 0,
+          materi: [
+            { id: "m-2041", judul: "Getaran dan Frekuensi Gelombang", urutan: 1 },
+            { id: "m-2042", judul: "Gelombang Bunyi dan Resonansi", urutan: 2 },
+            { id: "m-2043", judul: "Sifat Cahaya dan Alat Optik", urutan: 3 },
+          ],
+        },
+        {
+          id: "ipa-bab-5",
+          urutan: 5,
+          judul: "Bab 5: Unsur, Senyawa, dan Struktur Bumi",
+          deskripsi: "Klasifikasi materi, tabel periodik, pemisahan campuran, serta lapisan litosfer, hidrosfer, dan tata surya.",
+          semester: 2,
+          mapel: "IPA",
+          progress: 0,
+          materi: [
+            { id: "m-2051", judul: "Unsur, Senyawa, dan Campuran", urutan: 1 },
+            { id: "m-2052", judul: "Metode Pemisahan Campuran Fisika & Kimia", urutan: 2 },
+            { id: "m-2053", judul: "Struktur Bumi dan Gunung Berapi", urutan: 3 },
+          ],
+        },
+      ];
+      return ipaBabs;
+    }
+
     const list = chapters.filter((c) => {
       const mapelLower = (c.mapel || "").toLowerCase();
       return mapelLower.includes("matematika") || mapelLower.includes("math") || !c.mapel;
@@ -290,16 +408,18 @@ export default function RuangBelajarSubjectChaptersView({
         deskripsi: override.deskripsi || c.deskripsi,
       };
     });
-  }, [chapters, customBabs]);
+  }, [chapters, customBabs, selectedSubject]);
 
   // Filter by semester
   const semesterChapters = useMemo(() => {
+    const isIpa = selectedSubject.toLowerCase().includes("ipa");
+    const semThreshold = isIpa ? 3 : 4;
     const filtered = subjectChapters.filter((c) => {
-      const sem = c.semester || (c.urutan <= 3 ? 1 : 2);
+      const sem = c.semester || (c.urutan <= semThreshold ? 1 : 2);
       return sem === selectedSemester;
     });
     return filtered.length > 0 ? filtered : subjectChapters;
-  }, [subjectChapters, selectedSemester]);
+  }, [subjectChapters, selectedSemester, selectedSubject]);
 
   // Total materials count
   const totalMateriCount = semesterChapters.reduce(
@@ -317,10 +437,10 @@ export default function RuangBelajarSubjectChaptersView({
             className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Home</span>
+            <span>{t.home || "Beranda"}</span>
           </button>
           <span>/</span>
-          <span>Ruang Belajar</span>
+          <span>{t.studyRoom || "Ruang Belajar"}</span>
           <span>/</span>
           <span className="text-blue-600 font-bold">{selectedSubject}</span>
         </div>
@@ -386,7 +506,7 @@ export default function RuangBelajarSubjectChaptersView({
       </div>
 
       {/* PENGUMUMAN GURU MATEMATIKA (STREAM CARD GURU MASUK KE RUANG BELAJAR MATEMATIKA SISWA) */}
-      {matematikaAnnouncements.length > 0 && (
+      {selectedSubject.toLowerCase().includes("mat") && matematikaAnnouncements.length > 0 && (
         <section className="space-y-3.5">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
@@ -421,7 +541,9 @@ export default function RuangBelajarSubjectChaptersView({
       {/* Semester Switcher & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">Pilih Semester:</span>
+          <span className="text-xs font-bold text-slate-700">
+            {language === "en" ? "Select Semester:" : "Pilih Semester:"}
+          </span>
           <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 text-xs font-bold">
             <button
               onClick={() => setSelectedSemester(1)}
@@ -431,7 +553,7 @@ export default function RuangBelajarSubjectChaptersView({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Semester 1 (Ganjil)
+              {language === "en" ? "Semester 1 (Odd)" : "Semester 1 (Ganjil)"}
             </button>
             <button
               onClick={() => setSelectedSemester(2)}
@@ -441,13 +563,15 @@ export default function RuangBelajarSubjectChaptersView({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Semester 2 (Genap)
+              {language === "en" ? "Semester 2 (Even)" : "Semester 2 (Genap)"}
             </button>
           </div>
         </div>
 
         <div className="text-xs text-slate-500 font-medium">
-          Menampilkan {semesterChapters.length} Bab untuk Semester {selectedSemester}
+          {language === "en"
+            ? `Showing ${semesterChapters.length} Chapters for Semester ${selectedSemester}`
+            : `Menampilkan ${semesterChapters.length} Bab untuk Semester ${selectedSemester}`}
         </div>
       </div>
 
@@ -460,7 +584,7 @@ export default function RuangBelajarSubjectChaptersView({
             { id: `m3-${chap.id}`, judul: "3. Latihan Penalaran & Pembahasan", urutan: 3 },
           ];
 
-          const progressPercent = typeof chap.progress === "number" ? chap.progress : 0;
+          const progressPercent = typeof (chap as any).progress === "number" ? (chap as any).progress : 0;
           const isBabOpened = openedBabIds.has(String(chap.id)) || progressPercent > 0;
           const chapterStatus: "belum" | "berjalan" | "selesai" =
             progressPercent >= 100 ? "selesai" : isBabOpened ? "berjalan" : "belum";
@@ -486,7 +610,7 @@ export default function RuangBelajarSubjectChaptersView({
                     {isSelectedFromDueSoon && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1 shadow-2xs animate-pulse">
                         <Sparkles className="w-3 h-3 text-blue-600" />
-                        <span>Dibuka dari Due Soon</span>
+                        <span>{language === "en" ? "Opened from Due Soon" : "Dibuka dari Due Soon"}</span>
                       </span>
                     )}
                   </div>
@@ -500,21 +624,21 @@ export default function RuangBelajarSubjectChaptersView({
                   {chapterStatus === "selesai" ? (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Selesai</span>
+                      <span>{t.done || (language === "en" ? "Completed" : "Selesai")}</span>
                     </span>
                   ) : chapterStatus === "berjalan" ? (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
                       <Clock className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Sedang Berjalan ({progressPercent}%)</span>
+                      <span>{t.inProgress || (language === "en" ? "In Progress" : "Sedang Berjalan")} ({progressPercent}%)</span>
                     </span>
                   ) : (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/70">
-                      Belum Dimulai
+                      {language === "en" ? "Not Started" : "Belum Dimulai"}
                     </span>
                   )}
 
                   <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/70">
-                    {materiList.length} Bahan Materi
+                    {materiList.length} {language === "en" ? "Learning Materials" : "Bahan Materi"}
                   </span>
                 </div>
               </div>
@@ -522,13 +646,13 @@ export default function RuangBelajarSubjectChaptersView({
               {/* Grid 3 Kolom Materi Pembelajaran di dalam Bab */}
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
-                  Materi Pembelajaran ({materiList.length})
+                  {language === "en" ? "Learning Materials" : "Materi Pembelajaran"} ({materiList.length})
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   {materiList.map((m, mIdx) => (
                     <Link
                       key={m.id}
-                      href={`/bab/${chap.id}`}
+                      href={`/bab/${chap.id}?materiId=${m.id}`}
                       onClick={() => handleMarkChapterOpened(chap.id)}
                       className="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-200 transition p-3.5 flex items-center justify-between gap-2 group/m cursor-pointer"
                     >
@@ -550,7 +674,11 @@ export default function RuangBelajarSubjectChaptersView({
               <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Siap dipelajari kapan saja melalui Ruang Belajar Thinksy.</span>
+                  <span>
+                    {language === "en"
+                      ? "Ready for self-paced learning via Thinksy Study Room."
+                      : "Siap dipelajari kapan saja melalui Ruang Belajar Thinksy."}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2.5 self-end sm:self-auto">
@@ -559,14 +687,14 @@ export default function RuangBelajarSubjectChaptersView({
                     onClick={() => handleMarkChapterOpened(chap.id)}
                     className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
                   >
-                    Kuis Bab
+                    {language === "en" ? "Chapter Quiz" : "Kuis Bab"}
                   </Link>
                   <Link
                     href={`/bab/${chap.id}`}
                     onClick={() => handleMarkChapterOpened(chap.id)}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
                   >
-                    <span>{isBabOpened ? "Lanjutkan" : "Mulai"}</span>
+                    <span>{isBabOpened ? (language === "en" ? "Continue" : "Lanjutkan") : (language === "en" ? "Start" : "Mulai")}</span>
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>

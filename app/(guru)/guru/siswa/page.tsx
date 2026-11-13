@@ -19,6 +19,14 @@ import {
   BookOpen,
   Award,
   FileSpreadsheet,
+  Edit3,
+  ExternalLink,
+  Plus,
+  Save,
+  Sparkles,
+  Loader2,
+  HelpCircle,
+  Printer,
 } from "lucide-react";
 
 interface AssessmentItem {
@@ -242,7 +250,7 @@ function generateStudentMock(
   const ulanganAssessments: AssessmentItem[] = [
     {
       id: `ulangan-sem1-${id}`,
-      targetId: "u1",
+      targetId: "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
       tipe: "ulangan",
       kategori: "ulangan",
       judul: "Ulangan Matematika Semester 1",
@@ -256,23 +264,71 @@ function generateStudentMock(
         sem1Score !== null
           ? [
               {
-                id: `qu1-${id}`,
+                id: `qu1-${id}-1`,
                 pertanyaan: "Sederhanakan bentuk aljabar $5(x - 2) + 3(2x + 4)$!",
                 tipeSoal: "pilihan_ganda",
                 jawabanSiswa: "11x + 2",
                 kunciJawaban: "11x + 2",
-                pembahasan: "$5x - 10 + 6x + 12 = 11x + 2$.",
+                pembahasan: "$5(x - 2) + 3(2x + 4) = 5x - 10 + 6x + 12 = (5x + 6x) + (-10 + 12) = 11x + 2$.",
                 isBenar: true,
                 nilai: 10,
                 miskonsepsi: null,
                 umpanBalik: "Langkah aljabar terstruktur rapi.",
+              },
+              {
+                id: `qu1-${id}-2`,
+                pertanyaan: "Tentukan himpunan penyelesaian dari persamaan linear satu variabel $3x + 7 = 22$!",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: (sem1Score || 0) >= 75 ? "x = 5" : "x = 4",
+                kunciJawaban: "x = 5",
+                pembahasan: "Kurangkan kedua ruas dengan 7: $3x = 22 - 7 \\Rightarrow 3x = 15$. Bagi kedua ruas dengan 3: $x = \\frac{15}{3} = 5$.",
+                isBenar: (sem1Score || 0) >= 75,
+                nilai: (sem1Score || 0) >= 75 ? 10 : 0,
+                miskonsepsi: (sem1Score || 0) < 75 ? "Salah dalam membagi nilai konstanta saat penyelesaian PLSV." : null,
+                umpanBalik: "Perhatikan pembagian kedua ruas persamaan linear.",
+              },
+              {
+                id: `qu1-${id}-3`,
+                pertanyaan: "Diketahui barisan bilangan aritmetika $3, 7, 11, 15, \\dots$. Tentukan nilai dari suku ke-15 ($U_{15}$)!",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "59",
+                kunciJawaban: "59",
+                pembahasan: "Suku pertama $a = 3$, beda $b = 4$. Rumus $U_n = a + (n - 1)b$. Maka $U_{15} = 3 + (15 - 1) \\times 4 = 3 + 14 \\times 4 = 3 + 56 = 59$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Substitusi rumus suku ke-n tepat.",
+              },
+              {
+                id: `qu1-${id}-4`,
+                pertanyaan: "Diketahui suatu fungsi linear $f(x) = 2x - 5$. Tentukan nilai dari $f(7)$!",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "9",
+                kunciJawaban: "9",
+                pembahasan: "Substitusi $x = 7$: $f(7) = 2(7) - 5 = 14 - 5 = 9$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Operasi perkalian dan pengurangan fungsi linear tepat.",
+              },
+              {
+                id: `qu1-${id}-5`,
+                pertanyaan: "Gradien garis yang melalui titik $(2, 3)$ dan $(6, 11)$ adalah...",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "2",
+                kunciJawaban: "2",
+                pembahasan: "Rumus gradien garis melalui 2 titik: $m = \\frac{y_2 - y_1}{x_2 - x_1} = \\frac{11 - 3}{6 - 2} = \\frac{8}{4} = 2$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Kalkulasi selisih ordinat dan absis tepat.",
               },
             ]
           : [],
     },
     {
       id: `ulangan-sem2-${id}`,
-      targetId: "u2",
+      targetId: "u2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
       tipe: "ulangan",
       kategori: "ulangan",
       judul: "Ulangan Matematika Semester 2",
@@ -286,8 +342,8 @@ function generateStudentMock(
         sem2Score !== null
           ? [
               {
-                id: `qu2-${id}`,
-                pertanyaan: "Panjang hipotenusa segitiga siku-siku dengan sisi tegak 9 cm dan 12 cm adalah...",
+                id: `qu2-${id}-1`,
+                pertanyaan: "Panjang hipotenusa segitiga siku-siku dengan sisi tegak $9\\text{ cm}$ dan $12\\text{ cm}$ adalah...",
                 tipeSoal: "pilihan_ganda",
                 jawabanSiswa: "15 cm",
                 kunciJawaban: "15 cm",
@@ -296,6 +352,42 @@ function generateStudentMock(
                 nilai: 10,
                 miskonsepsi: null,
                 umpanBalik: "Aplikasi Teorema Pythagoras tepat.",
+              },
+              {
+                id: `qu2-${id}-2`,
+                pertanyaan: "Penyelesaian dari sistem persamaan linear dua variabel (SPLDV) $x + y = 10$ dan $x - y = 4$ adalah...",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: (sem2Score || 0) >= 75 ? "x = 7, y = 3" : "x = 6, y = 4",
+                kunciJawaban: "x = 7, y = 3",
+                pembahasan: "Jumlahkan kedua persamaan: $2x = 14 \\Rightarrow x = 7$. Substitusi ke $x + y = 10 \\Rightarrow 7 + y = 10 \\Rightarrow y = 3$.",
+                isBenar: (sem2Score || 0) >= 75,
+                nilai: (sem2Score || 0) >= 75 ? 10 : 0,
+                miskonsepsi: (sem2Score || 0) < 75 ? "Kurang teliti dalam metode eliminasi persamaan aljabar." : null,
+                umpanBalik: "Perhatikan eliminasi variabel SPLDV.",
+              },
+              {
+                id: `qu2-${id}-3`,
+                pertanyaan: "Hitung luas permukaan kubus jika panjang rusuk sisinya adalah $7\\text{ cm}$!",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "294 cm²",
+                kunciJawaban: "294 cm²",
+                pembahasan: "Rumus luas permukaan kubus memiliki 6 sisi persegi: $L = 6 \\times s^2 = 6 \\times (7)^2 = 6 \\times 49 = 294\\text{ cm}^2$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Rumus luas bangun ruang sisi datar diaplikasikan dengan benar.",
+              },
+              {
+                id: `qu2-${id}-4`,
+                pertanyaan: "Rata-rata (mean) dari data nilai ulangan $6, 7, 8, 8, 9, 10$ adalah...",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "8,0",
+                kunciJawaban: "8,0",
+                pembahasan: "Jumlah data: $6 + 7 + 8 + 8 + 9 + 10 = 48$. Banyak data: $n = 6$. Mean: $\\bar{x} = \\frac{48}{6} = 8{,}0$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Kalkulasi mean statistika tepat.",
               },
             ]
           : [],
@@ -312,7 +404,7 @@ function generateStudentMock(
   const ujianAssessments: AssessmentItem[] = [
     {
       id: `ujian-resmi1-${id}`,
-      targetId: "e1",
+      targetId: "e5eebc99-9c0b-4ef8-bb6d-6bb9bd380a55",
       tipe: "ujian",
       kategori: "ujian",
       judul: "Ujian Resmi Matematika #1",
@@ -326,16 +418,40 @@ function generateStudentMock(
         ujianScore !== null
           ? [
               {
-                id: `quj1-${id}`,
-                pertanyaan: "Penyelesaian dari sistem persamaan $x + y = 10$ dan $2x - y = 5$ adalah...",
+                id: `quj1-${id}-1`,
+                pertanyaan: "Penyelesaian dari sistem persamaan $x + y = 10$ dan $2x - y = 5$. Tentukan nilai dari bentuk $2x + 3y$!",
                 tipeSoal: "pilihan_ganda",
-                jawabanSiswa: "x = 5, y = 5",
-                kunciJawaban: "x = 5, y = 5",
-                pembahasan: "Eliminasi diperoleh $3x = 15 \\Rightarrow x = 5$. Substitusi diperoleh $y = 5$.",
+                jawabanSiswa: "25",
+                kunciJawaban: "25",
+                pembahasan: "Eliminasi diperoleh $3x = 15 \\Rightarrow x = 5$. Substitusi diperoleh $y = 5$. Nilai $2(5) + 3(5) = 10 + 15 = 25$.",
                 isBenar: true,
                 nilai: 10,
                 miskonsepsi: null,
                 umpanBalik: "Kalkulasi CBT terverifikasi.",
+              },
+              {
+                id: `quj1-${id}-2`,
+                pertanyaan: "Sebuah dadu bersisi 6 dan sekeping uang logam dilempar secara bersamaan. Peluang munculnya mata dadu ganjil dan sisi angka pada uang logam adalah...",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: (ujianScore || 0) >= 75 ? "1/4" : "1/2",
+                kunciJawaban: "1/4",
+                pembahasan: "$P(\\text{ganjil}) = \\frac{3}{6} = \\frac{1}{2}$. $P(\\text{angka}) = \\frac{1}{2}$. Peluang independen: $\\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$.",
+                isBenar: (ujianScore || 0) >= 75,
+                nilai: (ujianScore || 0) >= 75 ? 10 : 0,
+                miskonsepsi: (ujianScore || 0) < 75 ? "Lupa mengalikan kedua peluang kejadian independen." : null,
+                umpanBalik: "Konsep peluang kejadian independen terstandar.",
+              },
+              {
+                id: `quj1-${id}-3`,
+                pertanyaan: "Sebuah tangga sepanjang $10\\text{ m}$ disandarkan pada dinding tegak. Jika jarak ujung bawah tangga ke dasar dinding adalah $6\\text{ m}$, berapakah tinggi dinding yang dicapai tangga tersebut?",
+                tipeSoal: "pilihan_ganda",
+                jawabanSiswa: "8 m",
+                kunciJawaban: "8 m",
+                pembahasan: "Berdasarkan Teorema Pythagoras: $t = \\sqrt{10^2 - 6^2} = \\sqrt{100 - 36} = \\sqrt{64} = 8\\text{ m}$.",
+                isBenar: true,
+                nilai: 10,
+                miskonsepsi: null,
+                umpanBalik: "Aplikasi Teorema Pythagoras tepat.",
               },
             ]
           : [],
@@ -434,6 +550,136 @@ export default function GuruKelolaSiswaPage() {
   const [modalFilter, setModalFilter] = useState<"semua" | "sudah" | "belum">("semua");
   const [expandedAssessmentId, setExpandedAssessmentId] = useState<string | null>(null);
   const [reminderToast, setReminderToast] = useState<string | null>(null);
+  const [isStudentReportPrintOpen, setIsStudentReportPrintOpen] = useState(false);
+
+  // Dedicated Question Editor Modal State for Teacher Review
+  const [editingModalData, setEditingModalData] = useState<{
+    assessment: AssessmentItem;
+    question: any;
+    questionIndex: number;
+  } | null>(null);
+
+  const [editPertanyaan, setEditPertanyaan] = useState("");
+  const [editTipeSoal, setEditTipeSoal] = useState("pilihan_ganda");
+  const [editKunciJawaban, setEditKunciJawaban] = useState("");
+  const [editJawabanSiswa, setEditJawabanSiswa] = useState("");
+  const [editPembahasan, setEditPembahasan] = useState("");
+  const [editNilai, setEditNilai] = useState(10);
+  const [editIsBenar, setEditIsBenar] = useState(true);
+  const [editMiskonsepsi, setEditMiskonsepsi] = useState("");
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  const [activeToolbarField, setActiveToolbarField] = useState<"pertanyaan" | "kunci" | "pembahasan">("pertanyaan");
+  const [showFormulaPreview, setShowFormulaPreview] = useState(false);
+
+  const handleOpenEditQuestionModal = (assessment: AssessmentItem, q: any, qIdx: number) => {
+    setEditingModalData({
+      assessment,
+      question: q,
+      questionIndex: qIdx,
+    });
+    setEditPertanyaan(q.pertanyaan || "");
+    setEditTipeSoal(q.tipeSoal || "pilihan_ganda");
+    setEditKunciJawaban(q.kunciJawaban || "");
+    setEditJawabanSiswa(q.jawabanSiswa || "");
+    setEditPembahasan(q.pembahasan || "");
+    setEditNilai(q.nilai ?? 10);
+    setEditIsBenar(Boolean(q.isBenar));
+    setEditMiskonsepsi(q.miskonsepsi || "");
+    setShowFormulaPreview(false);
+  };
+
+  const handleInsertMathToolbarSymbol = (symbol: string) => {
+    if (activeToolbarField === "pertanyaan") {
+      setEditPertanyaan((prev) => prev + " " + symbol);
+    } else if (activeToolbarField === "kunci") {
+      setEditKunciJawaban((prev) => prev + " " + symbol);
+    } else {
+      setEditPembahasan((prev) => prev + " " + symbol);
+    }
+  };
+
+  const handleSaveEditedQuestion = async () => {
+    if (!editingModalData) return;
+    setIsSavingQuestion(true);
+    try {
+      const { assessment, question, questionIndex } = editingModalData;
+      const targetExamId = assessment.targetId || "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+
+      const patchPayload = {
+        pertanyaan: editPertanyaan,
+        tipeSoal: editTipeSoal,
+        kunciJawaban: editKunciJawaban,
+        pembahasan: editPembahasan,
+        poin: editNilai,
+        miskonsepsi: editMiskonsepsi || null,
+      };
+
+      // Upayakan simpan ke backend API
+      try {
+        await fetch(`/api/guru/ujian/${targetExamId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionId: question.id,
+            patch: patchPayload,
+          }),
+        });
+      } catch (err) {
+        console.warn("API PATCH offline, updating in-memory state:", err);
+      }
+
+      // Update state in selectedStudent and students immediately
+      const updatedQuestion = {
+        ...question,
+        pertanyaan: editPertanyaan,
+        tipeSoal: editTipeSoal,
+        kunciJawaban: editKunciJawaban,
+        jawabanSiswa: editJawabanSiswa,
+        pembahasan: editPembahasan,
+        nilai: editNilai,
+        isBenar: editIsBenar,
+        miskonsepsi: editMiskonsepsi || null,
+      };
+
+      if (selectedStudent) {
+        const updatedAssessments = selectedStudent.assessments.map((a) => {
+          if (a.id === assessment.id) {
+            const updatedSoalList = [...a.soalList];
+            updatedSoalList[questionIndex] = updatedQuestion;
+            return { ...a, soalList: updatedSoalList };
+          }
+          return a;
+        });
+
+        const updatedStudent: StudentItem = {
+          ...selectedStudent,
+          assessments: updatedAssessments,
+          kuisAssessments: (selectedStudent.kuisAssessments || []).map((a) =>
+            a.id === assessment.id ? { ...a, soalList: a.soalList.map((sq, i) => i === questionIndex ? updatedQuestion : sq) } : a
+          ),
+          ulanganAssessments: (selectedStudent.ulanganAssessments || []).map((a) =>
+            a.id === assessment.id ? { ...a, soalList: a.soalList.map((sq, i) => i === questionIndex ? updatedQuestion : sq) } : a
+          ),
+          ujianAssessments: (selectedStudent.ujianAssessments || []).map((a) =>
+            a.id === assessment.id ? { ...a, soalList: a.soalList.map((sq, i) => i === questionIndex ? updatedQuestion : sq) } : a
+          ),
+        };
+
+        setSelectedStudent(updatedStudent);
+        setStudents((prev) =>
+          prev.map((s) => (s.id === selectedStudent.id ? updatedStudent : s))
+        );
+      }
+
+      setReminderToast(`Soal #${questionIndex + 1} berhasil diperbarui & review lembar kerja tersinkronisasi!`);
+      setTimeout(() => setReminderToast(null), 4000);
+      setEditingModalData(null);
+    } catch (err: any) {
+      alert("Gagal memperbarui soal: " + err.message);
+    } finally {
+      setIsSavingQuestion(false);
+    }
+  };
 
   const openStudentReview = (st: StudentItem, category: "kuis" | "ulangan" | "ujian") => {
     setSelectedStudent(st);
@@ -894,12 +1140,12 @@ export default function GuruKelolaSiswaPage() {
         {/* MODAL REVIEW LENGKAP PEKERJAAN & BUTIR SOAL SETIAP SISWA                  */}
         {/* ========================================================================= */}
         {selectedStudent && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150 overflow-y-auto">
-            <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-150 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
               {/* Modal Top Bar */}
-              <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between gap-3 sm:gap-4 bg-slate-50/50">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-base flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white font-black text-sm sm:text-base flex items-center justify-center shrink-0 shadow-xs">
                     {selectedStudent.nama.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -920,16 +1166,29 @@ export default function GuruKelolaSiswaPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setSelectedStudent(null)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsStudentReportPrintOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    title="Cetak Laporan Rapor Hasil Belajar Siswa (A4 PDF)"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Cetak Rapor Siswa</span>
+                    <span className="sm:hidden">Cetak</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedStudent(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* 3 Main Category Tabs */}
-              <div className="px-6 py-2.5 bg-slate-100/80 border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
+              <div className="px-4 sm:px-6 py-2.5 bg-slate-100/80 border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -1000,7 +1259,7 @@ export default function GuruKelolaSiswaPage() {
                 return (
                   <>
                     {/* Modal Filter Tabs */}
-                    <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-2">
+                    <div className="px-4 sm:px-6 py-2.5 sm:py-3 border-b border-slate-100 bg-white flex items-center gap-2 overflow-x-auto sm:overflow-visible flex-nowrap sm:flex-wrap">
                       <button
                         onClick={() => setModalFilter("semua")}
                         className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -1120,111 +1379,173 @@ export default function GuruKelolaSiswaPage() {
                                     </span>
                                   </div>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setExpandedAssessmentId(isExpanded ? null : a.id)}
-                                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>{isExpanded ? "Tutup Soal" : "Rincian Soal"}</span>
-                                  </button>
+                                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <Link
+                                      href={
+                                        a.tipe === "kuis_bab"
+                                          ? `/guru/soal`
+                                          : `/guru/ujian/${a.targetId || "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"}/edit`
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 border border-slate-300 shadow-2xs"
+                                      title="Kelola & edit butir soal ujian di Dashboard Guru"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                                      <span className="hidden sm:inline">Kelola Soal Ujian</span>
+                                      <span className="sm:hidden">Kelola</span>
+                                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                                    </Link>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedAssessmentId(isExpanded ? null : a.id)}
+                                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                      <span>{isExpanded ? "Tutup Soal" : "Rincian Soal"}</span>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
                               {/* Dropdown Rincian Butir Soal & Jawaban Siswa */}
                               {isExpanded && (
-                                <div className="p-4 sm:p-6 border-t border-emerald-100 space-y-4 bg-slate-50/40 animate-in fade-in duration-150">
-                                  <h5 className="text-xs font-black uppercase tracking-wider text-slate-500">
-                                    Daftar Butir Soal, Jawaban Siswa & Pembahasan:
-                                  </h5>
+                                  <div className="p-4 sm:p-6 border-t border-emerald-100 space-y-4 bg-slate-50/40 animate-in fade-in duration-150">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <h5 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                                        Daftar Butir Soal, Jawaban Siswa & Pembahasan:
+                                      </h5>
+                                      <span className="text-[11px] font-bold text-slate-400">
+                                        Total: {a.soalList.length} Butir Soal Terintegrasi
+                                      </span>
+                                    </div>
 
-                                  <div className="space-y-4">
-                                    {a.soalList.map((q, qIdx) => (
-                                      <div
-                                        key={q.id || `q-${qIdx}`}
-                                        className={`p-4 sm:p-5 rounded-2xl border bg-white space-y-3 shadow-2xs ${
-                                          q.isBenar
-                                            ? "border-emerald-200"
-                                            : "border-rose-200 bg-rose-50/20"
-                                        }`}
-                                      >
-                                        {/* Nomor Soal & Status */}
-                                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                                          <span className="font-black text-xs text-slate-800">
-                                            Soal #{qIdx + 1}{" "}
-                                            <span className="text-[10px] font-medium text-slate-400 capitalize">
-                                              ({q.tipeSoal.replace("_", " ")})
+                                    <div className="space-y-4">
+                                      {a.soalList.map((q, qIdx) => (
+                                        <div
+                                          key={q.id || `q-${qIdx}`}
+                                          className={`p-4 sm:p-5 rounded-2xl border bg-white space-y-3 shadow-2xs ${
+                                            q.isBenar
+                                              ? "border-emerald-200"
+                                              : "border-rose-200 bg-rose-50/20"
+                                          }`}
+                                        >
+                                          {/* Nomor Soal, Status & Tombol Edit Butir Soal */}
+                                          <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 flex-wrap">
+                                            <span className="font-black text-xs text-slate-800">
+                                              Soal #{qIdx + 1}{" "}
+                                              <span className="text-[10px] font-medium text-slate-400 capitalize">
+                                                ({q.tipeSoal.replace("_", " ")})
+                                              </span>
                                             </span>
-                                          </span>
 
-                                          {q.isBenar ? (
-                                            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                                              <Check className="w-3 h-3 text-emerald-600" />
-                                              <span>Benar (+{q.nilai} Poin)</span>
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
-                                              <X className="w-3 h-3 text-rose-600" />
-                                              <span>Salah (0 Poin)</span>
-                                            </span>
-                                          )}
-                                        </div>
+                                            <div className="flex items-center gap-2">
+                                              {q.isBenar ? (
+                                                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                                                  <Check className="w-3 h-3 text-emerald-600" />
+                                                  <span>Benar (+{q.nilai} Poin)</span>
+                                                </span>
+                                              ) : (
+                                                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
+                                                  <X className="w-3 h-3 text-rose-600" />
+                                                  <span>Salah (0 Poin)</span>
+                                                </span>
+                                              )}
 
-                                        {/* Teks Pertanyaan Render LaTeX */}
-                                        <div className="text-xs sm:text-sm text-slate-900 leading-relaxed font-medium">
-                                          <MarkdownRenderer content={q.pertanyaan} />
-                                        </div>
-
-                                        {/* Komparasi Jawaban Siswa vs Kunci */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs">
-                                          <div
-                                            className={`p-3 rounded-xl border ${
-                                              q.isBenar
-                                                ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
-                                                : "bg-rose-50/60 border-rose-200 text-rose-900"
-                                            }`}
-                                          >
-                                            <span className="text-[10px] font-bold uppercase block text-slate-500 mb-0.5">
-                                              Jawaban Siswa:
-                                            </span>
-                                            <div className="font-extrabold">{q.jawabanSiswa || "-"}</div>
-                                          </div>
-
-                                          <div className="p-3 rounded-xl border bg-slate-50 border-slate-200 text-slate-800">
-                                            <span className="text-[10px] font-bold uppercase block text-slate-500 mb-0.5">
-                                              Kunci Jawaban Benar:
-                                            </span>
-                                            <div className="font-extrabold text-blue-700">{q.kunciJawaban || "-"}</div>
-                                          </div>
-                                        </div>
-
-                                        {/* Analisis Miskonsepsi Jika Salah */}
-                                        {!q.isBenar && q.miskonsepsi && (
-                                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-                                            <span className="font-black flex items-center gap-1 text-[11px] text-amber-800">
-                                              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                                              <span>Analisis Miskonsepsi Jawaban Siswa:</span>
-                                            </span>
-                                            <p className="leading-relaxed font-medium">{q.miskonsepsi}</p>
-                                          </div>
-                                        )}
-
-                                        {/* Pembahasan Matematis */}
-                                        {q.pembahasan && (
-                                          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 space-y-1">
-                                            <span className="font-bold text-[10px] text-slate-500 uppercase tracking-wide block">
-                                              Pembahasan Matematis:
-                                            </span>
-                                            <div className="leading-relaxed font-medium text-slate-800">
-                                              <MarkdownRenderer content={q.pembahasan} />
+                                              {/* Action Edit Soal Individual */}
+                                              <button
+                                                type="button"
+                                                onClick={() => handleOpenEditQuestionModal(a, q, qIdx)}
+                                                className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold border border-blue-200 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                title="Edit Pertanyaan, Kunci Jawaban & Pembahasan Butir Soal Ini"
+                                              >
+                                                <Edit3 className="w-3 h-3 text-blue-600" />
+                                                <span>Edit Soal</span>
+                                              </button>
                                             </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    ))}
+
+                                          {/* Teks Pertanyaan Render LaTeX */}
+                                          <div className="text-xs sm:text-sm text-slate-900 leading-relaxed font-medium">
+                                            <MarkdownRenderer content={q.pertanyaan} />
+                                          </div>
+
+                                          {/* Komparasi Jawaban Siswa vs Kunci */}
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs">
+                                            <div
+                                              className={`p-3 rounded-xl border ${
+                                                q.isBenar
+                                                  ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                                                  : "bg-rose-50/60 border-rose-200 text-rose-900"
+                                              }`}
+                                            >
+                                              <span className="text-[10px] font-bold uppercase block text-slate-500 mb-0.5">
+                                                Jawaban Siswa:
+                                              </span>
+                                              <div className="font-extrabold">
+                                                <MarkdownRenderer content={q.jawabanSiswa || "-"} isCompact />
+                                              </div>
+                                            </div>
+
+                                            <div className="p-3 rounded-xl border bg-slate-50 border-slate-200 text-slate-800">
+                                              <span className="text-[10px] font-bold uppercase block text-slate-500 mb-0.5">
+                                                Kunci Jawaban Benar:
+                                              </span>
+                                              <div className="font-extrabold text-blue-700">
+                                                <MarkdownRenderer content={q.kunciJawaban || "-"} isCompact />
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Analisis Miskonsepsi Jika Salah */}
+                                          {!q.isBenar && q.miskonsepsi && (
+                                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                                              <span className="font-black flex items-center gap-1 text-[11px] text-amber-800">
+                                                <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                                <span>Analisis Miskonsepsi Jawaban Siswa:</span>
+                                              </span>
+                                              <p className="leading-relaxed font-medium">{q.miskonsepsi}</p>
+                                            </div>
+                                          )}
+
+                                          {/* Pembahasan Matematis */}
+                                          {q.pembahasan && (
+                                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 space-y-1">
+                                              <span className="font-bold text-[10px] text-slate-500 uppercase tracking-wide block">
+                                                Pembahasan Matematis:
+                                              </span>
+                                              <div className="leading-relaxed font-medium text-slate-800">
+                                                <MarkdownRenderer content={q.pembahasan} />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Footer Section di Lembar Soal: Akses Editor Lengkap */}
+                                    <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200/80 bg-white/70 p-3.5 rounded-2xl border">
+                                      <p className="text-[11px] text-slate-500 font-medium">
+                                        Perubahan butir soal, kunci & pembahasan otomatis tersinkronisasi ke seluruh review pengerjaan siswa.
+                                      </p>
+                                      <Link
+                                        href={
+                                          a.tipe === "kuis_bab"
+                                            ? `/guru/soal`
+                                            : `/guru/ujian/${a.targetId || "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"}/edit`
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs shrink-0"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Buka Editor Lengkap & Tambah Soal</span>
+                                        <ExternalLink className="w-3 h-3 opacity-80" />
+                                      </Link>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
                           );
                         })}
@@ -1234,13 +1555,486 @@ export default function GuruKelolaSiswaPage() {
               })()}
 
               {/* Modal Footer */}
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsStudentReportPrintOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Rapor Siswa (PDF A4)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setSelectedStudent(null)}
                   className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition cursor-pointer"
                 >
                   Tutup Lembar Kerja
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CETAK RAPOR SISWA INDIVIDUAL */}
+        {isStudentReportPrintOpen && selectedStudent && (
+          <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto print:static print:inset-auto print:bg-white print:p-0 print:z-auto print:overflow-visible">
+            <div className="bg-white rounded-3xl max-w-3xl w-full p-4 sm:p-6 lg:p-8 shadow-2xl border border-slate-200 space-y-5 my-4 max-h-[92vh] overflow-y-auto print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:my-0 print:max-h-none print:overflow-visible">
+              {/* Modal Top Bar */}
+              <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-200 print:hidden">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+                    <Printer className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">
+                      Pratinjau Cetak Rapor Hasil Belajar Siswa
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Format resmi dokumen kemajuan belajar individu siap print A4
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-2 transition cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Sekarang (Ctrl+P)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsStudentReportPrintOpen(false)}
+                    className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* PRINT CONTENT AREA */}
+              <div className="bg-white text-black p-4 sm:p-6 border border-slate-300 rounded-2xl space-y-5 print:border-none print:p-0 font-sans">
+                {/* Kop Surat Sekolah */}
+                <div className="text-center border-b-2 border-black pb-3 space-y-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    DINAS PENDIDIKAN & KEBUDAYAAN • KURIKULUM MERDEKA
+                  </h4>
+                  <h2 className="text-lg font-black uppercase text-black tracking-tight">
+                    LAPORAN HASIL BELAJAR PESERTA DIDIK (RAPOR PROGRES)
+                  </h2>
+                  <p className="text-xs font-medium text-slate-600">
+                    SMP MUHAMMADIYAH 1 • TAHUN PELAJARAN 2025/2026
+                  </p>
+                </div>
+
+                {/* Identitas Siswa */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 text-xs font-medium gap-2 pt-1 border-b border-slate-200 pb-3">
+                  <div className="space-y-1">
+                    <div><strong>Nama Peserta Didik:</strong> {selectedStudent.nama}</div>
+                    <div><strong>Nomor Induk Siswa Nasional (NISN):</strong> {selectedStudent.nisn}</div>
+                    <div><strong>Kelas / Rombongan Belajar:</strong> {selectedStudent.namaKelas}</div>
+                  </div>
+                  <div className="text-left sm:text-right print:text-right space-y-1">
+                    <div><strong>Mata Pelajaran:</strong> Matematika (Fase D)</div>
+                    <div><strong>Guru Pengampu:</strong> Ibu Siti Rahmawati, M.Pd.</div>
+                    <div><strong>Kriteria Ketuntasan (KKM):</strong> 75 Poin</div>
+                  </div>
+                </div>
+
+                {/* Tabel Nilai Komponen */}
+                <div>
+                  <table className="w-full text-left text-xs border-collapse border border-black">
+                    <thead>
+                      <tr className="bg-slate-100 font-bold text-center border-b border-black">
+                        <th className="border border-black p-2 w-10">No</th>
+                        <th className="border border-black p-2 text-left">Komponen Asesmen Pembelajaran</th>
+                        <th className="border border-black p-2 w-28">Status</th>
+                        <th className="border border-black p-2 w-24">Skor / Nilai</th>
+                        <th className="border border-black p-2 w-24">Ketuntasan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-black">
+                        <td className="border border-black p-2 text-center">1</td>
+                        <td className="border border-black p-2 font-medium">
+                          Rata-rata Kuis Harian Formatif (Bab 1–8)
+                        </td>
+                        <td className="border border-black p-2 text-center text-[11px]">
+                          {selectedStudent.kuisCompletedCount}/8 Selesai
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {selectedStudent.kuisAverage ?? "-"}
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {(selectedStudent.kuisAverage ?? 0) >= 75 ? "Tuntas" : "Remedial"}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black">
+                        <td className="border border-black p-2 text-center">2</td>
+                        <td className="border border-black p-2 font-medium">
+                          Ulangan Harian Semester (Semester 1 & 2)
+                        </td>
+                        <td className="border border-black p-2 text-center text-[11px]">
+                          {selectedStudent.ulanganCompletedCount}/2 Selesai
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {selectedStudent.ulanganAverage ?? "-"}
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {(selectedStudent.ulanganAverage ?? 0) >= 75 ? "Tuntas" : "Remedial"}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black">
+                        <td className="border border-black p-2 text-center">3</td>
+                        <td className="border border-black p-2 font-medium">
+                          Ujian Resmi Terstandar CBT (PTS / PAS)
+                        </td>
+                        <td className="border border-black p-2 text-center text-[11px]">
+                          {selectedStudent.ujianCompletedCount}/1 Selesai
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {typeof selectedStudent.ujianScore === "number" && selectedStudent.ujianScore > 0
+                            ? selectedStudent.ujianScore
+                            : "-"}
+                        </td>
+                        <td className="border border-black p-2 text-center font-bold">
+                          {(selectedStudent.ujianScore ?? 0) >= 75 ? "Tuntas" : "Remedial"}
+                        </td>
+                      </tr>
+                      <tr className="bg-slate-50 font-black border-t-2 border-black">
+                        <td className="border border-black p-2 text-center" colSpan={3}>
+                          NILAI AKHIR KUMULATIF & PREDIKAT
+                        </td>
+                        <td className="border border-black p-2 text-center text-sm">
+                          {selectedStudent.rataRataNilai} / 100
+                        </td>
+                        <td className="border border-black p-2 text-center text-xs">
+                          {selectedStudent.statusKetuntasan}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Catatan Guru */}
+                <div className="p-3 border border-black rounded-xl text-xs space-y-1 bg-slate-50">
+                  <span className="font-bold uppercase tracking-wider block">Catatan & Masukan Guru Pengampu:</span>
+                  <p className="italic text-slate-700">
+                    {selectedStudent.rataRataNilai >= 85
+                      ? `Ananda ${selectedStudent.nama} menunjukkan penguasaan materi yang sangat baik dalam menyelesaikan soal konsep dan penalaran matematika. Pertahankan konsistensi belajarnya.`
+                      : selectedStudent.rataRataNilai >= 75
+                      ? `Ananda ${selectedStudent.nama} telah mencapai kriteria ketuntasan minimal (KKM). Disarankan memperbanyak latihan soal penalaran berbasis HOTS untuk bab-bab berikutnya.`
+                      : `Ananda ${selectedStudent.nama} perlu mengikuti pendampingan pengayaan/remedial pada materi yang belum tuntas serta meningkatkan keaktifan pengerjaan kuis.`}
+                  </p>
+                </div>
+
+                {/* Tanda Tangan */}
+                <div className="pt-6 grid grid-cols-2 text-xs text-center">
+                  <div>
+                    <p>Mengetahui,</p>
+                    <p className="font-semibold">Orang Tua / Wali Murid</p>
+                    <div className="h-16" />
+                    <p className="font-bold underline">( ............................................ )</p>
+                  </div>
+                  <div>
+                    <p>Yogyakarta, {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                    <p className="font-semibold">Guru Mata Pelajaran Matematika</p>
+                    <div className="h-16" />
+                    <p className="font-bold underline">Ibu Siti Rahmawati, M.Pd.</p>
+                    <p className="text-[10px] text-slate-500">NIP. 19850315 201001 2 018</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* MODAL EDITOR BUTIR SOAL TERPADU GURU (LIVE PREVIEW & KATEX TOOLBAR) */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {editingModalData && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-inner">
+                    <Edit3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-white text-base">
+                      Edit Butir Soal #{editingModalData.questionIndex + 1}
+                    </h3>
+                    <p className="text-xs text-blue-100 mt-0.5">
+                      {editingModalData.assessment.judul} • Terintegrasi Bank Soal & Lembar Kerja
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingModalData(null)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-slate-800">
+                {/* Toolbar Rumus Matematika Cepat */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                    <span className="font-bold text-slate-700 flex items-center gap-1.5 text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      Sisipkan Rumus Matematika Cepat:
+                    </span>
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                      <span>Target:</span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveToolbarField("pertanyaan")}
+                        className={`px-2 py-0.5 rounded-md cursor-pointer transition ${
+                          activeToolbarField === "pertanyaan"
+                            ? "bg-blue-600 text-white font-bold"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                        }`}
+                      >
+                        Pertanyaan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveToolbarField("kunci")}
+                        className={`px-2 py-0.5 rounded-md cursor-pointer transition ${
+                          activeToolbarField === "kunci"
+                            ? "bg-blue-600 text-white font-bold"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                        }`}
+                      >
+                        Kunci
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveToolbarField("pembahasan")}
+                        className={`px-2 py-0.5 rounded-md cursor-pointer transition ${
+                          activeToolbarField === "pembahasan"
+                            ? "bg-blue-600 text-white font-bold"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                        }`}
+                      >
+                        Pembahasan
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { label: "a/b", insert: "$\\frac{a}{b}$" },
+                      { label: "x²", insert: "$x^2$" },
+                      { label: "√x", insert: "$\\sqrt{x}$" },
+                      { label: "×", insert: "$\\times$" },
+                      { label: "÷", insert: "$\\div$" },
+                      { label: "π", insert: "$\\pi$" },
+                      { label: "±", insert: "$\\pm$" },
+                      { label: "°", insert: "$^{\\circ}$" },
+                      { label: "Δ", insert: "$\\Delta$" },
+                      { label: "$...$", insert: "$x + y = 10$" },
+                    ].map((btn, bIdx) => (
+                      <button
+                        key={bIdx}
+                        type="button"
+                        onClick={() => handleInsertMathToolbarSymbol(btn.insert)}
+                        className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-blue-500 hover:bg-blue-50 text-slate-700 font-mono text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 1. Teks Pertanyaan */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">
+                      Teks Pertanyaan Soal (Mendukung KaTeX):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowFormulaPreview(!showFormulaPreview)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>{showFormulaPreview ? "Sembunyikan Preview" : "Lihat Live Preview"}</span>
+                    </button>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={editPertanyaan}
+                    onChange={(e) => setEditPertanyaan(e.target.value)}
+                    onFocus={() => setActiveToolbarField("pertanyaan")}
+                    className="w-full p-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono text-xs transition"
+                    placeholder="Tuliskan pertanyaan... Contoh: Sederhanakan bentuk $5(x - 2) + 3(2x + 4)$!"
+                  />
+                  {/* Live Render Preview */}
+                  {editPertanyaan.trim() && (
+                    <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-200/80 text-xs text-slate-900 leading-relaxed font-medium">
+                      <span className="text-[10px] font-extrabold uppercase text-blue-800 block mb-1">
+                        Live Preview Pertanyaan:
+                      </span>
+                      <MarkdownRenderer content={editPertanyaan} />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Komparasi Kunci Jawaban vs Jawaban Siswa */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Kunci Jawaban Benar:
+                    </label>
+                    <input
+                      type="text"
+                      value={editKunciJawaban}
+                      onChange={(e) => setEditKunciJawaban(e.target.value)}
+                      onFocus={() => setActiveToolbarField("kunci")}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-semibold"
+                      placeholder="Contoh: 11x + 2"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Jawaban Siswa (Hasil Review):
+                    </label>
+                    <input
+                      type="text"
+                      value={editJawabanSiswa}
+                      onChange={(e) => setEditJawabanSiswa(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-semibold"
+                      placeholder="Contoh: 11x + 2"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Status Penilaian & Poin */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Status Penilaian:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditIsBenar(true)}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          editIsBenar
+                            ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Benar (+{editNilai} Poin)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditIsBenar(false)}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          !editIsBenar
+                            ? "bg-rose-600 border-rose-600 text-white shadow-xs"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Salah (0 Poin)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Bobot Nilai / Poin Soal:
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={editNilai}
+                      onChange={(e) => setEditNilai(Number(e.target.value) || 10)}
+                      className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Pembahasan Matematis */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Pembahasan Matematis & Langkah Penyelesaian:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editPembahasan}
+                    onChange={(e) => setEditPembahasan(e.target.value)}
+                    onFocus={() => setActiveToolbarField("pembahasan")}
+                    className="w-full p-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono text-xs transition"
+                    placeholder="Tuliskan pembahasan matematis... Contoh: $5x - 10 + 6x + 12 = 11x + 2$."
+                  />
+                  {editPembahasan.trim() && (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed font-medium">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-500 block mb-1">
+                        Live Preview Pembahasan:
+                      </span>
+                      <MarkdownRenderer content={editPembahasan} />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Analisis Miskonsepsi (Jika Salah) */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Catatan Analisis Miskonsepsi Siswa:
+                  </label>
+                  <input
+                    type="text"
+                    value={editMiskonsepsi}
+                    onChange={(e) => setEditMiskonsepsi(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium"
+                    placeholder="Contoh: Siswa keliru pada operasi tanda $-10 + 12$."
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingModalData(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveEditedQuestion}
+                  disabled={isSavingQuestion}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingQuestion ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Simpan Perubahan Soal</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

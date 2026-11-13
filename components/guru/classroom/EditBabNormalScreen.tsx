@@ -41,6 +41,7 @@ import {
 import { generateTextbookModules } from "@/lib/curriculum-textbook-engine";
 import SubMateriNormalEditorScreen from "./SubMateriNormalEditorScreen";
 import QuestionNormalEditorScreen from "./QuestionNormalEditorScreen";
+import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 
 export interface BabSubMateri {
   id: string;
@@ -1648,7 +1649,7 @@ export default function EditBabNormalScreen({
 
                     {/* Pertanyaan */}
                     <div className="text-xs font-semibold text-slate-800 leading-relaxed font-sans">
-                      {q.pertanyaan}
+                      <MarkdownRenderer content={q.pertanyaan} isCompact />
                     </div>
 
                     {/* Opsi Jawaban Jika Pilihan Ganda */}
@@ -1673,7 +1674,9 @@ export default function EditBabNormalScreen({
                                   {optionLetter}
                                 </span>
                               )}
-                              <span className="truncate">{op}</span>
+                              <div className="flex-1 min-w-0">
+                                <MarkdownRenderer content={op} isCompact />
+                              </div>
                             </div>
                           );
                         })}
@@ -1683,16 +1686,16 @@ export default function EditBabNormalScreen({
                     {/* Kunci Jawaban Esai */}
                     {q.tipe === "esai" && (
                       <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-                        <strong className="text-emerald-700">Kunci Pedoman: </strong>
-                        <span>{q.kunciJawaban}</span>
+                        <strong className="text-emerald-700 block mb-1">Kunci Pedoman: </strong>
+                        <MarkdownRenderer content={q.kunciJawaban} isCompact />
                       </div>
                     )}
 
                     {/* Pembahasan */}
                     {q.pembahasan && (
                       <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 text-[11px] text-blue-900">
-                        <strong>💡 Pembahasan Soal: </strong>
-                        <span>{q.pembahasan}</span>
+                        <strong className="block mb-1">💡 Pembahasan Soal: </strong>
+                        <MarkdownRenderer content={q.pembahasan} isCompact />
                       </div>
                     )}
                   </div>

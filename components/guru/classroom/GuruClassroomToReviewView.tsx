@@ -33,6 +33,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
+import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 
 export interface AssignmentItem {
   id: string;
@@ -1134,9 +1135,9 @@ export default function GuruClassroomToReviewView({
                 <FileText className="w-4 h-4" />
                 <span>Petunjuk & Soal Tugas</span>
               </div>
-              <p className="text-sm font-medium text-slate-800 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                {reviewingSubmission.soalText}
-              </p>
+              <div className="text-sm font-medium text-slate-800 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <MarkdownRenderer content={reviewingSubmission.soalText} />
+              </div>
             </div>
 
             {/* Lembar Jawaban Siswa */}
@@ -1151,8 +1152,8 @@ export default function GuruClassroomToReviewView({
                 </span>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 font-mono text-xs sm:text-sm text-slate-800 whitespace-pre-wrap leading-relaxed shadow-inner">
-                {reviewingSubmission.jawabanText}
+              <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 text-xs sm:text-sm text-slate-800 leading-relaxed shadow-inner">
+                <MarkdownRenderer content={reviewingSubmission.jawabanText} />
               </div>
 
               {/* Lampiran Dokumen */}
@@ -1180,9 +1181,9 @@ export default function GuruClassroomToReviewView({
               <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                 Kunci Jawaban Resmi / Pembahasan Kurikulum:
               </div>
-              <p className="text-xs text-slate-700 leading-relaxed font-mono">
-                {reviewingSubmission.keyAnswer}
-              </p>
+              <div className="text-xs text-slate-700 leading-relaxed font-medium">
+                <MarkdownRenderer content={reviewingSubmission.keyAnswer} isCompact />
+              </div>
             </div>
           </div>
 
@@ -1233,8 +1234,8 @@ export default function GuruClassroomToReviewView({
 
               {/* Catatan AI */}
               <div className="p-3.5 rounded-xl bg-white border border-blue-100 text-xs text-slate-700 leading-relaxed shadow-2xs">
-                <span className="font-bold text-blue-900">Catatan AI: </span>
-                {reviewingSubmission.aiFeedback}
+                <span className="font-bold text-blue-900 block mb-1">Catatan AI: </span>
+                <MarkdownRenderer content={reviewingSubmission.aiFeedback} isCompact />
               </div>
             </div>
 

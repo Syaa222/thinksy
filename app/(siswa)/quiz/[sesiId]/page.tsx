@@ -33,6 +33,49 @@ export default async function QuizPage({
   const isValidUUID = (str?: string) =>
     Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
+  const IPA_BABS: Record<string, { id: string; judul: string; mapel: string; kelas: number }> = {
+    "ipa-bab-1": {
+      id: "ipa-bab-1",
+      judul: "Bab 1: Pengenalan Sel & Mikroskop",
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-2": {
+      id: "ipa-bab-2",
+      judul: "Bab 2: Struktur dan Fungsi Tubuh Manusia",
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-3": {
+      id: "ipa-bab-3",
+      judul: "Bab 3: Usaha, Energi, dan Pesawat Sederhana",
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-4": {
+      id: "ipa-bab-4",
+      judul: "Bab 4: Getaran, Gelombang, dan Cahaya",
+      mapel: "IPA",
+      kelas: 8,
+    },
+    "ipa-bab-5": {
+      id: "ipa-bab-5",
+      judul: "Bab 5: Unsur, Senyawa, dan Struktur Bumi",
+      mapel: "IPA",
+      kelas: 8,
+    },
+  };
+
+  const isIpaTarget =
+    sesiId.startsWith("ipa-") ||
+    (babId ? babId.startsWith("ipa-") : false) ||
+    Boolean(IPA_BABS[sesiId]) ||
+    Boolean(babId && IPA_BABS[babId]);
+
+  const targetIpaKey = isIpaTarget
+    ? (sesiId.startsWith("ipa-") ? sesiId : (babId || "ipa-bab-1"))
+    : null;
+
   // 1. Fetch Sesi record & Check if already finished
   let sesiRow: any = null;
   if (isValidUUID(sesiId)) {
@@ -49,7 +92,7 @@ export default async function QuizPage({
   }
 
   // 2. Resolve effective babId
-  let effectiveBabId = babId || sesiRow?.bab_id;
+  let effectiveBabId = targetIpaKey || babId || sesiRow?.bab_id;
   if (!effectiveBabId && isValidUUID(sesiId)) {
     // SesiId mungkin merupakan babId dari link langsung bab
     const { data: checkBab } = await adminDb
@@ -62,7 +105,7 @@ export default async function QuizPage({
     }
   }
 
-  if (!effectiveBabId) {
+  if (!effectiveBabId && !isIpaTarget) {
     const { data: firstBab } = await adminDb
       .from("bab")
       .select("id")
@@ -75,43 +118,65 @@ export default async function QuizPage({
   }
 
   // Jika sesiRow belum ada di database, cari sesi aktif milik siswa atau buat baru
-  if (!sesiRow && user && effectiveBabId) {
-    const { data: existingActive } = await adminDb
-      .from("sesi")
-      .select("id, siswa_id, bab_id, status_sesi, batas_menit, mulai_pada")
-      .eq("siswa_id", user.id)
-      .eq("bab_id", effectiveBabId)
-      .eq("status_sesi", "aktif")
-      .order("mulai_pada", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  if (!sesiRow && user) {
+    if (isIpaTarget && targetIpaKey) {
+      const { data: newSesi } = await adminDb
+        .from("sesi")
+        .insert({
+          siswa_id: user.id,
+          bab_id: null,
+          sekolah_id: profil?.sekolah_id || null,
+          tipe_sesi: "kuis",
+          status_sesi: "aktif",
+          batas_menit: 30,
+          mulai_pada: new Date().toISOString(),
+        })
+        .select("id, siswa_id, bab_id, status_sesi, batas_menit, mulai_pada")
+        .single();
 
-    if (existingActive?.id) {
-      redirect(`/quiz/${existingActive.id}?mode=${mode || "inclass"}&babId=${effectiveBabId}`);
-    }
+      if (newSesi?.id) {
+        redirect(`/quiz/${newSesi.id}?mode=${mode || "inclass"}&babId=${targetIpaKey}`);
+      }
+    } else if (effectiveBabId) {
+      const { data: existingActive } = await adminDb
+        .from("sesi")
+        .select("id, siswa_id, bab_id, status_sesi, batas_menit, mulai_pada")
+        .eq("siswa_id", user.id)
+        .eq("bab_id", effectiveBabId)
+        .eq("status_sesi", "aktif")
+        .order("mulai_pada", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const { data: newSesi } = await adminDb
-      .from("sesi")
-      .insert({
-        siswa_id: user.id,
-        bab_id: effectiveBabId,
-        sekolah_id: profil?.sekolah_id || null,
-        tipe_sesi: "kuis",
-        status_sesi: "aktif",
-        batas_menit: 30,
-        mulai_pada: new Date().toISOString(),
-      })
-      .select("id, siswa_id, bab_id, status_sesi, batas_menit, mulai_pada")
-      .single();
+      if (existingActive?.id) {
+        redirect(`/quiz/${existingActive.id}?mode=${mode || "inclass"}&babId=${effectiveBabId}`);
+      }
 
-    if (newSesi?.id) {
-      redirect(`/quiz/${newSesi.id}?mode=${mode || "inclass"}&babId=${effectiveBabId}`);
+      const { data: newSesi } = await adminDb
+        .from("sesi")
+        .insert({
+          siswa_id: user.id,
+          bab_id: effectiveBabId,
+          sekolah_id: profil?.sekolah_id || null,
+          tipe_sesi: "kuis",
+          status_sesi: "aktif",
+          batas_menit: 30,
+          mulai_pada: new Date().toISOString(),
+        })
+        .select("id, siswa_id, bab_id, status_sesi, batas_menit, mulai_pada")
+        .single();
+
+      if (newSesi?.id) {
+        redirect(`/quiz/${newSesi.id}?mode=${mode || "inclass"}&babId=${effectiveBabId}`);
+      }
     }
   }
 
   // 3. Fetch Bab Info
   let babData: { judul: string; mapel?: string; kelas?: number } | null = null;
-  if (effectiveBabId) {
+  if (isIpaTarget && targetIpaKey) {
+    babData = IPA_BABS[targetIpaKey] || IPA_BABS["ipa-bab-1"];
+  } else if (effectiveBabId && isValidUUID(effectiveBabId)) {
     const { data: bData } = await adminDb
       .from("bab")
       .select("id, judul, mapel, kelas")
@@ -177,7 +242,7 @@ export default async function QuizPage({
   const dbSoalList: any[] = [...validDbSoal];
 
   // Sinkronisasi otomatis agar tepat 15 butir soal tersimpan di tabel `soal` dan `opsi_soal`
-  if (dbSoalList.length < 15 && effectiveBabId) {
+  if (dbSoalList.length < 15 && effectiveBabId && isValidUUID(effectiveBabId)) {
     for (let i = 0; i < curriculum15.length; i++) {
       const cq = curriculum15[i];
       const alreadyExists = dbSoalList.some(
