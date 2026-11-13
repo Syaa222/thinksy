@@ -870,7 +870,7 @@ export default function QuizAssessmentClient({
 
                     {openPetunjuk[currentQ.id] && (
                       <div className="mt-2.5 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs sm:text-sm text-amber-950 leading-relaxed animate-in fade-in duration-150">
-                        <p className="font-medium">{currentQ.hintSokratik}</p>
+                        <MarkdownRenderer content={currentQ.hintSokratik} isCompact />
                       </div>
                     )}
                   </div>

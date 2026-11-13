@@ -50,7 +50,31 @@ function LoginForm() {
         console.log("[masuk] Profil:", profil);
 
         if (!profil) {
-          window.location.replace("/pilih-peran");
+          console.warn("[masuk] User OAuth belum memiliki profil resmi. Mengarahkan ke pendaftaran...");
+          const userEmail = data.user?.email || "";
+          const userName =
+            data.user?.user_metadata?.full_name ||
+            data.user?.user_metadata?.name ||
+            userEmail.split("@")[0] ||
+            "";
+
+          // Bersihkan sesi di browser
+          await supabase.auth.signOut();
+
+          // Bersihkan akun auth sementara di backend agar email tidak tersangkut
+          try {
+            await fetch("/api/auth/clean-orphan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: data.user!.id }),
+            });
+          } catch {
+            // abaikan error jaringan pada cleanup
+          }
+
+          window.location.replace(
+            `/daftar?email=${encodeURIComponent(userEmail)}&nama=${encodeURIComponent(userName)}&error=unregistered_oauth`
+          );
           return;
         }
 
@@ -331,6 +355,10 @@ function LoginForm() {
           <span>GitHub</span>
         </button>
       </div>
+
+      <p className="text-[11px] text-center text-slate-400">
+        Login Google &amp; GitHub hanya untuk akun yang telah terdaftar resmi
+      </p>
 
       {/* Modal Bantuan Lupa Kata Sandi */}
       {showForgotPasswordModal && (

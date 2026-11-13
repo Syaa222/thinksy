@@ -125,26 +125,36 @@ function DaftarFormContent() {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  const isFromOAuthUnregistered = searchParams.get("error") === "unregistered_oauth";
+
+  const queryNama = searchParams.get("nama") || "";
+  const queryEmail = searchParams.get("email") || "";
+  const initialGender = queryNama ? detectGenderFromName(queryNama) : null;
+
   // Step state: 1 = Form Pendaftaran, 2 = Pembuatan Profile Foto
   const [step, setStep] = useState<1 | 2>(1);
 
   // Form Fields State
-  const [namaLengkap, setNamaLengkap] = useState("");
-  const [jenisKelamin, setJenisKelamin] = useState<"Laki-laki" | "Perempuan">("Laki-laki");
+  const [namaLengkap, setNamaLengkap] = useState(queryNama);
+  const [jenisKelamin, setJenisKelamin] = useState<"Laki-laki" | "Perempuan">(initialGender || "Laki-laki");
   const [isGenderManual, setIsGenderManual] = useState(false);
-  const [detectedGenderHint, setDetectedGenderHint] = useState<string | null>(null);
+  const [detectedGenderHint, setDetectedGenderHint] = useState<string | null>(
+    initialGender ? `Terdeteksi: ${initialGender === "Perempuan" ? "Siswi Putri 🌸" : "Siswa Putra 👔"}` : null
+  );
 
   const [tempatLahir, setTempatLahir] = useState("");
   const [tanggalLahir, setTanggalLahir] = useState("");
   const [noWa, setNoWa] = useState("");
   const [namaKelas, setNamaKelas] = useState("Kelas 8A");
   const [nisn, setNisn] = useState("");
-  const [email, setEmail] = useState(() => searchParams.get("email") || "");
+  const [email, setEmail] = useState(queryEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   // Foto Profil State (Default draft disesuaikan dengan jenis kelamin)
-  const [selectedPhoto, setSelectedPhoto] = useState<string>(DEFAULT_STUDENT_PHOTO);
+  const [selectedPhoto, setSelectedPhoto] = useState<string>(
+    initialGender === "Perempuan" ? FEMALE_STUDENT_PHOTO : DEFAULT_STUDENT_PHOTO
+  );
   const [customPhotoPreview, setCustomPhotoPreview] = useState<string | null>(null);
   const [hasCustomPhotoSelected, setHasCustomPhotoSelected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,14 +168,6 @@ function DaftarFormContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Tanggapi perubahan input email jika ada dari query params
-  useEffect(() => {
-    const queryEmail = searchParams.get("email");
-    if (queryEmail && !email) {
-      setEmail(queryEmail);
-    }
-  }, [searchParams, email]);
 
   // Handler nama lengkap berubah -> Deteksi cerdas gender & penyesuaian draft profil
   const handleNameChange = (val: string) => {
@@ -460,6 +462,24 @@ function DaftarFormContent() {
               >
                 Masuk Sekarang Menggunakan Akun Ini →
               </Link>
+            </div>
+          )}
+
+          {/* Notifikasi jika dialihkan dari percobaan login Google/GitHub yang belum terdaftar */}
+          {isFromOAuthUnregistered && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm space-y-2 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-amber-900">Akun Belum Terdaftar di Thinksy</p>
+                  <p className="text-amber-800 text-xs leading-relaxed">
+                    Akun Google / GitHub Anda ({email || "sosial media"}) belum terdaftar di sistem. Tombol login sosial hanya diperuntukkan bagi akun yang sudah aktif.
+                  </p>
+                  <p className="text-amber-800 text-xs leading-relaxed font-semibold">
+                    Silakan lengkapi formulir di bawah ini (data NISN, kelas, dan data profil) untuk membuat akun resmi Thinksy Anda.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
