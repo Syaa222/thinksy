@@ -329,8 +329,8 @@ export async function registerAction(prevState: any, formData: FormData) {
     console.error("[REGISTER] Exception saat menyimpan profil:", err);
   }
 
-  // Jika session langsung aktif atau auto sign-in
-  let redirectPath: string | null = null;
+  // Jika session langsung aktif atau auto sign-in, simpan cookie peran
+  const targetDashboard = getDashboardPath(peranBaru);
 
   if (authData.session) {
     const cookieStore = await cookies();
@@ -340,7 +340,6 @@ export async function registerAction(prevState: any, formData: FormData) {
       maxAge: 60 * 60 * 24, // 24 jam
       path: "/",
     });
-    redirectPath = getDashboardPath(peranBaru);
   } else {
     // Coba auto sign-in jika session belum langsung terbentuk
     try {
@@ -356,19 +355,15 @@ export async function registerAction(prevState: any, formData: FormData) {
           maxAge: 60 * 60 * 24,
           path: "/",
         });
-        redirectPath = getDashboardPath(peranBaru);
       }
     } catch {
       // Abaikan jika signInWithPassword gagal karena email confirmation
     }
   }
 
-  if (redirectPath) {
-    redirect(redirectPath);
-  }
-
   return {
     success: true,
+    redirectUrl: targetDashboard,
     user: {
       id: authData.user.id,
       nama_lengkap: namaLengkap,
@@ -376,8 +371,7 @@ export async function registerAction(prevState: any, formData: FormData) {
       nisn: nisn,
       foto_url: fotoUrl,
     },
-    message:
-      "Pendaftaran berhasil! Akun Anda telah aktif. Silakan masuk dengan email dan kata sandi Anda.",
+    message: "Pendaftaran berhasil! Akun Anda telah aktif. Mengalihkan ke dashboard...",
   };
 }
 

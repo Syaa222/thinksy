@@ -353,10 +353,13 @@ function DaftarFormContent() {
             res.message || "Pendaftaran akun siswa berhasil! Mengalihkan ke dashboard..."
           );
           setTimeout(() => {
-            router.push("/");
-          }, 1200);
+            router.push(res.redirectUrl || "/");
+          }, 1000);
         }
       } catch (err: any) {
+        if (err?.digest?.includes("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+          return;
+        }
         console.error("Gagal mendaftar:", err);
         setErrorMessage("Terjadi kesalahan sistem saat mendaftar. Silakan coba lagi.");
       }

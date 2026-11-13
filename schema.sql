@@ -673,7 +673,7 @@ CREATE OR REPLACE FUNCTION public.complete_student_registration(
   p_foto_url text,
   p_jenis_kelamin text,
   p_tempat_lahir text,
-  p_tanggal_lahir date,
+  p_tanggal_lahir text,
   p_no_wa text,
   p_nama_kelas text
 )
@@ -684,9 +684,14 @@ SET search_path = public
 AS $$
 DECLARE
   v_kelas_id uuid;
-  v_peran text;
+  v_peran public.peran;
 BEGIN
-  v_peran := coalesce(p_peran, 'siswa');
+  -- Parse peran ke enum public.peran
+  BEGIN
+    v_peran := coalesce(p_peran, 'siswa')::public.peran;
+  EXCEPTION WHEN OTHERS THEN
+    v_peran := 'siswa'::public.peran;
+  END;
 
   INSERT INTO public.profil (
     id, nama_lengkap, peran, sekolah_id, nisn, nis, foto_url,
@@ -694,14 +699,14 @@ BEGIN
   ) VALUES (
     p_user_id,
     p_nama_lengkap,
-    v_peran::public.peran_pengguna,
+    v_peran,
     p_sekolah_id,
     nullif(trim(p_nisn), ''),
     nullif(trim(p_nis), ''),
     nullif(trim(p_foto_url), ''),
     nullif(trim(p_jenis_kelamin), ''),
     nullif(trim(p_tempat_lahir), ''),
-    p_tanggal_lahir,
+    nullif(trim(p_tanggal_lahir), ''),
     nullif(trim(p_no_wa), ''),
     'Fase D (Kurikulum Merdeka)',
     '2026/2027'
@@ -723,7 +728,12 @@ BEGIN
 
   -- Hubungkan ke kelas
   IF p_nama_kelas IS NOT NULL AND trim(p_nama_kelas) <> '' THEN
-    SELECT id INTO v_kelas_id FROM public.kelas WHERE nama_kelas = trim(p_nama_kelas) LIMIT 1;
+    SELECT id INTO v_kelas_id FROM public.kelas 
+    WHERE lower(nama_kelas) = lower(trim(p_nama_kelas))
+       OR lower(trim(p_nama_kelas)) LIKE lower(nama_kelas) || '%'
+       OR lower(nama_kelas) LIKE lower(trim(p_nama_kelas)) || '%'
+    LIMIT 1;
+
     IF v_kelas_id IS NOT NULL THEN
       INSERT INTO public.anggota_kelas (kelas_id, siswa_id)
       VALUES (v_kelas_id, p_user_id)
@@ -737,7 +747,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.complete_student_registration TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.complete_student_registration(uuid, text, text, uuid, text, text, text, text, text, text, text, text) TO anon, authenticated, service_role;
 
 -- ============================================================
 -- SELESAI! Semua tabel, trigger, RLS, dan seed data sudah siap.
