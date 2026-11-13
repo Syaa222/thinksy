@@ -5,11 +5,6 @@ import { ReviewQuestionItem } from "./ReviewStyleQuestionCard";
 import {
   Sparkles,
   X,
-  BookOpen,
-  Award,
-  HelpCircle,
-  Hash,
-  FileEdit,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -176,31 +171,21 @@ export default function AiQuestionGeneratorModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[94vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between shrink-0 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white">
-                  Kurikulum Merdeka • SMP
-                </span>
-                <span className="text-[10px] font-bold text-blue-100">
-                  Google Gemini AI
-                </span>
-              </div>
-              <h2 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
-                Generate Soal dengan AI
-              </h2>
-            </div>
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+              Generate Soal
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tambah butir soal baru otomatis sesuai standar Kurikulum Merdeka
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             disabled={isGenerating}
-            className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer disabled:opacity-40"
             title="Tutup Form"
           >
             <X className="w-5 h-5" />
@@ -219,8 +204,7 @@ export default function AiQuestionGeneratorModal({
 
             {/* 1. Form Field: Materi / Bab Kurikulum */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4 text-blue-600" />
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                 <span>Materi / Bab Kurikulum</span>
                 <span className="text-rose-500">*</span>
               </label>
@@ -278,8 +262,7 @@ export default function AiQuestionGeneratorModal({
             {/* 2. Form Field: Tingkat Kesulitan (Taksonomi Akademik) */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-amber-500" />
+                <span className="flex items-center gap-1">
                   <span>Tingkat Kesulitan Soal</span>
                   <span className="text-rose-500">*</span>
                 </span>
@@ -341,8 +324,7 @@ export default function AiQuestionGeneratorModal({
               {/* Jumlah Soal (Maksimal 5) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Hash className="w-4 h-4 text-blue-600" />
+                  <span className="flex items-center gap-1">
                     <span>Jumlah Soal</span>
                     <span className="text-rose-500">*</span>
                   </span>
@@ -377,8 +359,7 @@ export default function AiQuestionGeneratorModal({
 
               {/* Jenis Soal */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-indigo-600" />
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                   <span>Jenis / Format Soal</span>
                   <span className="text-rose-500">*</span>
                 </label>
@@ -402,10 +383,7 @@ export default function AiQuestionGeneratorModal({
             {/* 5. Form Field: Instruksi / Catatan Tambahan Guru (Opsional) */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <FileEdit className="w-4 h-4 text-blue-600" />
-                  <span>Instruksi / Catatan Tambahan</span>
-                </span>
+                <span>Instruksi / Catatan Tambahan</span>
                 <span className="text-[11px] text-slate-400 font-normal">
                   Opsional
                 </span>
