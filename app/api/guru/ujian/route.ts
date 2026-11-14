@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getExamPackage, saveExamPackage } from "@/lib/exam-questions-store";
 
 export async function GET() {
   try {
@@ -280,9 +281,9 @@ export async function PATCH(req: Request) {
       .from("profil")
       .select("id, peran")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (!profil || profil.peran !== "guru") {
+    if (!profil || !["guru", "admin_sekolah", "superadmin"].includes(profil.peran)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -314,34 +315,56 @@ export async function PATCH(req: Request) {
     if (waktuMulai) updatePayload.waktu_mulai = new Date(waktuMulai).toISOString();
     if (waktuBerakhir) updatePayload.waktu_berakhir = new Date(waktuBerakhir).toISOString();
 
-    const { data, error } = await adminSupabase
-      .from("ujian")
-      .update(updatePayload)
-      .eq("id", ujianId)
-      .select(`
-        id,
-        judul,
-        deskripsi,
-        mapel,
-        tipe,
-        durasi_menit,
-        passing_grade,
-        waktu_mulai,
-        waktu_berakhir,
-        status,
-        token
-      `)
-      .single();
+    // 1. Simpan ke local exam package store (data/ujian_store.json) jika ada
+    const localPkg = getExamPackage(ujianId);
+    let localUpdated = false;
+    if (localPkg) {
+      if (status) localPkg.status = status;
+      if (token !== undefined) localPkg.token = String(token).trim().toUpperCase();
+      if (durasiMenit !== undefined) localPkg.durasi_menit = Number(durasiMenit);
+      if (passingGrade !== undefined) localPkg.passing_grade = Number(passingGrade);
+      saveExamPackage(localPkg);
+      localUpdated = true;
+    }
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // 2. Simpan ke database Supabase jika ada recordnya
+    let supabaseData: any = null;
+    try {
+      const { data, error } = await adminSupabase
+        .from("ujian")
+        .update(updatePayload)
+        .eq("id", ujianId)
+        .select(`
+          id,
+          judul,
+          deskripsi,
+          mapel,
+          tipe,
+          durasi_menit,
+          passing_grade,
+          waktu_mulai,
+          waktu_berakhir,
+          status,
+          token
+        `)
+        .maybeSingle();
+
+      if (error && !localUpdated) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      supabaseData = data;
+    } catch (dbErr: any) {
+      if (!localUpdated) {
+        return NextResponse.json({ error: dbErr?.message || "Gagal memperbarui ujian di database" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({
       success: true,
-      ujian: data,
+      ujian: supabaseData || localPkg,
+      status: status || (supabaseData?.status || localPkg?.status),
       message: status 
-        ? `Status ujian berhasil diubah menjadi ${status === "dipublikasi" ? "Dibuka (Aktif)" : "Ditutup"}!`
+        ? `Status ujian berhasil diubah menjadi ${status === "dipublikasi" ? "Dibuka (Aktif)" : status === "draft" ? "Draf" : "Ditutup"}!`
         : "Data ujian berhasil diperbarui!",
     });
   } catch (err: any) {

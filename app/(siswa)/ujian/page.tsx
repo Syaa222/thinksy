@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { getExamPackage } from "@/lib/exam-questions-store";
 import DaftarUjianClient from "./DaftarUjianClient";
 
 export default async function DaftarUjianPage() {
@@ -206,6 +207,10 @@ export default async function DaftarUjianPage() {
     });
   }
 
+  const p1 = getExamPackage("u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+  const p2 = getExamPackage("u2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22");
+  const p3 = getExamPackage("e5eebc99-9c0b-4ef8-bb6d-6bb9bd380a55");
+
   const CANONICAL_EXAMS_MAP: Record<string, any> = {
     "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11": {
       id: "u1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
@@ -214,10 +219,10 @@ export default async function DaftarUjianPage() {
         "Evaluasi formatif komprehensif Matematika Semester 1 mencakup Bab 1 sampai Bab 4 (Pola Bilangan, Bentuk Aljabar, Relasi & Fungsi, Persamaan Garis Lurus).",
       mapel: "Matematika",
       tipe: "ulangan" as const,
-      durasi_menit: 60,
-      passing_grade: 75,
-      status: "dipublikasi",
-      token: "MTK-SEM1",
+      durasi_menit: p1?.durasi_menit || 60,
+      passing_grade: p1?.passing_grade || 75,
+      status: p1?.status || "dipublikasi",
+      token: p1?.token || "MTK-SEM1",
       bab_id: null,
       isKeseluruhanBab: true,
       isPerBab: false,
@@ -229,10 +234,10 @@ export default async function DaftarUjianPage() {
         "Evaluasi formatif komprehensif Matematika Semester 2 mencakup Bab 5 sampai Bab 8 (SPLDV, Teorema Pythagoras, Bangun Ruang Sisi Datar, Statistika & Peluang).",
       mapel: "Matematika",
       tipe: "ulangan" as const,
-      durasi_menit: 60,
-      passing_grade: 75,
-      status: "dipublikasi",
-      token: "MTK-SEM2",
+      durasi_menit: p2?.durasi_menit || 60,
+      passing_grade: p2?.passing_grade || 75,
+      status: p2?.status || "dipublikasi",
+      token: p2?.token || "MTK-SEM2",
       bab_id: null,
       isKeseluruhanBab: true,
       isPerBab: false,
@@ -244,10 +249,10 @@ export default async function DaftarUjianPage() {
         "Asesmen sumatif resmi terstandar CBT Matematika Kelas 8 (Part 1 - Semester 1) materi Aljabar, Teorema Pythagoras, dan Relasi Fungsi.",
       mapel: "Matematika",
       tipe: "ujian" as const,
-      durasi_menit: 90,
-      passing_grade: 75,
-      status: "dipublikasi",
-      token: "MTK-PTS26",
+      durasi_menit: p3?.durasi_menit || 90,
+      passing_grade: p3?.passing_grade || 75,
+      status: p3?.status || "dipublikasi",
+      token: p3?.token || "MTK-PTS26",
       bab_id: null,
       isKeseluruhanBab: false,
       isPerBab: false,
@@ -265,10 +270,10 @@ export default async function DaftarUjianPage() {
           deskripsi: "Evaluasi formatif komprehensif Matematika Semester 1 mencakup Bab 1 sampai Bab 4 (Pola Bilangan, Bentuk Aljabar, Relasi & Fungsi, Persamaan Garis Lurus).",
           mapel: "Matematika",
           tipe: "ulangan",
-          durasi_menit: 60,
-          passing_grade: 75,
-          status: "dipublikasi",
-          token: "MTK-SEM1",
+          durasi_menit: p1?.durasi_menit || 60,
+          passing_grade: p1?.passing_grade || 75,
+          status: p1?.status || "dipublikasi",
+          token: p1?.token || "MTK-SEM1",
         },
         {
           id: "u2eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
@@ -276,10 +281,10 @@ export default async function DaftarUjianPage() {
           deskripsi: "Evaluasi formatif komprehensif Matematika Semester 2 mencakup Bab 5 sampai Bab 8 (SPLDV, Teorema Pythagoras, Bangun Ruang Sisi Datar, Statistika & Peluang).",
           mapel: "Matematika",
           tipe: "ulangan",
-          durasi_menit: 60,
-          passing_grade: 75,
-          status: "dipublikasi",
-          token: "MTK-SEM2",
+          durasi_menit: p2?.durasi_menit || 60,
+          passing_grade: p2?.passing_grade || 75,
+          status: p2?.status || "dipublikasi",
+          token: p2?.token || "MTK-SEM2",
         },
         {
           id: "e5eebc99-9c0b-4ef8-bb6d-6bb9bd380a55",
@@ -287,10 +292,10 @@ export default async function DaftarUjianPage() {
           deskripsi: "Asesmen sumatif resmi terstandar CBT Matematika Kelas 8 (Part 1 - Semester 1) materi Aljabar, Teorema Pythagoras, dan Relasi Fungsi.",
           mapel: "Matematika",
           tipe: "ujian",
-          durasi_menit: 90,
-          passing_grade: 75,
-          status: "dipublikasi",
-          token: "MTK-PTS26",
+          durasi_menit: p3?.durasi_menit || 90,
+          passing_grade: p3?.passing_grade || 75,
+          status: p3?.status || "dipublikasi",
+          token: p3?.token || "MTK-PTS26",
         },
       ])
       .then(() => {});
@@ -350,6 +355,7 @@ export default async function DaftarUjianPage() {
 
     const isPerBab = calculatedTipe === "ulangan" && (Boolean(u.bab_id) || /bab\s*\d+/i.test(u.judul || ""));
     const isKeseluruhanBab = calculatedTipe === "ulangan" && !isPerBab;
+    const localPkg = getExamPackage(u.id);
 
     examMap.set(u.id, {
       ...u,
@@ -357,12 +363,15 @@ export default async function DaftarUjianPage() {
       tipe: calculatedTipe,
       isPerBab,
       isKeseluruhanBab,
-      durasi_menit: u.durasi_menit || (isOfficial ? 90 : 60),
-      passing_grade: u.passing_grade || 75,
+      status: localPkg?.status || u.status || "dipublikasi",
+      durasi_menit: localPkg?.durasi_menit || u.durasi_menit || (isOfficial ? 90 : 60),
+      passing_grade: localPkg?.passing_grade || u.passing_grade || 75,
     });
   });
 
-  const exams = Array.from(examMap.values()).map((u) => {
+  const exams = Array.from(examMap.values())
+    .filter((u) => u.status !== "draft")
+    .map((u) => {
     const sesi = userSessions[u.id];
     let sessionStatus = "belum_mulai";
     let score = null;

@@ -614,6 +614,141 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.check_user_account_status(TEXT) TO anon, authenticated, service_role;
 
+-- 8. Function untuk menghapus user auth tanpa profil (orphan user)
+CREATE OR REPLACE FUNCTION public.delete_orphan_auth_user(p_email text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_has_profile boolean;
+BEGIN
+  SELECT id INTO v_user_id FROM auth.users WHERE lower(email) = lower(trim(p_email)) LIMIT 1;
+  
+  IF v_user_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  SELECT EXISTS(SELECT 1 FROM public.profil WHERE id = v_user_id) INTO v_has_profile;
+
+  IF NOT v_has_profile THEN
+    DELETE FROM auth.users WHERE id = v_user_id;
+    RETURN true;
+  END IF;
+
+  RETURN false;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_orphan_auth_user(text) TO anon, authenticated, service_role;
+
+-- 9. Function untuk menghapus user auth tanpa profil berdasarkan UUID
+CREATE OR REPLACE FUNCTION public.delete_orphan_auth_user_by_id(p_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.profil WHERE id = p_user_id) THEN
+    DELETE FROM auth.users WHERE id = p_user_id;
+    RETURN true;
+  END IF;
+  RETURN false;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_orphan_auth_user_by_id(uuid) TO anon, authenticated, service_role;
+
+-- 10. Function untuk melengkapi profil pendaftaran siswa secara atomik
+CREATE OR REPLACE FUNCTION public.complete_student_registration(
+  p_user_id uuid,
+  p_nama_lengkap text,
+  p_peran text,
+  p_sekolah_id uuid,
+  p_nisn text,
+  p_nis text,
+  p_foto_url text,
+  p_jenis_kelamin text,
+  p_tempat_lahir text,
+  p_tanggal_lahir text,
+  p_no_wa text,
+  p_nama_kelas text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_kelas_id uuid;
+  v_peran public.peran;
+BEGIN
+  -- Parse peran ke enum public.peran
+  BEGIN
+    v_peran := coalesce(p_peran, 'siswa')::public.peran;
+  EXCEPTION WHEN OTHERS THEN
+    v_peran := 'siswa'::public.peran;
+  END;
+
+  INSERT INTO public.profil (
+    id, nama_lengkap, peran, sekolah_id, nisn, nis, foto_url,
+    jenis_kelamin, tempat_lahir, tanggal_lahir, no_wa, jurusan, tahun_ajaran
+  ) VALUES (
+    p_user_id,
+    p_nama_lengkap,
+    v_peran,
+    p_sekolah_id,
+    nullif(trim(p_nisn), ''),
+    nullif(trim(p_nis), ''),
+    nullif(trim(p_foto_url), ''),
+    nullif(trim(p_jenis_kelamin), ''),
+    nullif(trim(p_tempat_lahir), ''),
+    nullif(trim(p_tanggal_lahir), ''),
+    nullif(trim(p_no_wa), ''),
+    'Fase D (Kurikulum Merdeka)',
+    '2026/2027'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    nama_lengkap = EXCLUDED.nama_lengkap,
+    peran = EXCLUDED.peran,
+    sekolah_id = EXCLUDED.sekolah_id,
+    nisn = coalesce(EXCLUDED.nisn, public.profil.nisn),
+    nis = coalesce(EXCLUDED.nis, public.profil.nis),
+    foto_url = coalesce(EXCLUDED.foto_url, public.profil.foto_url),
+    jenis_kelamin = coalesce(EXCLUDED.jenis_kelamin, public.profil.jenis_kelamin),
+    tempat_lahir = coalesce(EXCLUDED.tempat_lahir, public.profil.tempat_lahir),
+    tanggal_lahir = coalesce(EXCLUDED.tanggal_lahir, public.profil.tanggal_lahir),
+    no_wa = coalesce(EXCLUDED.no_wa, public.profil.no_wa),
+    jurusan = coalesce(EXCLUDED.jurusan, public.profil.jurusan),
+    tahun_ajaran = coalesce(EXCLUDED.tahun_ajaran, public.profil.tahun_ajaran),
+    diperbarui_pada = now();
+
+  -- Hubungkan ke kelas
+  IF p_nama_kelas IS NOT NULL AND trim(p_nama_kelas) <> '' THEN
+    SELECT id INTO v_kelas_id FROM public.kelas 
+    WHERE lower(nama_kelas) = lower(trim(p_nama_kelas))
+       OR lower(trim(p_nama_kelas)) LIKE lower(nama_kelas) || '%'
+       OR lower(nama_kelas) LIKE lower(trim(p_nama_kelas)) || '%'
+    LIMIT 1;
+
+    IF v_kelas_id IS NOT NULL THEN
+      INSERT INTO public.anggota_kelas (kelas_id, siswa_id)
+      VALUES (v_kelas_id, p_user_id)
+      ON CONFLICT (kelas_id, siswa_id) DO NOTHING;
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object('success', true);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.complete_student_registration(uuid, text, text, uuid, text, text, text, text, text, text, text, text) TO anon, authenticated, service_role;
+
 -- ============================================================
 -- SELESAI! Semua tabel, trigger, RLS, dan seed data sudah siap.
 -- ============================================================

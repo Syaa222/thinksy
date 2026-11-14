@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getExamPackage, getExamQuestions } from "@/lib/exam-questions-store";
 
 export async function GET(req: Request) {
   try {
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
     }
 
     // 1. Ambil detail Ujian
-    const { data: ujian, error: ujianErr } = await adminSupabase
+    let { data: ujian } = await adminSupabase
       .from("ujian")
       .select(`
         id,
@@ -40,9 +41,27 @@ export async function GET(req: Request) {
         bab_id
       `)
       .eq("id", ujianId)
-      .single();
+      .maybeSingle();
 
-    if (ujianErr || !ujian) {
+    const localPackage = getExamPackage(ujianId);
+    if (!ujian && localPackage) {
+      ujian = {
+        id: localPackage.id,
+        judul: localPackage.judul,
+        deskripsi: localPackage.deskripsi,
+        mapel: localPackage.mapel || "Matematika",
+        durasi_menit: localPackage.durasi_menit || 60,
+        passing_grade: localPackage.passing_grade || 75,
+        waktu_mulai: null,
+        waktu_berakhir: null,
+        status: localPackage.status || "dipublikasi",
+        acak_soal: false,
+        acak_opsi: false,
+        bab_id: localPackage.bab_id || null,
+      };
+    }
+
+    if (!ujian) {
       return NextResponse.json({ error: "Ujian tidak ditemukan" }, { status: 404 });
     }
 
@@ -98,42 +117,59 @@ export async function GET(req: Request) {
         };
       });
     } else {
-      // Fallback: Jika ujian belum memiliki relasi ujian_soal, ambil dari soal yang relevan
-      let query = adminSupabase
-        .from("soal")
-        .select(`
-          id,
-          pertanyaan,
-          tipe_soal,
-          opsi_soal (
+      // Coba ambil dari central store ujian_store.json terlebih dahulu
+      const storeQuestions = getExamQuestions(ujianId);
+      if (storeQuestions && storeQuestions.length > 0) {
+        formattedQuestions = storeQuestions.map((q, idx) => ({
+          id: q.id,
+          urutan: idx + 1,
+          pertanyaan: q.pertanyaan,
+          tipe_soal: q.tipeSoal,
+          poin_bobot: q.poin || 10,
+          opsi: (q.opsi || []).map((o, oIdx) => ({
+            id: o.id || `${q.id}-opt-${oIdx}`,
+            teks_opsi: o.teks,
+            urutan: oIdx + 1,
+          })),
+        }));
+      } else {
+        // Fallback: Jika ujian belum memiliki relasi ujian_soal, ambil dari soal yang relevan
+        let query = adminSupabase
+          .from("soal")
+          .select(`
             id,
-            teks_opsi,
-            urutan
-          )
-        `);
+            pertanyaan,
+            tipe_soal,
+            opsi_soal (
+              id,
+              teks_opsi,
+              urutan
+            )
+          `);
 
-      if (ujian.bab_id) {
-        query = query.eq("bab_id", ujian.bab_id);
-      }
+        if (ujian.bab_id) {
+          query = query.eq("bab_id", ujian.bab_id);
+        }
 
-      const { data: fallbackQuestions } = await query.limit(10);
+        const { data: fallbackQuestions } = await query.limit(10);
 
-      if (fallbackQuestions && fallbackQuestions.length > 0) {
-        formattedQuestions = fallbackQuestions.map((q: any, idx: number) => {
-          const rawOpsi = Array.isArray(q.opsi_soal) ? q.opsi_soal : [];
-          return {
-            id: q.id,
-            urutan: idx + 1,
-            pertanyaan: q.pertanyaan,
-            tipe_soal: q.tipe_soal || "pilihan_ganda",
-            poin_bobot: 10,
-            opsi: rawOpsi.map((o: any) => ({
-              id: o.id,
-              teks_opsi: o.teks_opsi,
-              urutan: o.urutan,
-            })),
-          };
-        });
+        if (fallbackQuestions && fallbackQuestions.length > 0) {
+          formattedQuestions = fallbackQuestions.map((q: any, idx: number) => {
+            const rawOpsi = Array.isArray(q.opsi_soal) ? q.opsi_soal : [];
+            return {
+              id: q.id,
+              urutan: idx + 1,
+              pertanyaan: q.pertanyaan,
+              tipe_soal: q.tipe_soal || "pilihan_ganda",
+              poin_bobot: 10,
+              opsi: rawOpsi.map((o: any) => ({
+                id: o.id,
+                teks_opsi: o.teks_opsi,
+                urutan: o.urutan,
+              })),
+            };
+          });
+        }
       }
     }
 

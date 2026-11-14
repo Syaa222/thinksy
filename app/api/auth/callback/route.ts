@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // Helper: tentukan path dashboard berdasarkan peran
 function getDashboardPath(peran: string): string {
@@ -99,9 +98,12 @@ export async function GET(request: Request) {
 
     // 2. Bersihkan akun auth sementara di auth.users agar email tidak terkunci
     try {
-      const adminClient = createAdminClient();
-      await adminClient.auth.admin.deleteUser(user.id);
-      console.log(`[OAuth Callback] User auth sementara ${user.id} (${user.email}) berhasil dibersihkan.`);
+      if (user.email) {
+        await supabase.rpc("delete_orphan_auth_user", { p_email: user.email });
+      } else {
+        await supabase.rpc("delete_orphan_auth_user_by_id", { p_user_id: user.id });
+      }
+      console.log(`[OAuth Callback] User auth sementara ${user.id} (${user.email}) berhasil dibersihkan via RPC.`);
     } catch (cleanErr: any) {
       console.warn("[OAuth Callback] Peringatan saat membersihkan user auth sementara:", cleanErr?.message);
     }

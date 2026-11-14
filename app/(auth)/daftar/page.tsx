@@ -285,22 +285,73 @@ function DaftarFormContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Handler upload foto custom dari perangkat
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper kompres pasfoto di browser ke canvas agar ukuran file ringan (< 50KB) & kilat dikirim
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 400; // Pasfoto resolusi optimal
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(reader.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.8);
+          resolve(compressed);
+        };
+        img.onerror = () => resolve(reader.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(DEFAULT_STUDENT_PHOTO);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handler upload foto custom dari perangkat dengan kompresi otomatis
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        setErrorMessage("Ukuran foto maksimal 4MB.");
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage("Ukuran foto maksimal 10MB.");
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setCustomPhotoPreview(base64String);
-        setSelectedPhoto(base64String);
+      try {
+        const compressedBase64 = await compressImage(file);
+        setCustomPhotoPreview(compressedBase64);
+        setSelectedPhoto(compressedBase64);
         setHasCustomPhotoSelected(true);
-      };
-      reader.readAsDataURL(file);
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          setCustomPhotoPreview(base64String);
+          setSelectedPhoto(base64String);
+          setHasCustomPhotoSelected(true);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -353,10 +404,13 @@ function DaftarFormContent() {
             res.message || "Pendaftaran akun siswa berhasil! Mengalihkan ke dashboard..."
           );
           setTimeout(() => {
-            router.push("/");
-          }, 1200);
+            router.push(res.redirectUrl || "/");
+          }, 1000);
         }
       } catch (err: any) {
+        if (err?.digest?.includes("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+          return;
+        }
         console.error("Gagal mendaftar:", err);
         setErrorMessage("Terjadi kesalahan sistem saat mendaftar. Silakan coba lagi.");
       }

@@ -15,9 +15,15 @@ export default function ExamStatusToggle({
   initialStatus,
 }: ExamStatusToggleProps) {
   const [status, setStatus] = useState(initialStatus || "dipublikasi");
+  const [prevInitial, setPrevInitial] = useState(initialStatus);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { broadcastEvent } = useRealtimeDashboard();
+
+  if (initialStatus !== prevInitial) {
+    setPrevInitial(initialStatus);
+    setStatus(initialStatus);
+  }
 
   const handleUpdateStatus = async (newStatus: "dipublikasi" | "ditutup" | "draft") => {
     if (newStatus === status || isLoading) return;
@@ -29,12 +35,17 @@ export default function ExamStatusToggle({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ujianId, status: newStatus }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setStatus(newStatus);
         broadcastEvent("EXAM_STATUS_CHANGED", { ujianId, status: newStatus });
         router.refresh();
+      } else {
+        console.error("[ExamStatusToggle] Gagal update status:", data?.error);
       }
-    } catch {} finally {
+    } catch (err) {
+      console.error("[ExamStatusToggle] Network error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -67,7 +78,7 @@ export default function ExamStatusToggle({
             onClick={() => handleUpdateStatus("ditutup")}
             className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
               status === "ditutup"
-                ? "bg-slate-700 text-white shadow-2xs font-black"
+                ? "bg-slate-600 text-white shadow-2xs font-black"
                 : "text-slate-600 hover:text-slate-900"
             }`}
             title="Nonaktif: Muncul abu-abu di siswa & tidak bisa diakses"
