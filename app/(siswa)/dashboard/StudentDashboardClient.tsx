@@ -75,6 +75,7 @@ export default function StudentDashboardClient({
   >("Home");
   const [classroomView, setClassroomView] = useState<ClassroomViewMode>("home");
   const [selectedSubjectClass, setSelectedSubjectClass] = useState<string>("Matematika");
+  const [selectedClassId, setSelectedClassId] = useState<string>("mat-8");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Dynamic Student Profile (synced with settings & localStorage after mount)
@@ -479,9 +480,22 @@ export default function StudentDashboardClient({
     } else if (classId) {
       const found = enrolledClasses.find((c: any) => c.id === classId);
       if (found) {
-        resolvedSubj = (found.mata_pelajaran || found.nama_kelas || "").toLowerCase().includes("ipa") ? "IPA" : "Matematika";
+        resolvedSubj = found.mata_pelajaran || found.nama_kelas || "Matematika";
       }
     }
+
+    if (classId) {
+      setSelectedClassId(classId);
+    } else {
+      const found = enrolledClasses.find((c: any) =>
+        (c.mata_pelajaran || c.nama_kelas || "").toLowerCase() === resolvedSubj.toLowerCase() ||
+        (c.id || "").toLowerCase() === resolvedSubj.toLowerCase()
+      );
+      if (found) setSelectedClassId(found.id);
+      else if (resolvedSubj.toLowerCase().includes("ipa")) setSelectedClassId("ipa-8");
+      else setSelectedClassId("mat-8");
+    }
+
     setSelectedSubjectClass(resolvedSubj);
     setClassroomView("matematika");
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
@@ -2166,6 +2180,7 @@ export default function StudentDashboardClient({
           isActive={true}
           enrolledClasses={enrolledClasses}
           selectedSubject={selectedSubjectClass}
+          selectedClassId={selectedClassId}
           onSelectSubjectClass={(classId, subj) => handleOpenClassSubject(classId, subj)}
         />
 
@@ -2207,6 +2222,7 @@ export default function StudentDashboardClient({
           ) : classroomView === "matematika" ? (
             <RuangBelajarSubjectChaptersView
               selectedSubject={selectedSubjectClass}
+              selectedClassId={selectedClassId}
               chapters={chapters}
               userProfile={userProfile}
               onBackToHome={() => setClassroomView("home")}

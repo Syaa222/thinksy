@@ -1,5 +1,28 @@
 [
   {
+    "id": "class-coding-9753",
+    "name": "Coding",
+    "nama_kelas": "Coding",
+    "mapel": "Coding",
+    "mata_pelajaran": "Coding",
+    "section": "Kelas 8 • Informatika & Algoritma",
+    "room": "Lab Komputer",
+    "ruang": "Lab Komputer",
+    "subjectCode": "cdn8cuv",
+    "kode_kelas": "cdn8cuv",
+    "themeColor": "#2563EB",
+    "banner_color": "#2563EB",
+    "bgGradient": "from-blue-600 via-indigo-600 to-slate-950",
+    "bannerType": "illustration",
+    "bannerIllustration": "math",
+    "banner_pattern": "math",
+    "bannerPhotoUrl": "",
+    "teacherName": "Ibu Siti Rahmawati, M.Pd.",
+    "nama_guru": "Ibu Siti Rahmawati, M.Pd.",
+    "studentCount": 0,
+    "description": "Kelas pemrograman dasar, logika algoritma, dan problem solving berbasis AI."
+  },
+  {
     "id": "mat-8",
     "name": "Matematika (Kelas 8)",
     "nama_kelas": "Matematika (Kelas 8)",
@@ -21,5 +44,28 @@
     "nama_guru": "Ibu Siti Rahmawati, M.Pd.",
     "studentCount": 32,
     "description": "Aljabar, Teorema Pythagoras, Persamaan Linear, Statistika, Peluang & Penalaran Matematika."
+  },
+  {
+    "id": "ipa-8",
+    "name": "IPA (Ilmu Pengetahuan Alam)",
+    "nama_kelas": "IPA (Ilmu Pengetahuan Alam)",
+    "mapel": "IPA",
+    "mata_pelajaran": "IPA",
+    "section": "Kelas 8 • Laboratorium Sains",
+    "room": "Lab IPA",
+    "ruang": "Lab IPA",
+    "subjectCode": "ipa8xpk",
+    "kode_kelas": "ipa8xpk",
+    "themeColor": "#0F9D58",
+    "banner_color": "#0F9D58",
+    "bgGradient": "from-emerald-600 via-teal-600 to-slate-950",
+    "bannerType": "illustration",
+    "bannerIllustration": "science",
+    "banner_pattern": "science",
+    "bannerPhotoUrl": "",
+    "teacherName": "Ibu Siti Rahmawati, M.Pd.",
+    "nama_guru": "Ibu Siti Rahmawati, M.Pd.",
+    "studentCount": 32,
+    "description": "Sistem Organisasi Kehidupan, Gerak dan Gaya, Usaha dan Energi, Struktur Bumi & Tata Surya."
   }
 ]

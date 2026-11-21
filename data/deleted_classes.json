@@ -1,9 +1,30 @@
 [
   {
-    "id": "ipa-8",
-    "name": "IPA (Ilmu Pengetahuan Alam)",
-    "subjectCode": "ipa8xpk",
-    "kode_kelas": "ipa8xpk",
-    "deletedAt": "2026-11-13T09:11:13.574Z"
+    "id": "class-matematika-9753",
+    "name": "Coding",
+    "subjectCode": "mtk8cuv",
+    "kode_kelas": "mtk8cuv",
+    "deletedAt": "2026-11-21T05:00:00.000Z"
+  },
+  {
+    "id": "class-matematika-8156",
+    "name": "coding",
+    "subjectCode": "mtk8z7c",
+    "kode_kelas": "mtk8z7c",
+    "deletedAt": "2026-11-21T05:00:00.000Z"
+  },
+  {
+    "id": "class-matematika-8950",
+    "name": "coding",
+    "subjectCode": "mtk82e9",
+    "kode_kelas": "mtk82e9",
+    "deletedAt": "2026-11-21T04:42:51.555Z"
+  },
+  {
+    "id": "class-informatika---tik-1384",
+    "name": "Informatika / TIK (Kelas 8)",
+    "subjectCode": "inf8cyh",
+    "kode_kelas": "inf8cyh",
+    "deletedAt": "2026-11-21T04:00:15.832Z"
   }
 ]

@@ -36,6 +36,7 @@ interface ClassroomSidebarProps {
   isActive?: boolean;
   enrolledClasses?: any[];
   selectedSubject?: string;
+  selectedClassId?: string;
   onSelectSubjectClass?: (classId: string, subjectName: string) => void;
 }
 
@@ -53,6 +54,7 @@ export default function ClassroomSidebar({
   isActive = true,
   enrolledClasses = [],
   selectedSubject = "Matematika",
+  selectedClassId,
   onSelectSubjectClass,
 }: ClassroomSidebarProps) {
   const [isStudyRoomOpen, setIsStudyRoomOpen] = useState(true);
@@ -192,12 +194,14 @@ export default function ClassroomSidebar({
                   const isIpa =
                     (cls.nama_kelas || "").toLowerCase().includes("ipa") ||
                     (cls.mata_pelajaran || "").toLowerCase().includes("ipa");
-                  const subjectKey = isIpa ? "IPA" : "Matematika";
+                  const subjectKey = cls.mata_pelajaran || cls.nama_kelas || (isIpa ? "IPA" : "Matematika");
                   const isSelected =
                     activeView === "matematika" &&
-                    (isIpa ? selectedSubject === "IPA" : selectedSubject !== "IPA");
+                    ((selectedClassId && cls.id && selectedClassId === cls.id) ||
+                      selectedSubject === subjectKey ||
+                      (isIpa ? selectedSubject === "IPA" : false));
 
-                  const badgeLetter = isIpa ? "I" : "M";
+                  const badgeLetter = (cls.nama_kelas || cls.mata_pelajaran || (isIpa ? "I" : "M")).charAt(0).toUpperCase();
                   const badgeBg = isIpa
                     ? isSelected
                       ? "bg-white text-emerald-600"

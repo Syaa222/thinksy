@@ -49,7 +49,11 @@ export default function GuruDashboardPage() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+            return parsed.filter(
+              (c: any) =>
+                c.id !== "class-matematika-9753" &&
+                c.id !== "class-matematika-8156"
+            );
           }
         }
       } catch {}
@@ -81,12 +85,14 @@ export default function GuruDashboardPage() {
 
           if (data.classes && Array.isArray(data.classes)) {
             setClasses((prev) => {
-              // Filter out any classes that have been deleted
+              // Filter out any classes that have been deleted or obsolete
               const nonDeletedPrev = prev.filter(
                 (c: any) =>
                   !deletedIds.has((c.id || "").toLowerCase()) &&
                   !deletedIds.has((c.subjectCode || "").toLowerCase()) &&
-                  !deletedIds.has((c.kode_kelas || "").toLowerCase())
+                  !deletedIds.has((c.kode_kelas || "").toLowerCase()) &&
+                  c.id !== "class-matematika-9753" &&
+                  c.id !== "class-matematika-8156"
               );
               const prevMap = new Map(nonDeletedPrev.map((c: any) => [c.id, c]));
               data.classes.forEach((sc: any) => {
@@ -437,6 +443,8 @@ export default function GuruDashboardPage() {
 
     try {
       localStorage.setItem("thinksy_guru_classes", JSON.stringify(updated));
+      // Pastikan kelas baru yang dibuat memiliki daftar bab kosong terlebih dahulu (0 bab)
+      localStorage.setItem(`thinksy_class_babs_${newClass.id}`, JSON.stringify([]));
       notifyClassUpdated();
 
       // Sinkronkan ke server registry sehingga siswa bisa langsung bergabung dengan token

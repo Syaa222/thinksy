@@ -267,7 +267,7 @@ export default function RuangUlanganSubjectChaptersView({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   <Link
-                    href={`/quiz/${chap.id}`}
+                    href={`/quiz/${chap.id}?mode=inclass&babId=${chap.id}`}
                     className="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-200 transition flex items-center justify-between gap-2 group/m cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -285,7 +285,7 @@ export default function RuangUlanganSubjectChaptersView({
                   </Link>
 
                   <Link
-                    href={`/quiz/${chap.id}`}
+                    href={`/quiz/${chap.id}?mode=inclass&babId=${chap.id}`}
                     className="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-200 transition flex items-center justify-between gap-2 group/m cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -337,7 +337,7 @@ export default function RuangUlanganSubjectChaptersView({
                     Materi Bab
                   </Link>
                   <Link
-                    href={`/quiz/${chap.id}`}
+                    href={`/quiz/${chap.id}?mode=inclass&babId=${chap.id}`}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
                   >
                     <span>

@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Code,
   List,
+  Loader2,
 } from "lucide-react";
 import {
   formatDueSoonDisplay,
@@ -230,6 +231,65 @@ export default function EditBabNormalScreen({
   const [subScreenMode, setSubScreenMode] = useState<"none" | "edit_module" | "edit_question">("none");
   const [editingModule, setEditingModule] = useState<BabSubMateri | null>(null);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // AI MULTI-MODULE CHAPTER GENERATOR STATE & HANDLERS
+  // ══════════════════════════════════════════════════════════════════════════
+  const [isAiChapterModalOpen, setIsAiChapterModalOpen] = useState(false);
+  const [aiChapterTopic, setAiChapterTopic] = useState(bab.judul || "");
+  const [aiChapterInstruction, setAiChapterInstruction] = useState("");
+  const [isGeneratingChapterAi, setIsGeneratingChapterAi] = useState(false);
+  const [aiChapterError, setAiChapterError] = useState<string | null>(null);
+  const [aiGeneratedChapterModules, setAiGeneratedChapterModules] = useState<BabSubMateri[] | null>(null);
+
+  const handleGenerateChapterModulesWithAi = async () => {
+    setIsGeneratingChapterAi(true);
+    setAiChapterError(null);
+
+    try {
+      const res = await fetch("/api/guru/generate-materi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topik: aiChapterTopic.trim() || bab.judul,
+          babJudul: bab.judul,
+          mapel: subjectName,
+          kelas: 8,
+          durasiMenit: 25,
+          instruksiKhusus: aiChapterInstruction.trim(),
+          mode: "full_chapter_modules",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !Array.isArray(data.modules)) {
+        throw new Error(data.error || "Gagal menyusun modul bab.");
+      }
+
+      const mapped: BabSubMateri[] = data.modules.map((m: any, idx: number) => ({
+        id: `${bab.id}-mod-${Date.now().toString().slice(-4)}-${idx + 1}`,
+        urutan: idx + 1,
+        judul: m.judul || `Materi ${idx + 1}`,
+        durasiMenit: Number(m.durasiMenit) || 20,
+        konten_markdown: m.kontenMarkdown || m.konten_markdown || "",
+        isOpen: true,
+      }));
+
+      setAiGeneratedChapterModules(mapped);
+    } catch (err: any) {
+      setAiChapterError(err.message || "Gagal menyusun modul bab dengan AI.");
+    } finally {
+      setIsGeneratingChapterAi(false);
+    }
+  };
+
+  const handleApplyChapterAiModules = () => {
+    if (!aiGeneratedChapterModules || aiGeneratedChapterModules.length === 0) return;
+    setModules(aiGeneratedChapterModules);
+    showToast("✨ 3 Sub-Materi berhasil disusun dengan AI dan ditambahkan ke bab!");
+    setIsAiChapterModalOpen(false);
+    setAiGeneratedChapterModules(null);
+  };
+
   // 3. FITUR BAB & AI TUTOR STATE
   const [features, setFeatures] = useState<BabFeatureSettings>(() => {
     if (bab.features) return bab.features;
@@ -330,6 +390,12 @@ export default function EditBabNormalScreen({
   // Global Save State
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessToast, setSaveSuccessToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Handle Save All Bab Changes
   const handleSaveAll = async () => {
@@ -694,6 +760,15 @@ export default function EditBabNormalScreen({
               Seluruh materi, jadwal Due Soon, fitur AI, dan kuis telah disinkronkan ke siswa.
             </div>
           </div>
+        </div>
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#041E49] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-blue-400/30 animate-in slide-in-from-bottom duration-200">
+          <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check className="w-4 h-4 stroke-[3]" />
+          </div>
+          <div className="text-xs font-bold">{toastMessage}</div>
         </div>
       )}
 
@@ -1117,27 +1192,62 @@ export default function EditBabNormalScreen({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleOpenAddModule}
-                className="px-4 py-2.5 rounded-xl bg-[#1967D2] hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer self-start sm:self-auto"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Sub-Materi Baru</span>
-              </button>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiChapterTopic(bab.judul || "");
+                    setIsAiChapterModalOpen(true);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer self-start sm:self-auto"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Generate 3 Sub-Materi (AI)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddModule}
+                  className="px-4 py-2.5 rounded-xl bg-[#1967D2] hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Sub-Materi Baru</span>
+                </button>
+              </div>
             </div>
 
             {/* List Materi */}
             {modules.length === 0 ? (
-              <div className="py-12 text-center text-slate-500 space-y-3">
-                <p className="text-xs font-medium">Belum ada modul materi dalam bab ini.</p>
-                <button
-                  type="button"
-                  onClick={handleOpenAddModule}
-                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition cursor-pointer"
-                >
-                  + Tambah Materi Pertama
-                </button>
+              <div className="py-12 text-center text-slate-500 space-y-4 max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 mx-auto flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-slate-800">Belum ada modul materi dalam bab ini</p>
+                  <p className="text-xs text-slate-500">
+                    Susun materi pembelajaran secara otomatis dengan Thinksy AI atau buat modul secara manual.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiChapterTopic(bab.judul || "");
+                      setIsAiChapterModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>✨ Susun 3 Modul dengan AI</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddModule}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition cursor-pointer"
+                  >
+                    + Buat Manual
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1707,6 +1817,225 @@ export default function EditBabNormalScreen({
       )}
 
       {/* Sub-screens (Editor Sub-Materi & Editor Soal Kuis) are rendered as full normal screens at the top */}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* MODAL: GENERATE SELURUH SUB-MATERI BAB DENGAN AI (3 MODUL)            */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {isAiChapterModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150 overflow-y-auto"
+          onClick={() => {
+            if (!isGeneratingChapterAi) {
+              setIsAiChapterModalOpen(false);
+              setAiGeneratedChapterModules(null);
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 my-auto text-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-gradient-to-r from-purple-50/80 via-indigo-50/50 to-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>Generate 3 Sub-Materi Bab dengan AI</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                      Thinksy AI
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Secara otomatis menyusun 3 modul terstruktur dari konsep dasar, pendalaman, hingga studi kasus.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isGeneratingChapterAi) {
+                    setIsAiChapterModalOpen(false);
+                    setAiGeneratedChapterModules(null);
+                  }
+                }}
+                disabled={isGeneratingChapterAi}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {aiChapterError && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{aiChapterError}</span>
+                </div>
+              )}
+
+              {!aiGeneratedChapterModules ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Judul Bab / Fokus Utama Kurikulum <span className="text-red-500">*</span></span>
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        Mata Pelajaran: <strong className="text-slate-700">{subjectName}</strong>
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={aiChapterTopic}
+                      onChange={(e) => setAiChapterTopic(e.target.value)}
+                      placeholder="Contoh: Bab 1: Dasar Pemrograman & Logika Algoritma"
+                      className="w-full text-xs font-semibold px-4 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-100 transition"
+                    />
+                  </div>
+
+                  {/* Penjelasan 3 Modul yang akan dibuat */}
+                  <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200/80 space-y-2.5 text-xs text-purple-950">
+                    <span className="font-bold flex items-center gap-1.5 text-purple-900">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span>Alur 3 Modul Pembelajaran yang Akan Disusun:</span>
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                      <div className="p-2.5 bg-white rounded-xl border border-purple-100 shadow-2xs">
+                        <span className="font-bold text-purple-800 block">Modul 1</span>
+                        <span className="text-slate-600">Pengenalan konsep dasar, analogi nyata & capaian awal.</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-purple-100 shadow-2xs">
+                        <span className="font-bold text-purple-800 block">Modul 2</span>
+                        <span className="text-slate-600">Pendalaman teori, rumus/kode, dan sifat mekanisme.</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-purple-100 shadow-2xs">
+                        <span className="font-bold text-purple-800 block">Modul 3</span>
+                        <span className="text-slate-600">Studi kasus, contoh terapan dan pemecahan masalah.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Catatan / Instruksi Khusus (Opsional)</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Misal: fokus bahasa Python untuk pemula</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={aiChapterInstruction}
+                      onChange={(e) => setAiChapterInstruction(e.target.value)}
+                      placeholder="Contoh: Sertakan contoh kode Python sederhana di modul 2 dan 3..."
+                      className="w-full text-xs font-medium p-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-100 transition resize-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Preview hasil 3 modul */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Berhasil menyusun 3 modul pembelajaran terstruktur!</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setAiGeneratedChapterModules(null)}
+                      className="text-xs font-bold text-purple-700 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Ubah Parameter</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {aiGeneratedChapterModules.map((m) => (
+                      <div
+                        key={m.id}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            {m.judul}
+                          </span>
+                          <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                            ⏱️ {m.durasiMenit} Menit
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-mono line-clamp-2">
+                          {m.konten_markdown.slice(0, 150)}...
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isGeneratingChapterAi) {
+                    setIsAiChapterModalOpen(false);
+                    setAiGeneratedChapterModules(null);
+                  }
+                }}
+                disabled={isGeneratingChapterAi}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+              >
+                Batal
+              </button>
+
+              {!aiGeneratedChapterModules ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateChapterModulesWithAi}
+                  disabled={isGeneratingChapterAi}
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isGeneratingChapterAi ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sedang Menyusun 3 Modul...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>✨ Generate 3 Modul Sekarang</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateChapterModulesWithAi}
+                    disabled={isGeneratingChapterAi}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Generate Ulang</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyChapterAiModules}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Terapkan Semua ke Bab</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

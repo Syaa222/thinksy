@@ -30,6 +30,13 @@ import {
   AlertCircle,
   Monitor,
   Smartphone,
+  Wand2,
+  Bot,
+  Loader2,
+  RefreshCw,
+  X,
+  CheckCircle2,
+  Sliders,
 } from "lucide-react";
 import MarkdownRenderer from "@/components/materi/MarkdownRenderer";
 import type { BabSubMateri } from "./EditBabNormalScreen";
@@ -425,6 +432,104 @@ export default function SubMateriNormalEditorScreen({
   const [activeCardTab, setActiveCardTab] = useState<"editor" | "preview">("editor");
   const [formatNotice, setFormatNotice] = useState<string | null>(null);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // AI MATERIAL GENERATOR STATE & HANDLERS
+  // ══════════════════════════════════════════════════════════════════════════
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiTopik, setAiTopik] = useState(module.judul || babJudul || "");
+  const [aiGayaBelajar, setAiGayaBelajar] = useState<
+    "konseptual_sokratik" | "praktis_studi_kasus" | "komprehensif_buku_teks" | "ringkas_latihan"
+  >("konseptual_sokratik");
+  const [aiDurasi, setAiDurasi] = useState<number>(durasiMenit || 25);
+  const [aiElemen, setAiElemen] = useState<string[]>([
+    "tujuan",
+    "analogi",
+    "konsep",
+    "contoh_langkah",
+    "miskonsepsi",
+    "sokratik",
+    "rangkuman",
+  ]);
+  const [aiInstruksi, setAiInstruksi] = useState("");
+  const [aiPlacement, setAiPlacement] = useState<"replace" | "append">("replace");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiGeneratedPreview, setAiGeneratedPreview] = useState<{
+    judul: string;
+    durasiMenit: number;
+    ringkasan: string;
+    kontenMarkdown: string;
+  } | null>(null);
+
+  const handleToggleAiElemen = (item: string) => {
+    setAiElemen((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+    );
+  };
+
+  const handleGenerateAi = async () => {
+    const finalTopik = aiTopik.trim() || judul.trim() || babJudul || "Materi Pembelajaran";
+    setIsGeneratingAi(true);
+    setAiError(null);
+
+    try {
+      const res = await fetch("/api/guru/generate-materi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topik: finalTopik,
+          babJudul,
+          mapel: subjectName,
+          kelas: 8,
+          durasiMenit: aiDurasi,
+          gayaBelajar: aiGayaBelajar,
+          elemen: aiElemen,
+          instruksiKhusus: aiInstruksi.trim(),
+          mode: "single_module",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.module) {
+        throw new Error(data.error || "Gagal menyusun materi pembelajaran.");
+      }
+
+      setAiGeneratedPreview({
+        judul: data.module.judul || finalTopik,
+        durasiMenit: data.module.durasiMenit || aiDurasi,
+        ringkasan: data.module.ringkasan || "",
+        kontenMarkdown: data.module.kontenMarkdown || "",
+      });
+    } catch (err: any) {
+      setAiError(err.message || "Terjadi kendala saat menghubungi asisten AI.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
+  const handleApplyAiContent = () => {
+    if (!aiGeneratedPreview) return;
+
+    if (aiPlacement === "replace" || !kontenMarkdown.trim()) {
+      setKontenMarkdown(aiGeneratedPreview.kontenMarkdown);
+    } else {
+      setKontenMarkdown((prev) => prev.trim() + "\n\n" + aiGeneratedPreview.kontenMarkdown);
+    }
+
+    if (!judul.trim() || judul === "Sub-Materi Baru") {
+      setJudul(aiGeneratedPreview.judul);
+    }
+
+    if (durasiMenit === 0 || durasiMenit === 20) {
+      setDurasiMenit(aiGeneratedPreview.durasiMenit);
+    }
+
+    markDirty();
+    showFeedback("✨ Materi AI berhasil diterapkan ke editor!");
+    setIsAiModalOpen(false);
+    setAiGeneratedPreview(null);
+  };
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const noticeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -701,6 +806,21 @@ export default function SubMateriNormalEditorScreen({
               </button>
             </div>
 
+            {/* AI Generator Trigger Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setAiTopik(judul || babJudul || "");
+                setIsAiModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              title="Generate materi pembelajaran terstruktur dengan AI"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span className="hidden sm:inline">Susun dengan AI</span>
+              <span className="sm:hidden">AI</span>
+            </button>
+
             <button
               type="button"
               onClick={onBack}
@@ -936,6 +1056,20 @@ export default function SubMateriNormalEditorScreen({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* AI Generate Button inside Card 2 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiTopik(judul || babJudul || "");
+                      setIsAiModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    title="Generate materi ini dengan AI"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                    <span>Generate AI</span>
+                  </button>
+
                   {/* Mode Tab Switcher: Editor vs Pratinjau Teks Langsung */}
                   <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
                     <button
@@ -1394,6 +1528,332 @@ export default function SubMateriNormalEditorScreen({
           </div>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* MODAL: GENERATE MATERI DENGAN AI (THINKSY AI CURRICULUM ARCHITECT)   */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {isAiModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150 overflow-y-auto"
+          onClick={() => {
+            if (!isGeneratingAi) {
+              setIsAiModalOpen(false);
+              setAiGeneratedPreview(null);
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 my-auto text-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1967D2] to-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>Generate Materi Pembelajaran AI</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-[#1967D2] border border-blue-200">
+                      Thinksy AI
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Menyusun modul ajar mendalam, terstruktur, dan siap pakai sesuai standar Kurikulum Merdeka.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isGeneratingAi) {
+                    setIsAiModalOpen(false);
+                    setAiGeneratedPreview(null);
+                  }
+                }}
+                disabled={isGeneratingAi}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {aiError && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{aiError}</span>
+                </div>
+              )}
+
+              {/* View 1: Konfigurasi Generator (Saat belum ada preview atau ingin edit konfigurasi) */}
+              {!aiGeneratedPreview ? (
+                <div className="space-y-4.5">
+                  {/* Topik Materi Input */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Topik / Judul Sub-Materi yang Ingin Disusun <span className="text-red-500">*</span></span>
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        Mata Pelajaran: <strong className="text-slate-700">{subjectName}</strong>
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={aiTopik}
+                      onChange={(e) => setAiTopik(e.target.value)}
+                      placeholder="Contoh: Logika Percabangan If-Else dan Operator Perbandingan dalam Python"
+                      className="w-full text-xs font-semibold px-4 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 transition"
+                    />
+                  </div>
+
+                  {/* Gaya Belajar & Pendekatan Pedagogis */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-2 block">
+                      Gaya Pembelajaran & Pendekatan Pedagogis
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {[
+                        {
+                          id: "konseptual_sokratik",
+                          title: "Konseptual & Sokratik",
+                          desc: "Penjelasan logika inti, analogi nyata, dan pemantik berpikir kritis.",
+                          icon: "🧠",
+                        },
+                        {
+                          id: "praktis_studi_kasus",
+                          title: "Praktis & Studi Kasus",
+                          desc: "Banyak contoh terapan nyata, implementasi kode/rumus langkah demi langkah.",
+                          icon: "🛠️",
+                        },
+                        {
+                          id: "komprehensif_buku_teks",
+                          title: "Buku Teks Lengkap",
+                          desc: "Penjabaran formal komprehensif, teori ilmiah, dan pembuktian matematis.",
+                          icon: "📖",
+                        },
+                        {
+                          id: "ringkas_latihan",
+                          title: "Ringkas & Latihan",
+                          desc: "Padat inti, rangkuman rumus kunci, dan tabel analisis praktis.",
+                          icon: "⚡",
+                        },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setAiGayaBelajar(item.id as any)}
+                          className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            aiGayaBelajar === item.id
+                              ? "border-[#1967D2] bg-blue-50/60 ring-2 ring-blue-500/20"
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <span className="text-lg shrink-0">{item.icon}</span>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                              {item.title}
+                            </h4>
+                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5">
+                              {item.desc}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Komponen Wajib */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block">
+                      Komponen Pembelajaran yang Disertakan
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { id: "tujuan", label: "🎯 Capaian & Tujuan" },
+                        { id: "analogi", label: "💡 Apersepsi & Analogi" },
+                        { id: "konsep", label: "📖 Teori & Konsep Inti" },
+                        { id: "contoh_langkah", label: "🔍 Langkah Solusi Rinci" },
+                        { id: "miskonsepsi", label: "⚠️ Peringatan Miskonsepsi" },
+                        { id: "sokratik", label: "🧠 Refleksi Sokratik" },
+                        { id: "rangkuman", label: "📝 Rangkuman Poin Kunci" },
+                      ].map((comp) => {
+                        const isChecked = aiElemen.includes(comp.id);
+                        return (
+                          <button
+                            key={comp.id}
+                            type="button"
+                            onClick={() => handleToggleAiElemen(comp.id)}
+                            className={`px-3 py-2 rounded-xl text-xs font-bold border transition flex items-center justify-between cursor-pointer ${
+                              isChecked
+                                ? "bg-blue-50 text-[#1967D2] border-blue-200"
+                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            <span>{comp.label}</span>
+                            <span className="text-xs">{isChecked ? "✓" : "+"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Catatan / Instruksi Khusus Guru (Opsional) */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Catatan / Arahan Khusus Guru (Opsional)</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Misal: tambahkan kode Python atau tabel perbandingan</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={aiInstruksi}
+                      onChange={(e) => setAiInstruksi(e.target.value)}
+                      placeholder="Contoh: Buat analogi menggunakan sistem lampu lalu lintas dan sertakan 2 contoh koding sederhana..."
+                      className="w-full text-xs font-medium p-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-[#1967D2] focus:ring-2 focus:ring-blue-100 transition resize-none placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  {/* Pilihan Penempatan Isi */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-700 block">
+                      Metode Penempatan Hasil AI ke Editor:
+                    </span>
+                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-700 flex-wrap">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="aiPlacement"
+                          checked={aiPlacement === "replace"}
+                          onChange={() => setAiPlacement("replace")}
+                          className="text-[#1967D2] focus:ring-0"
+                        />
+                        <span>Gantikan seluruh isi editor saat ini</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="aiPlacement"
+                          checked={aiPlacement === "append"}
+                          onChange={() => setAiPlacement("append")}
+                          className="text-[#1967D2] focus:ring-0"
+                        />
+                        <span>Sisipkan di akhir materi yang sudah ada</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* View 2: Pratinjau Hasil Generate AI */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Materi berhasil disusun oleh AI Thinksy!</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setAiGeneratedPreview(null)}
+                      className="text-xs font-bold text-[#1967D2] hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Ubah Konfigurasi</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1">
+                    <h4 className="text-sm font-extrabold text-slate-900">
+                      {aiGeneratedPreview.judul}
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      {aiGeneratedPreview.ringkasan}
+                    </p>
+                    <div className="flex items-center gap-3 pt-2 text-[10px] text-slate-400 font-mono">
+                      <span>Estimasi Waktu: {aiGeneratedPreview.durasiMenit} Menit</span>
+                      <span>•</span>
+                      <span>{aiGeneratedPreview.kontenMarkdown.length} Karakter</span>
+                    </div>
+                  </div>
+
+                  {/* Rendered Markdown Preview Box */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-500 block">
+                      Pratinjau Isi Konten:
+                    </span>
+                    <div className="max-h-72 overflow-y-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-inner text-xs sm:text-sm">
+                      <MarkdownRenderer
+                        content={aiGeneratedPreview.kontenMarkdown}
+                        className="text-xs leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isGeneratingAi) {
+                    setIsAiModalOpen(false);
+                    setAiGeneratedPreview(null);
+                  }
+                }}
+                disabled={isGeneratingAi}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+              >
+                Batal
+              </button>
+
+              {!aiGeneratedPreview ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateAi}
+                  disabled={isGeneratingAi}
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isGeneratingAi ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sedang Menyusun Materi...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>✨ Mulai Susun Materi dengan AI</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateAi}
+                    disabled={isGeneratingAi}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Generate Ulang</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyAiContent}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Terapkan ke Editor</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

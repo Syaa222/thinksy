@@ -30,6 +30,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 
 interface RuangBelajarSubjectChaptersViewProps {
   selectedSubject?: string;
+  selectedClassId?: string;
   chapters: ChapterItem[];
   userProfile?: {
     nama_lengkap?: string;
@@ -87,6 +88,7 @@ function getSubjectMeta(subject: string) {
 
 export default function RuangBelajarSubjectChaptersView({
   selectedSubject = "Matematika",
+  selectedClassId,
   chapters,
   userProfile,
   onBackToHome,
@@ -98,13 +100,16 @@ export default function RuangBelajarSubjectChaptersView({
   const meta = getSubjectMeta(selectedSubject);
   const SubjectIcon = meta.icon;
 
+  // Revision counter for immediate real-time re-renders when a new bab is created or updated
+  const [babsRevision, setBabsRevision] = useState<number>(0);
+
   // Sync custom babs from localStorage (thinksy_custom_babs)
   const [customBabs, setCustomBabs] = useState<Record<string, any>>(() => {
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("thinksy_custom_babs");
         return stored ? JSON.parse(stored) : {};
-      } catch {}
+      } catch { }
     }
     return {};
   });
@@ -120,7 +125,7 @@ export default function RuangBelajarSubjectChaptersView({
             return new Set<string>(arr.map(String));
           }
         }
-      } catch {}
+      } catch { }
     }
     return new Set<string>();
   });
@@ -134,7 +139,7 @@ export default function RuangBelajarSubjectChaptersView({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("thinksy_opened_babs", JSON.stringify(Array.from(next)));
-        } catch {}
+        } catch { }
       }
       return next;
     });
@@ -150,7 +155,7 @@ export default function RuangBelajarSubjectChaptersView({
             setOpenedBabIds(new Set<string>(arr.map(String)));
           }
         }
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("storage", syncOpenedBabs);
@@ -170,7 +175,7 @@ export default function RuangBelajarSubjectChaptersView({
           localStorage.removeItem("thinksy_active_bab_id");
           return parseInt(active, 10);
         }
-      } catch {}
+      } catch { }
     }
     return null;
   });
@@ -184,7 +189,7 @@ export default function RuangBelajarSubjectChaptersView({
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
-      } catch {}
+      } catch { }
     }
     return DEFAULT_ANNOUNCEMENTS;
   });
@@ -200,7 +205,7 @@ export default function RuangBelajarSubjectChaptersView({
             setAnnouncements(data.announcements);
             try {
               localStorage.setItem("thinksy_class_announcements", JSON.stringify(data.announcements));
-            } catch {}
+            } catch { }
           }
         }
       } catch (err) {
@@ -217,14 +222,14 @@ export default function RuangBelajarSubjectChaptersView({
         } else if (e.detail?.post) {
           setAnnouncements((prev) => [e.detail.post, ...prev.filter((p) => p.id !== e.detail.post.id)]);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "thinksy_class_announcements" && e.newValue) {
         try {
           setAnnouncements(JSON.parse(e.newValue));
-        } catch {}
+        } catch { }
       }
     };
 
@@ -232,14 +237,19 @@ export default function RuangBelajarSubjectChaptersView({
       try {
         const stored = localStorage.getItem("thinksy_custom_babs");
         if (stored) setCustomBabs(JSON.parse(stored));
-      } catch {}
+      } catch { }
+      setBabsRevision((v) => v + 1);
     };
 
     window.addEventListener("thinksy_bab_updated", handleBabUpdate);
+    window.addEventListener("thinksy_bab_created", handleBabUpdate);
+    window.addEventListener("thinksy_classes_updated", handleBabUpdate);
     window.addEventListener("thinksy_announcement_event", handleAnnouncementEvent);
     window.addEventListener("storage", handleStorageChange);
     return () => {
       window.removeEventListener("thinksy_bab_updated", handleBabUpdate);
+      window.removeEventListener("thinksy_bab_created", handleBabUpdate);
+      window.removeEventListener("thinksy_classes_updated", handleBabUpdate);
       window.removeEventListener("thinksy_announcement_event", handleAnnouncementEvent);
       window.removeEventListener("storage", handleStorageChange);
     };
@@ -279,7 +289,7 @@ export default function RuangBelajarSubjectChaptersView({
     setAnnouncements(updated);
     try {
       localStorage.setItem("thinksy_class_announcements", JSON.stringify(updated));
-    } catch {}
+    } catch { }
 
     window.dispatchEvent(
       new CustomEvent("thinksy_announcement_event", {
@@ -308,6 +318,72 @@ export default function RuangBelajarSubjectChaptersView({
 
   // Filter chapters by subject (Matematika & IPA Kelas 8) & sync overrides
   const subjectChapters = useMemo(() => {
+    // 1. Cek apakah ada bab kustom yang disimpan untuk classId spesifik ini
+    if (selectedClassId && typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`thinksy_class_babs_${selectedClassId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            if (parsed.length > 0) {
+              return parsed.map((b: any, idx: number) => {
+                const override = customBabs[b.id] || {};
+                const customModules = override.modules || b.modules;
+                const materi =
+                  Array.isArray(customModules) && customModules.length > 0
+                    ? customModules.map((m: any, mIdx: number) => ({
+                        id: m.id || `m-${b.id}-${mIdx + 1}`,
+                        judul: m.judul || `Materi ${mIdx + 1}`,
+                        urutan: m.urutan || mIdx + 1,
+                      }))
+                    : (b.materials || []).map((m: any, mIdx: number) => ({
+                        id: m.id || `m-${b.id}-${mIdx + 1}`,
+                        judul: m.title || `Materi ${mIdx + 1}`,
+                        urutan: mIdx + 1,
+                      }));
+
+                return {
+                  id: b.id,
+                  urutan: b.nomor || idx + 1,
+                  judul: override.judul || b.judul,
+                  deskripsi: override.deskripsi || b.deskripsi || "",
+                  semester: 1,
+                  mapel: selectedSubject,
+                  progress: 0,
+                  isOpen: override.isOpen !== undefined ? override.isOpen : b.isOpen !== false,
+                  materi:
+                    materi.length > 0
+                      ? materi
+                      : [
+                          { id: `m-${b.id}-1`, judul: "1. Pengenalan Materi", urutan: 1 },
+                          { id: `m-${b.id}-2`, judul: "2. Pendalaman Konsep", urutan: 2 },
+                        ],
+                };
+              });
+            } else {
+              // Jika daftar bab kelas kustom kosong, return []
+              return [];
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Cek apakah ini kelas kustom baru (bukan kelas bawaan mat-8 atau ipa-8)
+    const isDefaultClass =
+      selectedClassId === "mat-8" ||
+      selectedClassId === "ipa-8" ||
+      selectedClassId === "class_matematika" ||
+      selectedClassId === "class_ipa" ||
+      (!selectedClassId &&
+        (selectedSubject.toLowerCase() === "matematika" ||
+          selectedSubject.toLowerCase().includes("ipa")));
+
+    if (selectedClassId && !isDefaultClass) {
+      // Kelas baru yang belum memiliki bab dari guru -> tampilkan 0 bab
+      return [];
+    }
+
     const isIpa = selectedSubject.toLowerCase().includes("ipa");
 
     if (isIpa) {
@@ -408,10 +484,11 @@ export default function RuangBelajarSubjectChaptersView({
         deskripsi: override.deskripsi || c.deskripsi,
       };
     });
-  }, [chapters, customBabs, selectedSubject]);
+  }, [chapters, customBabs, selectedSubject, selectedClassId, babsRevision]);
 
   // Filter by semester
   const semesterChapters = useMemo(() => {
+    if (subjectChapters.length === 0) return [];
     const isIpa = selectedSubject.toLowerCase().includes("ipa");
     const semThreshold = isIpa ? 3 : 4;
     const filtered = subjectChapters.filter((c) => {
@@ -423,7 +500,7 @@ export default function RuangBelajarSubjectChaptersView({
 
   // Total materials count
   const totalMateriCount = semesterChapters.reduce(
-    (acc, curr) => acc + (curr.materi?.length || 3),
+    (acc, curr) => acc + (curr.materi?.length || 0),
     0
   );
 
@@ -547,21 +624,19 @@ export default function RuangBelajarSubjectChaptersView({
           <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 text-xs font-bold">
             <button
               onClick={() => setSelectedSemester(1)}
-              className={`px-4 py-1.5 rounded-lg transition cursor-pointer ${
-                selectedSemester === 1
+              className={`px-4 py-1.5 rounded-lg transition cursor-pointer ${selectedSemester === 1
                   ? "bg-white text-blue-600 shadow-xs font-extrabold"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               {language === "en" ? "Semester 1 (Odd)" : "Semester 1 (Ganjil)"}
             </button>
             <button
               onClick={() => setSelectedSemester(2)}
-              className={`px-4 py-1.5 rounded-lg transition cursor-pointer ${
-                selectedSemester === 2
+              className={`px-4 py-1.5 rounded-lg transition cursor-pointer ${selectedSemester === 2
                   ? "bg-white text-blue-600 shadow-xs font-extrabold"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               {language === "en" ? "Semester 2 (Even)" : "Semester 2 (Genap)"}
             </button>
@@ -577,7 +652,26 @@ export default function RuangBelajarSubjectChaptersView({
 
       {/* Bab (Chapters) List Grid */}
       <div className="space-y-4">
-        {semesterChapters.map((chap, idx) => {
+        {semesterChapters.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-10 sm:p-14 text-center flex flex-col items-center justify-center space-y-4 shadow-2xs">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+              <Layers className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5 max-w-md">
+              <h3 className="text-base sm:text-lg font-bold text-slate-800">
+                Belum Ada Bab yang Dipublikasikan
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                Guru pengampu kelas ini belum menambahkan bab atau materi pembelajaran. Bab baru akan langsung muncul secara otomatis di sini setelah diterbitkan oleh guru.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Menunggu materi dari guru pengampu</span>
+            </div>
+          </div>
+        ) : (
+          semesterChapters.map((chap, idx) => {
           const materiList = chap.materi || [
             { id: `m1-${chap.id}`, judul: "1. Konsep & Definisi Dasar", urutan: 1 },
             { id: `m2-${chap.id}`, judul: "2. Pendalaman Materi & Contoh Soal", urutan: 2 },
@@ -594,11 +688,10 @@ export default function RuangBelajarSubjectChaptersView({
           return (
             <div
               key={chap.id}
-              className={`bg-white rounded-3xl border transition-all duration-200 p-6 space-y-4 group relative ${
-                isSelectedFromDueSoon
+              className={`bg-white rounded-3xl border transition-all duration-200 p-6 space-y-4 group relative ${isSelectedFromDueSoon
                   ? "ring-2 ring-blue-500 border-blue-400 shadow-md bg-blue-50/15"
                   : "border-slate-200/90 shadow-xs hover:shadow-md"
-              }`}
+                }`}
             >
               {/* Bab Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -649,7 +742,7 @@ export default function RuangBelajarSubjectChaptersView({
                   {language === "en" ? "Learning Materials" : "Materi Pembelajaran"} ({materiList.length})
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {materiList.map((m, mIdx) => (
+                  {materiList.map((m: any, mIdx: number) => (
                     <Link
                       key={m.id}
                       href={`/bab/${chap.id}?materiId=${m.id}`}
@@ -683,7 +776,7 @@ export default function RuangBelajarSubjectChaptersView({
 
                 <div className="flex items-center gap-2.5 self-end sm:self-auto">
                   <Link
-                    href={`/quiz/${chap.id}`}
+                    href={`/quiz/${chap.id}?mode=inclass&babId=${chap.id}`}
                     onClick={() => handleMarkChapterOpened(chap.id)}
                     className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
                   >
@@ -701,7 +794,7 @@ export default function RuangBelajarSubjectChaptersView({
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

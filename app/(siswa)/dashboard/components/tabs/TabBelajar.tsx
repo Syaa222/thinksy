@@ -294,6 +294,26 @@ export default function TabBelajar({
     };
   }, []);
 
+  // Listen for bab additions and class updates in real time
+  const [babsRevision, setBabsRevision] = useState<number>(0);
+  useEffect(() => {
+    const handleBabUpdate = () => {
+      setBabsRevision((v) => v + 1);
+    };
+
+    window.addEventListener("thinksy_bab_created", handleBabUpdate);
+    window.addEventListener("thinksy_bab_updated", handleBabUpdate);
+    window.addEventListener("thinksy_classes_updated", handleBabUpdate);
+    window.addEventListener("storage", handleBabUpdate);
+
+    return () => {
+      window.removeEventListener("thinksy_bab_created", handleBabUpdate);
+      window.removeEventListener("thinksy_bab_updated", handleBabUpdate);
+      window.removeEventListener("thinksy_classes_updated", handleBabUpdate);
+      window.removeEventListener("storage", handleBabUpdate);
+    };
+  }, []);
+
   const latestMathAnnouncement = useMemo(() => {
     const list = announcements.filter((a) => {
       const tag = (a.subjectTag || "").toLowerCase();
@@ -1253,7 +1273,33 @@ export default function TabBelajar({
             const cardPhotoUrl = (cls as any).bannerPhotoUrl || (!isIpa ? mathTheme.bannerPhotoUrl : "");
             const cardTitle = cls.nama_kelas || (isIpa ? "IPA (Ilmu Pengetahuan Alam)" : mathTheme.name);
             const cardTeacher = cls.nama_guru || (isMath ? (mathTheme.teacherName || "Ibu Siti Rahmawati, M.Pd.") : "Ibu Siti Rahmawati, M.Pd.");
-            const subjectKey = isIpa ? "IPA" : "Matematika";
+            const subjectKey = cls.mata_pelajaran || cls.nama_kelas || (isIpa ? "IPA" : "Matematika");
+
+            const isCoreMath = (cls.id === "mat-8" || cls.id === "class_matematika" || (isMath && !cls.id?.startsWith("class-")));
+            const isCoreIpa = (cls.id === "ipa-8" || cls.id === "class_ipa" || (isIpa && !cls.id?.startsWith("class-")));
+
+            let customBabCount = 0;
+            let hasCustomBabsStored = false;
+            if (typeof window !== "undefined") {
+              try {
+                const stored = localStorage.getItem(`thinksy_class_babs_${cls.id}`);
+                if (stored) {
+                  const parsed = JSON.parse(stored);
+                  if (Array.isArray(parsed)) {
+                    customBabCount = parsed.length;
+                    hasCustomBabsStored = true;
+                  }
+                }
+              } catch {}
+            }
+
+            const babCount = hasCustomBabsStored
+              ? customBabCount
+              : isCoreMath
+              ? allChapters.length || 6
+              : isCoreIpa
+              ? 5
+              : 0;
 
             const nameParts = cardTeacher.trim().split(" ");
             const initials =
@@ -1335,13 +1381,15 @@ export default function TabBelajar({
                     <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                       <span>Progres Ruang Belajar</span>
                       <span className={`${isIpa ? "text-emerald-600" : "text-indigo-600"} font-bold`}>
-                        {isIpa ? "40%" : `${Math.round(learningProgressPercent)}%`}
+                        {babCount === 0 ? "0%" : isIpa ? "40%" : `${Math.round(learningProgressPercent)}%`}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      {isIpa
-                        ? "5 Bab IPA Kelas 8 • Tersedia Materi, Latihan Sokratik & Sains Eksperimen"
-                        : `${allChapters.length || 5} Bab Matematika Kelas 8 • Tersedia Materi, Latihan Sokratik & Kuis`}
+                      {babCount === 0
+                        ? "0 Bab Pembelajaran • Belum ada bab yang dipublikasikan guru"
+                        : isIpa
+                        ? `${babCount} Bab IPA Kelas 8 • Tersedia Materi, Latihan Sokratik & Sains Eksperimen`
+                        : `${babCount} Bab ${cardTitle} • Tersedia Materi, Latihan Sokratik & Kuis`}
                     </div>
                   </div>
 
@@ -1379,7 +1427,9 @@ export default function TabBelajar({
                   <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-3">
                     <div
                       className={`${isIpa ? "bg-emerald-600" : "bg-indigo-600"} h-full rounded-full transition-all duration-300`}
-                      style={{ width: `${isIpa ? "40%" : Math.max(5, Math.min(100, learningProgressPercent))}%` }}
+                      style={{
+                        width: babCount === 0 ? "0%" : `${isIpa ? "40%" : Math.max(5, Math.min(100, learningProgressPercent))}%`,
+                      }}
                     />
                   </div>
 

@@ -404,12 +404,19 @@ export default function CreateClassModal({
 
     setIsSubmitting(true);
 
-    const safeId = `class-${subject.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now().toString().slice(-4)}`;
+    const cleanName = className.trim();
+    const effectiveSubject = (subject && subject !== "Matematika") ? subject.trim() : cleanName;
+    const safeSlug = cleanName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    const safeId = `class-${safeSlug || "kelas"}-${Date.now().toString().slice(-4)}`;
 
     const newClass: NewClassData = {
       id: safeId,
-      name: className.trim(),
-      mapel: subject.trim(),
+      name: cleanName,
+      mapel: effectiveSubject,
       section: section.trim() || "Kelas 8 • Fase D",
       room: room.trim() || "Ruang 8-A",
       subjectCode: classToken.trim().toLowerCase(),
@@ -503,6 +510,7 @@ export default function CreateClassModal({
                   value={className}
                   onChange={(e) => {
                     setClassName(e.target.value);
+                    setSubject(e.target.value);
                     setShowRecommendations(true);
                   }}
                   onFocus={() => setShowRecommendations(true)}
